@@ -30,9 +30,9 @@ export function NavbarInternal({
         {/* Logo */}
         <Link to="/partner" className="shrink-0" aria-label="Tiketbisa partner">
           <img
-            src="/logo/tiketbisa.svg"
+            src="/logo/tiketbisa-white.png"
             alt="Tiketbisa"
-            className="h-8 w-auto"
+            className="w-auto h-8 lg:h-10 cursor-pointer"
           />
         </Link>
 

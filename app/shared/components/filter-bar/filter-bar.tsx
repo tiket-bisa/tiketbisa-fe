@@ -6,6 +6,7 @@ export interface FilterBarProps {
   onSearchChange: (value: string) => void;
   onSearchClear?: () => void;
   searchPlaceholder?: string;
+  showSearch?: boolean;
   filters?: FilterBarFilter[];
   filterValues?: Record<string, string>;
   onFilterChange?: (key: string, value: string) => void;
@@ -17,6 +18,7 @@ export function FilterBar({
   onSearchChange,
   onSearchClear,
   searchPlaceholder = "Search…",
+  showSearch = true,
   filters,
   filterValues = {},
   onFilterChange,
@@ -27,14 +29,16 @@ export function FilterBar({
       className={`flex flex-col gap-3 sm:flex-row sm:items-center ${className}`}
     >
       {/* Search */}
-      <div className="flex-1 min-w-0 sm:max-w-xs">
-        <SearchInput
-          value={searchValue}
-          onChange={(e) => onSearchChange(e.currentTarget.value)}
-          onClear={onSearchClear}
-          placeholder={searchPlaceholder}
-        />
-      </div>
+      {showSearch && (
+        <div className="flex-1 min-w-0 sm:max-w-xs">
+          <SearchInput
+            value={searchValue}
+            onChange={(e) => onSearchChange(e.currentTarget.value)}
+            onClear={onSearchClear}
+            placeholder={searchPlaceholder}
+          />
+        </div>
+      )}
 
       {/* Filters */}
       {filters && filters.length > 0 && (

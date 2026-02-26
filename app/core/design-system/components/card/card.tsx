@@ -20,9 +20,9 @@ export function Card({
 }: CardProps) {
   return (
     <div
-      className={`rounded-xl border border-border-default bg-surface-alt overflow-hidden ${paddingClasses[padding]} ${
+      className={`rounded-xl border border-border-default bg-surface-alt shadow-md overflow-hidden ${paddingClasses[padding]} ${
         hoverable
-          ? "transition-colors hover:border-border-subtle hover:bg-surface-hover cursor-pointer"
+          ? "transition-all hover:border-border-subtle hover:bg-surface-hover hover:shadow-lg cursor-pointer"
           : ""
       } ${className}`}
       {...props}

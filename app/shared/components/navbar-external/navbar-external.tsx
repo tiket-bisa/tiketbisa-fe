@@ -17,15 +17,15 @@ export function NavbarExternal({ className = "" }: NavbarExternalProps) {
 
   return (
     <header
-      className={`sticky top-0 z-50 border-b border-border-default bg-surface-primary/95 backdrop-blur-sm ${className}`}
+      className={`sticky top-0 z-50 border-b border-border-default bg-[#1a1245] ${className}`}
     >
-      <nav className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-6 lg:px-8">
+      <nav className="mx-auto flex h-20 max-w-7xl items-center gap-6 px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link to="/" className="shrink-0" aria-label="Tiketbisa home">
           <img
-            src="/logo/tiketbisa.svg"
+            src="/logo/tiketbisa-white.png"
             alt="Tiketbisa"
-            className="h-8 w-auto"
+            className="w-auto h-8 lg:h-12 cursor-pointer"
           />
         </Link>
 
@@ -44,8 +44,8 @@ export function NavbarExternal({ className = "" }: NavbarExternalProps) {
                   to={link.to}
                   className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                     isActive
-                      ? "text-brand-primary"
-                      : "text-text-secondary hover:text-text-primary hover:bg-surface-hover"
+                      ? "text-white bg-brand-primary/20"
+                      : "text-text-secondary hover:text-white hover:bg-white/10"
                   }`}
                   aria-current={isActive ? "page" : undefined}
                 >

@@ -85,6 +85,55 @@ body {
   color: var(--color-text-inverse);
 }
 
+/* ── Scrolling text animation for long titles ── */
+@keyframes scroll-left-text {
+  0%,
+  10% {
+    transform: translateX(0);
+  }
+  90%,
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-scroll-left-text {
+  display: inline-block;
+  animation: scroll-left-text 8s linear infinite;
+}
+
+/* ── Light Theme Override ──
+   Apply data-theme="light" to a container to flip all tokens
+   to light-mode values. Used on external page content area. */
+
+[data-theme="light"] {
+  --color-surface-primary: #ffffff;
+  --color-surface-alt: #ffffff;
+  --color-surface-hover: #f3f4f6;
+  --color-surface-inverse: #0f0b1f;
+
+  --color-text-primary: #0f0b1f;
+  --color-text-secondary: #4b5563;
+  --color-text-tertiary: #6b7280;
+  --color-text-inverse: #f5f3ff;
+
+  --color-border-default: #e5e7eb;
+  --color-border-subtle: #d1d5db;
+  --color-divider: #e5e7eb;
+
+  --color-button-disabled: #e5e7eb;
+  --color-button-secondary-border: #d1d5db;
+  --color-button-secondary-text: #4b5563;
+  --color-button-ghost-text: #6d5cff;
+
+  --color-success-bg: #f0fdf4;
+  --color-success-text: #16a34a;
+  --color-warning-bg: #fffbeb;
+  --color-warning-text: #d97706;
+  --color-destructive-bg: #fef2f2;
+  --color-destructive-text: #dc2626;
+}
+
 /* ── 5 & 11. Trust Mode (Checkout) ──
    Strips club accent takeover, returns to brand purple.
    "Remove club takeover, Return to brand purple, Keep UI calm & clean" */

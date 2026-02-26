@@ -1,4 +1,5 @@
-import { Card, Badge } from "~/core/design-system/components";
+import { useRef, useState, useEffect, useCallback } from "react";
+import { Card } from "~/core/design-system/components";
 import type { EventCardData } from "./types";
 
 export interface EventCardProps {
@@ -8,11 +9,40 @@ export interface EventCardProps {
 }
 
 export function EventCard({ event, onClick, className = "" }: EventCardProps) {
+  const brandInitial = event.brandName
+    ? event.brandName.charAt(0).toUpperCase()
+    : "";
+
+  const titleRef = useRef<HTMLSpanElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+
+  const checkOverflow = useCallback(() => {
+    requestAnimationFrame(() => {
+      const titleEl = titleRef.current;
+      const containerEl = containerRef.current;
+      if (titleEl && containerEl) {
+        setIsOverflowing(titleEl.scrollWidth > containerEl.clientWidth);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    checkOverflow();
+
+    const containerEl = containerRef.current;
+    if (!containerEl) return;
+
+    const observer = new ResizeObserver(() => checkOverflow());
+    observer.observe(containerEl);
+    return () => observer.disconnect();
+  }, [event.title, checkOverflow]);
+
   return (
     <Card
       hoverable
       padding="none"
-      className={className}
+      className={`flex flex-col ${className}`}
       onClick={onClick}
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
@@ -28,29 +58,35 @@ export function EventCard({ event, onClick, className = "" }: EventCardProps) {
       }
     >
       {/* Thumbnail */}
-      <div className="relative aspect-[16/9] overflow-hidden">
+      <div className="h-auto overflow-hidden aspect-[1062/427] w-full rounded-t-xl bg-slate-200">
         <img
           src={event.imageUrl}
           alt={event.title}
           className="h-full w-full object-cover"
           loading="lazy"
         />
-        {event.brandName && (
-          <Badge variant="brand" className="absolute top-2 left-2">
-            {event.brandName}
-          </Badge>
-        )}
       </div>
 
       {/* Info */}
-      <div className="flex flex-col gap-1.5 p-4">
-        <h3 className="text-sm font-semibold text-text-primary line-clamp-2">
-          {event.title}
-        </h3>
+      <div className="flex flex-1 flex-col p-4">
+        <div ref={containerRef} className="overflow-hidden">
+          <h3
+            className={`text-base font-semibold text-text-primary leading-snug whitespace-nowrap ${
+              isOverflowing ? "animate-scroll-left-text" : ""
+            }`}
+          >
+            <span ref={titleRef}>{event.title}</span>
+            {isOverflowing && (
+              <span className="pl-8" aria-hidden="true">
+                {event.title}
+              </span>
+            )}
+          </h3>
+        </div>
 
-        <div className="flex items-center gap-1 text-xs text-text-tertiary">
+        <div className="mt-2 flex items-center gap-1.5 text-sm text-text-tertiary">
           <svg
-            className="h-3.5 w-3.5 shrink-0"
+            className="h-4 w-4 shrink-0 text-brand-primary"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -67,33 +103,24 @@ export function EventCard({ event, onClick, className = "" }: EventCardProps) {
           <span>{event.date}</span>
         </div>
 
-        <div className="flex items-center gap-1 text-xs text-text-tertiary">
-          <svg
-            className="h-3.5 w-3.5 shrink-0"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"
-            />
-          </svg>
-          <span className="truncate">{event.location}</span>
-        </div>
-
-        <p className="mt-1 text-sm font-semibold text-brand-primary">
+        <p className="mt-2 text-lg font-bold text-text-primary">
           {event.priceRange}
         </p>
+
+        {/* Spacer to push brand section to the bottom */}
+        <div className="flex-1" />
+
+        {/* Brand / Organizer — always pinned to bottom */}
+        {event.brandName && (
+          <div className="mt-3 flex items-center gap-2 border-t border-border-default pt-3">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-text-secondary">
+              {brandInitial}
+            </div>
+            <span className="text-sm font-medium text-text-secondary uppercase tracking-wide truncate">
+              {event.brandName}
+            </span>
+          </div>
+        )}
       </div>
     </Card>
   );

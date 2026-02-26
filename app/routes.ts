@@ -9,10 +9,7 @@ export default [
   // ─── External Layout (tiketbisa.com) ───
   layout("layouts/external.layout.tsx", [
     index("modules/external/landing/presentation/landing.page.tsx"),
-    route(
-      "explore",
-      "modules/external/event-search/presentation/event-search.page.tsx",
-    ),
+    route("explore", "modules/external/event/presentation/event.page.tsx"),
     route(
       "brand/:slug",
       "modules/external/brand-selection/presentation/brand-selection.page.tsx",
@@ -21,7 +18,6 @@ export default [
     route("hubungi", "modules/external/static/hubungi.page.tsx"),
   ]),
 
-  // ─── Checkout Layout (Trust Mode — strips dynamic club accents) ───
   layout("layouts/checkout.layout.tsx", [
     route(
       "checkout/:eventId",
@@ -29,10 +25,8 @@ export default [
     ),
   ]),
 
-  // ─── Partner Login (Standalone — no layout wrapper) ───
   route("partner/login", "modules/internal/login/presentation/login.page.tsx"),
 
-  // ─── Internal Layout ([subdomain].tiketbisa.com) ───
   layout("layouts/internal.layout.tsx", [
     route(
       "partner",
