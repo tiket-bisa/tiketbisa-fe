@@ -27,12 +27,29 @@ const placeholderLocations = [
 ];
 
 const placeholderPrices = [
-  "Rp 50.000 – Rp 150.000",
-  "Rp 75.000 – Rp 200.000",
-  "Rp 25.000 – Rp 100.000",
-  "Rp 100.000 – Rp 350.000",
-  "Gratis",
-  "Rp 150.000 – Rp 500.000",
+  [
+    { id: "t-1", name: "Ekonomi", price: 50000, available: true },
+    { id: "t-2", name: "VIP", price: 150000, available: true },
+  ],
+  [
+    { id: "t-1", name: "Reguler", price: 75000, available: true },
+    { id: "t-2", name: "VIP", price: 200000, available: true },
+  ],
+  [
+    { id: "t-1", name: "Festival", price: 25000, available: true },
+    { id: "t-2", name: "Tribune", price: 100000, available: true },
+  ],
+  [
+    { id: "t-1", name: "Silver", price: 100000, available: true },
+    { id: "t-2", name: "Gold", price: 350000, available: true },
+  ],
+  [
+    { id: "t-1", name: "Umum", price: 0, available: true },
+  ],
+  [
+    { id: "t-1", name: "Early Bird", price: 150000, available: true },
+    { id: "t-2", name: "Normal", price: 500000, available: true },
+  ],
 ];
 
 function generatePlaceholderDate(index: number): string {
@@ -55,6 +72,6 @@ export function mapEventDtoToEntity(dto: EventDto, index: number): Event {
     imageUrl: placeholderImages[index % placeholderImages.length],
     date: generatePlaceholderDate(index),
     location: placeholderLocations[index % placeholderLocations.length],
-    priceRange: placeholderPrices[index % placeholderPrices.length],
+    tickets: placeholderPrices[index % placeholderPrices.length],
   };
 }

@@ -7,7 +7,8 @@ export interface NavbarExternalProps {
 
 const navLinks = [
   { to: "/", label: "Beranda" },
-  { to: "/explore", label: "Explore Event" },
+  { to: "/event", label: "Event" },
+  { to: "/brand", label: "Brand" },
   { to: "/tentang", label: "Tentang" },
   { to: "/hubungi", label: "Hubungi Kami" },
 ] as const;
@@ -37,7 +38,11 @@ export function NavbarExternal({ className = "" }: NavbarExternalProps) {
         {/* Nav links */}
         <ul className="hidden md:flex items-center gap-1 ml-auto">
           {navLinks.map((link) => {
-            const isActive = location.pathname === link.to;
+            const isActive =
+              link.to === "/"
+                ? location.pathname === "/"
+                : location.pathname.startsWith(link.to);
+
             return (
               <li key={link.to}>
                 <Link

@@ -11,4 +11,5 @@ import type { EventFilterParams } from "../infrastructure/event-filter.params";
  */
 export interface EventRepository {
   getEvents(params: EventFilterParams): Promise<PaginatedApiResponse<Event>>;
+  getEventById(id: string): Promise<Event | null>;
 }

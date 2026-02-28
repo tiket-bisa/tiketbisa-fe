@@ -6,7 +6,7 @@ import { Footer } from "~/shared/components";
  * External Layout — Public Platform (tiketbisa.com)
  *
  * Structure: NavbarExternal → <Outlet /> → Footer
- * Nav items: Beranda, Explore Event, Tentang, Hubungi Kami
+ * Nav items: Beranda, Event, Brand, Tentang, Hubungi Kami
  */
 export default function ExternalLayout() {
   return (

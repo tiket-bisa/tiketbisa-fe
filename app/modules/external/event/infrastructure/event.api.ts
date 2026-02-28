@@ -160,4 +160,23 @@ export const eventApi: EventRepository = {
       },
     };
   },
+
+  async getEventById(id: string): Promise<Event | null> {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const dtoIndex = DUMMY_EVENTS.findIndex((e) => e.id === id);
+    if (dtoIndex === -1) return null;
+
+    const baseEvent = mapEventDtoToEntity(DUMMY_EVENTS[dtoIndex], dtoIndex);
+
+    return {
+      ...baseEvent,
+      time: "19:00 - Selesai",
+      terms: [
+        "Tiket yang sudah dibeli tidak dapat dikembalikan.",
+        "Pengunjung wajib membawa kartu identitas asli.",
+        "Dilarang membawa makanan dan minuman dari luar.",
+        "Penyelenggara berhak menolak pengunjung yang melanggar aturan.",
+      ],
+    };
+  },
 };

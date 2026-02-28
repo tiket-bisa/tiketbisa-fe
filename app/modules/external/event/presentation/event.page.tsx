@@ -1,4 +1,4 @@
-import { useSearchParams } from "react-router";
+import { useSearchParams, useNavigate } from "react-router";
 import { Pagination, Select } from "~/core/design-system/components";
 import {
   EventCard,
@@ -17,7 +17,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const sp = url.searchParams;
 
-  const limit = EVENT_PAGE_SIZE;
+  const limit = Number(sp.get("limit") ?? EVENT_PAGE_SIZE);
   const page = Math.max(1, Number(sp.get("page") ?? 1));
   const offset = (page - 1) * limit;
 
@@ -74,6 +74,16 @@ export default function EventPage({ loaderData }: Route.ComponentProps) {
     });
   }
 
+  function resetFilters() {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      // Data-driven reset: clear all keys defined in our filter config
+      EVENT_FILTERS.forEach((f) => next.delete(f.key));
+      next.delete("page");
+      return next;
+    });
+  }
+
   function handlePageChange(page: number) {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
@@ -92,7 +102,7 @@ export default function EventPage({ loaderData }: Route.ComponentProps) {
       <SectionHeader title="Upcoming Events" className="mb-6" />
 
       {/* Filters + Sort Row */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between mb-10">
         <FilterBar
           searchValue=""
           onSearchChange={() => {}}
@@ -100,15 +110,21 @@ export default function EventPage({ loaderData }: Route.ComponentProps) {
           filters={EVENT_FILTERS}
           filterValues={filterValues}
           onFilterChange={(key, value) => updateParam(key, value)}
+          onReset={resetFilters}
           className="flex-1"
         />
-        <Select
-          options={SORT_OPTIONS}
-          value={sortValue}
-          onChange={(e) => updateParam("sort", e.currentTarget.value)}
-          placeholder="Urutkan"
-          className="w-auto min-w-[160px]"
-        />
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-bold text-text-tertiary whitespace-nowrap hidden sm:block">
+            Urutkan:
+          </label>
+          <Select
+            options={SORT_OPTIONS}
+            value={sortValue}
+            onChange={(e) => updateParam("sort", e.currentTarget.value)}
+            placeholder="Pilih Urutan"
+            className="w-auto min-w-[180px]"
+          />
+        </div>
       </div>
 
       {/* Event Grid or Empty State */}
@@ -124,7 +140,7 @@ export default function EventPage({ loaderData }: Route.ComponentProps) {
                   imageUrl: event.imageUrl,
                   date: event.date,
                   location: event.location,
-                  priceRange: event.priceRange,
+                  tickets: event.tickets,
                   brandName: event.brand,
                 }}
               />
@@ -133,9 +149,23 @@ export default function EventPage({ loaderData }: Route.ComponentProps) {
 
           {/* Pagination — bottom right */}
           <div className="mt-8 flex items-center justify-between">
-            <p className="text-sm text-text-tertiary">
-              Size: {limit} , Page: {currentPage}
-            </p>
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-bold text-text-tertiary whitespace-nowrap hidden sm:block">
+                Show:
+              </label>
+              <Select
+                options={[
+                  { value: "8", label: "8" },
+                  { value: "12", label: "12" },
+                  { value: "24", label: "24" },
+                  { value: "48", label: "48" },
+                ]}
+                value={String(limit)}
+                onChange={(e) => updateParam("limit", e.currentTarget.value)}
+                placeholder="Show"
+                className="w-24"
+              />
+            </div>
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}

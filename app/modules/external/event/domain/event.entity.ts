@@ -1,3 +1,10 @@
+export interface EventTicket {
+  id: string;
+  name: string;
+  price: number;
+  available: boolean;
+  maxPerOrder?: number;
+}
 
 export interface Event {
   id: string;
@@ -7,5 +14,7 @@ export interface Event {
   imageUrl: string;
   date: string;
   location: string;
-  priceRange: string;
+  time?: string;
+  tickets: EventTicket[];
+  terms?: string[];
 }
