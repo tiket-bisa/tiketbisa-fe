@@ -111,10 +111,8 @@ export function EventDetailTabs({
               to={`/brand/${event.brand.toLowerCase()}`}
               className="text-brand-primary hover:underline font-medium inline-flex items-center gap-1"
             >
-              Lihat Profil Brand{" "}
-              <span className="material-symbols-outlined text-sm">
-                arrow_forward
-              </span>
+              Lihat Profil Brand 
+<span>&#8594;</span>
             </Link>
           </div>
         </div>
