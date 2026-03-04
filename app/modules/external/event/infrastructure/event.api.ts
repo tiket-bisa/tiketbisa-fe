@@ -101,6 +101,13 @@ function applyFilters(events: Event[], params: EventFilterParams): Event[] {
     );
   }
 
+  if (params.brand_slug) {
+    filtered = filtered.filter((e) => {
+      const generatedSlug = e.brand.toLowerCase().replace(/\s+/g, "-");
+      return generatedSlug === params.brand_slug;
+    });
+  }
+
   if (params.city) {
     filtered = filtered.filter(
       (e) => e.location.toLowerCase() === params.city!.toLowerCase(),
