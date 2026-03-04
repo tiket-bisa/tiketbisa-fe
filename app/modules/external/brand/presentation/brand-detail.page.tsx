@@ -12,9 +12,6 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const slug = params.slug;
   if (!slug) throw new Response("Not Found", { status: 404 });
 
-  const brand = await brandApi.getBrandBySlug(slug);
-  if (!brand) throw new Response("Not Found", { status: 404 });
-
   const url = new URL(request.url);
   const { limit, offset, page } = getPaginationFromSearchParams(
     url.searchParams,
@@ -24,12 +21,17 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const activeTab = url.searchParams.get("tab") || "aktif";
   const sort = url.searchParams.get("sort") || "date_asc";
 
-  const eventsResponse = await eventApi.getEvents({
-    limit,
-    offset,
-    order_by: sort,
-    brand_name: brand.name,
-  });
+  const [brand, eventsResponse] = await Promise.all([
+    brandApi.getBrandBySlug(slug),
+    eventApi.getEvents({
+      limit,
+      offset,
+      order_by: sort,
+      brand_slug: slug,
+    }),
+  ]);
+
+  if (!brand) throw new Response("Not Found", { status: 404 });
 
   return {
     brand,
