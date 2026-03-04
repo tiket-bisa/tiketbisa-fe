@@ -1,7 +1,7 @@
 import { useSearchParams } from "react-router";
 import { BRAND_FILTERS } from "../constants/brand.constants";
 
-export function useBrandSelection() {
+export function useBrand() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const sortValue = searchParams.get("sort") ?? "";

@@ -11,13 +11,13 @@ export default [
     index("modules/external/landing/presentation/landing.page.tsx"),
     route("event", "modules/external/event/presentation/event.page.tsx"),
     route("event/:eventId", "modules/external/event/presentation/event-detail.page.tsx"),
-    route("brand", "modules/external/brand-selection/presentation/brand-selection.page.tsx", {
-      id: "brand-selection",
+    route("brand", "modules/external/brand/presentation/brand.page.tsx", {
+      id: "brand",
     }),
     route(
       "brand/:slug",
-      "modules/external/brand-selection/presentation/brand-selection.page.tsx",
-      { id: "brand-selection-slug" },
+      "modules/external/brand/presentation/brand-detail.page.tsx",
+      { id: "brand-detail" },
     ),
     route("tentang", "modules/external/static/tentang.page.tsx"),
     route("hubungi", "modules/external/static/hubungi.page.tsx"),
@@ -70,7 +70,7 @@ export default [
     ),
     route(
       "internal/partner/brands",
-      "modules/internal/brand-selection/presentation/brand-selection.page.tsx",
+      "modules/internal/brand/presentation/brand.page.tsx",
     ),
     route(
       "internal/partner/events",
