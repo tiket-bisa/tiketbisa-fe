@@ -1,4 +1,3 @@
-import { useRef, useState, useEffect, useCallback } from "react";
 import { Link } from "react-router";
 import { Card } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
@@ -9,40 +8,20 @@ export function EventCard({ event, className = "" }: EventCardProps) {
     ? event.brandName.charAt(0).toUpperCase()
     : "";
 
-  const titleRef = useRef<HTMLSpanElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [isOverflowing, setIsOverflowing] = useState(false);
-
-  const checkOverflow = useCallback(() => {
-    requestAnimationFrame(() => {
-      const titleEl = titleRef.current;
-      const containerEl = containerRef.current;
-      if (titleEl && containerEl) {
-        setIsOverflowing(titleEl.scrollWidth > containerEl.clientWidth);
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    checkOverflow();
-
-    const containerEl = containerRef.current;
-    if (!containerEl) return;
-
-    const observer = new ResizeObserver(() => checkOverflow());
-    observer.observe(containerEl);
-    return () => observer.disconnect();
-  }, [event.title, checkOverflow]);
-
   const minPrice =
     event.tickets.length > 0
-      ? Math.min(...event.tickets.map((t) => t.price))
+      ? Math.min(...event.tickets.map((t: { price: number }) => t.price))
       : 0;
+
+  const isLongTitle = event.title.length > 27;
 
   return (
     <Link to={`/event/${event.id}`} className="block group">
-      <Card hoverable padding="none" className={`flex flex-col h-full ${className}`}>
-        {/* Thumbnail */}
+      <Card
+        hoverable
+        padding="none"
+        className={`flex flex-col h-full ${className}`}
+      >
         <div className="h-auto overflow-hidden aspect-[1062/427] w-full rounded-t-xl bg-slate-200">
           <img
             src={event.imageUrl}
@@ -52,21 +31,25 @@ export function EventCard({ event, className = "" }: EventCardProps) {
           />
         </div>
 
-        {/* Info */}
         <div className="flex flex-1 flex-col p-4">
-          <div ref={containerRef} className="overflow-hidden">
+          <div className="relative overflow-hidden">
             <h3
-              className={`text-base font-semibold text-text-primary leading-snug whitespace-nowrap ${
-                isOverflowing ? "animate-scroll-left-text" : ""
-              }`}
+              className={`text-lg font-semibold text-text-primary leading-snug whitespace-nowrap inline-block ${isLongTitle ? "group-hover:animate-scroll-left-text" : ""}`}
             >
-              <span ref={titleRef}>{event.title}</span>
-              {isOverflowing && (
-                <span className="pl-8" aria-hidden="true">
+              <span>{event.title}</span>
+              {isLongTitle && (
+                <span
+                  className="pl-8 hidden group-hover:inline-block"
+                  aria-hidden="true"
+                >
                   {event.title}
                 </span>
               )}
             </h3>
+
+            {isLongTitle && (
+              <div className="absolute top-0 right-0 h-full w-4 bg-gradient-to-l from-surface-alt to-transparent group-hover:hidden" />
+            )}
           </div>
 
           <div className="mt-2 flex items-center gap-1.5 text-sm text-text-tertiary">

@@ -12,80 +12,87 @@
     "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
     "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
-  /* ── 3. Base Colors ── */
+  /* 3. Base Colors */
   --color-base-white: #ffffff;
   --color-base-inverse: #0f0b1f;
 
-  /* ── 3. Primary Surface Colors ── */
+  /* 3. Primary Surface Colors */
   --color-surface-primary: #0f0b1f;
   --color-surface-alt: #17122b;
   --color-surface-hover: #211a3a;
   --color-surface-inverse: #ffffff;
 
-  /* ── 4.1 Brand Primary (Identity) ── */
+  /* 4.1 Brand Primary (Identity) */
   --color-brand-primary: #6d5cff;
   --color-brand-primary-hover: #5a4ae6;
   --color-brand-primary-active: #4c3fd1;
   --color-brand-primary-subtle: #2a2355;
 
-  /* ── 4.2 Brand Secondary (Supporting Accent) ── */
+  /* 4.2 Brand Secondary (Supporting Accent) */
   --color-brand-secondary: #22c7a9;
   --color-brand-secondary-hover: #1dae94;
   --color-brand-secondary-subtle: #163f3a;
 
-  /* ── 5. Club Dynamic Accent (Runtime) ── */
+  /* 5. Club Dynamic Accent (Runtime) */
   --color-club-accent: #6d5cff;
   --color-club-accent-subtle: #2a2355;
   --color-club-accent-text: #ffffff;
 
-  /* ── 6.1 Success ── */
+  /* 6.1 Success */
   --color-success: #22c55e;
   --color-success-bg: #0f2a1b;
   --color-success-text: #86efac;
 
-  /* ── 6.2 Warning ── */
+  /* 6.2 Warning */
   --color-warning: #f59e0b;
   --color-warning-bg: #2a1f0a;
   --color-warning-text: #fcd34d;
 
-  /* ── 6.3 Destructive / Error ── */
+  /* 6.3 Destructive / Error */
   --color-destructive: #ef4444;
   --color-destructive-hover: #dc2626;
   --color-destructive-bg: #2a1212;
   --color-destructive-text: #fca5a5;
 
-  /* ── 7. Button System ── */
+  /* 7. Button System */
   --color-button-disabled: #3a355f;
   --color-button-secondary-border: #3a355f;
   --color-button-secondary-text: #c7c2ff;
   --color-button-ghost-text: #a9a3ff;
 
-  /* ── 8. Text Colors ── */
+  /* 8. Text Colors */
   --color-text-primary: #f5f3ff;
   --color-text-secondary: #c7c2ff;
   --color-text-tertiary: #8b85b3;
   --color-text-inverse: #0f0b1f;
 
-  /* ── 9. Border & Divider ── */
+  /* 9. Border & Divider /
   --color-border-default: #2b2550;
   --color-border-subtle: #221c40;
   --color-divider: #1c1735;
+
+  /* Tambahkan animasi custom di sini */
+  @keyframes scroll-left {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  --animate-scroll-left-text: scroll-left 10s linear infinite;
 }
 
-/* ── 10. Brand Gradient ── */
+/* 10. Brand Gradient */
 
 .brand-gradient {
   background: linear-gradient(135deg, #6d5cff 0%, #22c7a9 100%);
 }
 
-/* ── Global Base ── */
+/* Global Base */
 
 body {
   background-color: var(--color-base-white);
   color: var(--color-text-inverse);
 }
 
-/* ── Scrolling text animation for long titles ── */
+/* Scrolling text animation for long titles */
 @keyframes scroll-left-text {
   0%,
   10% {
@@ -102,7 +109,7 @@ body {
   animation: scroll-left-text 8s linear infinite;
 }
 
-/* ── Light Theme Override ──
+/* Light Theme Override
    Apply data-theme="light" to a container to flip all tokens
    to light-mode values. Used on external page content area. */
 
@@ -134,7 +141,7 @@ body {
   --color-destructive-text: #dc2626;
 }
 
-/* ── 5 & 11. Trust Mode (Checkout) ──
+/* 5 & 11. Trust Mode (Checkout)
    Strips club accent takeover, returns to brand purple.
    "Remove club takeover, Return to brand purple, Keep UI calm & clean" */
 
