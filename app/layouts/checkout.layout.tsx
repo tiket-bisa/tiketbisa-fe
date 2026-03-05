@@ -1,5 +1,5 @@
 import { Outlet, useSearchParams } from "react-router";
-import { CheckoutNavbar, CheckoutFooter, type CheckoutStep } from "~/shared/components";
+import { CheckoutNavbar, Footer, type CheckoutStep } from "~/shared/components";
 
 /**
  * Checkout Layout — Trust Mode
@@ -20,7 +20,7 @@ export default function CheckoutLayout() {
   return (
     <div
       data-trust-mode="true"
-      className="flex min-h-screen flex-col bg-surface-primary"
+      className="flex min-h-screen flex-col bg-white"
     >
       <CheckoutNavbar currentStep={currentStep} />
       
@@ -28,7 +28,7 @@ export default function CheckoutLayout() {
         <Outlet />
       </main>
 
-      <CheckoutFooter />
+      <Footer />
     </div>
   );
 }
