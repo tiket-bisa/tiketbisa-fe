@@ -33,8 +33,14 @@ export type { NavbarInternalProps } from "./navbar-internal";
 export { NavbarAdmin } from "./navbar-admin";
 export type { NavbarAdminProps } from "./navbar-admin";
 
+export { CheckoutNavbar } from "./checkout-navbar";
+export type { CheckoutNavbarProps, CheckoutStep } from "./checkout-navbar";
+
 export { Footer } from "./footer";
 export type { FooterProps } from "./footer";
+
+export { CheckoutFooter } from "./checkout-footer";
+export type { CheckoutFooterProps } from "./checkout-footer";
 
 export { TicketRow } from "./ticket-row";
 export type { TicketRowProps } from "./ticket-row";
