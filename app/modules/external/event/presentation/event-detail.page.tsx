@@ -47,7 +47,11 @@ export default function EventDetailPage({ loaderData }: Route.ComponentProps) {
   };
 
   const handleCheckout = () => {
-    navigate(`/checkout/${event.id}`);
+    const params = new URLSearchParams();
+    Object.entries(quantities).forEach(([id, qty]) => {
+      if (qty > 0) params.append(`t[${id}]`, qty.toString());
+    });
+    navigate(`/checkout/${event.id}?${params.toString()}`);
   };
 
   return (
