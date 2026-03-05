@@ -63,17 +63,6 @@ export function CheckoutSidebar({ summary, onNext, isLoading, className = "" }: 
         >
           Lanjut ke Pembayaran
         </Button>
-
-        <div className="flex flex-col items-center gap-3 mt-8">
-           <div className="flex items-center gap-1.5 grayscale opacity-40">
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5l-3.5-3.5 1.41-1.41L11 13.67l4.59-4.59L17 10.5 11 16.5z"/>
-              </svg>
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-900">
-                Guaranteed Secure
-              </span>
-           </div>
-        </div>
       </Card>
     </div>
   );
