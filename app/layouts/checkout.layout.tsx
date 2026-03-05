@@ -1,4 +1,5 @@
-import { Outlet } from "react-router";
+import { Outlet, useSearchParams } from "react-router";
+import { CheckoutNavbar, CheckoutFooter, type CheckoutStep } from "~/shared/components";
 
 /**
  * Checkout Layout — Trust Mode
@@ -8,20 +9,26 @@ import { Outlet } from "react-router";
  * and strip all dynamic club accents during payment.
  *
  * Structure: Minimal header (logo + step indicator) → <Outlet /> → Minimal footer
- *
- * TODO: Implement step indicator, minimal header/footer
  */
 export default function CheckoutLayout() {
+  const [searchParams] = useSearchParams();
+  
+  // Determine current step from URL, default to 1 (Detail Pesanan)
+  const stepParam = parseInt(searchParams.get("step") || "1", 10);
+  const currentStep = (stepParam >= 1 && stepParam <= 4 ? stepParam : 1) as CheckoutStep;
+
   return (
     <div
       data-trust-mode="true"
-      className="flex min-h-screen flex-col bg-[var(--color-neutral-50)]"
+      className="flex min-h-screen flex-col bg-surface-primary"
     >
-      {/* TODO: <CheckoutHeader /> with step indicator */}
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
+      <CheckoutNavbar currentStep={currentStep} />
+      
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
         <Outlet />
       </main>
-      {/* TODO: <CheckoutFooter /> */}
+
+      <CheckoutFooter />
     </div>
   );
 }
