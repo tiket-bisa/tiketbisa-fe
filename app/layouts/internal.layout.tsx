@@ -27,6 +27,7 @@ function InternalShell() {
     <div className="flex min-h-screen flex-col bg-surface-primary" data-theme="light">
       <NavbarInternal
         userEmail={user?.email}
+        brandName={user?.brand_name}
         onLogout={handleLogout}
         onScanTicket={handleScanTicket}
       />
@@ -43,7 +44,7 @@ function InternalShell() {
 export default function InternalLayout() {
   return (
     <AuthProvider>
-      <AuthGuard>
+      <AuthGuard requiredRole="partner">
         <InternalShell />
       </AuthGuard>
     </AuthProvider>

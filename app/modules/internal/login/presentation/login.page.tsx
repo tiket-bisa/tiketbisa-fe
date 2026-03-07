@@ -1,17 +1,28 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { Button } from "~/core/design-system/components";
+import { Button, Select } from "~/core/design-system/components";
 import { AuthProvider, useAuth } from "~/core/auth";
+import { mockBrands } from "../../brand-selection/infrastructure/brand.mock";
+
+const brandOptions = mockBrands.map((b) => ({ value: b.slug, label: b.name }));
 
 function LoginContent() {
-  const { user, login } = useAuth();
+  const { user, loginAsPartner } = useAuth();
   const navigate = useNavigate();
+  const [selectedBrand, setSelectedBrand] = useState(brandOptions[0].value);
 
   useEffect(() => {
-    if (user) {
-      navigate("/internal/partner/brands", { replace: true });
+    if (user && user.role === "partner") {
+      navigate("/internal/partner", { replace: true });
     }
   }, [user, navigate]);
+
+  const handleLogin = () => {
+    const brand = mockBrands.find((b) => b.slug === selectedBrand);
+    if (brand) {
+      loginAsPartner(brand.slug, brand.name);
+    }
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface-primary px-4" data-theme="light">
@@ -23,9 +34,22 @@ function LoginContent() {
             alt="Tiketbisa"
             className="h-12 w-auto"
           />
-          <p className="text-text-secondary text-base">
-            Welcome to TiketBisa Internal App
-          </p>
+          <div>
+            <p className="text-text-primary text-lg font-semibold">Partner Dashboard</p>
+            <p className="text-text-secondary text-sm mt-1">
+              Login sebagai partner Tiketbisa
+            </p>
+          </div>
+        </div>
+
+        {/* Brand Selection (mock — in production, determined by OAuth) */}
+        <div className="text-left">
+          <Select
+            options={brandOptions}
+            value={selectedBrand}
+            onChange={(e) => setSelectedBrand(e.target.value)}
+            label="Pilih Brand"
+          />
         </div>
 
         {/* Google Sign In */}
@@ -33,7 +57,7 @@ function LoginContent() {
           variant="secondary"
           size="lg"
           fullWidth
-          onClick={login}
+          onClick={handleLogin}
           className="flex items-center justify-center gap-3"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
@@ -61,7 +85,7 @@ function LoginContent() {
   );
 }
 
-/** Internal — Login (Standalone, no layout) */
+/** Internal — Partner Login (Standalone, no layout) */
 export default function LoginPage() {
   return (
     <AuthProvider>

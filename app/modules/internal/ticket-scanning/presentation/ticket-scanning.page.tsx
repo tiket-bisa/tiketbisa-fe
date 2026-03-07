@@ -1,5 +1,6 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Card, Badge, Button, Tabs } from "~/core/design-system/components";
+import { useAuth } from "~/core/auth";
 import { mockTicketDashboard } from "../infrastructure/ticket.mock";
 import type { TicketScanResult } from "~/core/types";
 
@@ -8,7 +9,7 @@ const tabItems = [
   { value: "dashboard", label: "Dashboard Tiket" },
 ];
 
-/** Internal — Ticket Scanning (Scan Tiket) */
+/** Partner — Ticket Scanning (filtered by partner's brand) */
 export default function TicketScanningPage() {
   const [tab, setTab] = useState("scan");
 
@@ -216,11 +217,17 @@ function ScanSection() {
   );
 }
 
-/** Ticket dashboard showing available vs checked-in */
+/** Ticket dashboard showing available vs checked-in (filtered by partner brand) */
 function DashboardSection() {
+  const { user } = useAuth();
+  const brandTickets = useMemo(
+    () => mockTicketDashboard.filter((t) => t.brand_slug === user?.brand_slug),
+    [user?.brand_slug],
+  );
+
   return (
     <div className="space-y-4">
-      {mockTicketDashboard.map((summary) => {
+      {brandTickets.map((summary) => {
         const soldPercent =
           summary.total_tickets > 0
             ? Math.round((summary.sold_tickets / summary.total_tickets) * 100)

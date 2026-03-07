@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Link } from "react-router";
 import { Card, Badge, SearchInput, Pagination, Select } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
+import { useAuth } from "~/core/auth";
 import { mockTransactions } from "../infrastructure/transaction.mock";
 
 const STATUS_MAP = {
@@ -21,24 +22,29 @@ const statusFilterOptions = [
   { value: "refunded", label: "Refund" },
 ];
 
-/** Internal — Dashboard / Beranda */
+/** Partner — Dashboard / Beranda (filtered by partner's brand) */
 export default function DashboardPage() {
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Summary stats
-  const totalRevenue = mockTransactions
+  // Filter transactions to only this partner's brand
+  const brandTransactions = useMemo(
+    () => mockTransactions.filter((t) => t.brand_slug === user?.brand_slug),
+    [user?.brand_slug],
+  );
+
+  const totalRevenue = brandTransactions
     .filter((t) => t.status === "paid")
     .reduce((sum, t) => sum + t.total_price, 0);
-  const totalTransactions = mockTransactions.length;
-  const totalTicketsSold = mockTransactions
+  const totalTransactions = brandTransactions.length;
+  const totalTicketsSold = brandTransactions
     .filter((t) => t.status === "paid")
     .reduce((sum, t) => sum + t.quantity, 0);
 
-  // Filter & search
   const filtered = useMemo(() => {
-    return mockTransactions.filter((t) => {
+    return brandTransactions.filter((t) => {
       const matchesSearch =
         t.buyer_name.toLowerCase().includes(search.toLowerCase()) ||
         t.event_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -46,7 +52,7 @@ export default function DashboardPage() {
       const matchesStatus = statusFilter === "all" || t.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [search, statusFilter]);
+  }, [brandTransactions, search, statusFilter]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paged = filtered.slice(
@@ -56,7 +62,12 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-text-primary text-2xl font-bold">Beranda</h1>
+      <div>
+        <h1 className="text-text-primary text-2xl font-bold">Beranda</h1>
+        {user?.brand_name && (
+          <p className="text-text-tertiary text-sm mt-1">{user.brand_name}</p>
+        )}
+      </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
