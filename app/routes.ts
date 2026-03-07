@@ -30,8 +30,38 @@ export default [
     ),
   ]),
 
+  // ─── Admin Login (Standalone) ───
+  route("admin/login", "modules/admin/login/presentation/login.page.tsx"),
+
+  // ─── Admin Layout (internal team — sees all brands) ───
+  layout("layouts/admin.layout.tsx", [
+    route(
+      "admin",
+      "modules/admin/dashboard/presentation/dashboard.page.tsx",
+      { index: true },
+    ),
+    route(
+      "admin/brands",
+      "modules/admin/brands/presentation/brands.page.tsx",
+    ),
+    route(
+      "admin/events",
+      "modules/admin/events/presentation/events.page.tsx",
+    ),
+    route(
+      "admin/analytics",
+      "modules/admin/analytics/presentation/analytics.page.tsx",
+    ),
+    route(
+      "admin/transactions/:id",
+      "modules/admin/transactions/presentation/transaction-details.page.tsx",
+    ),
+  ]),
+
+  // ─── Partner Login (Standalone) ───
   route("partner/login", "modules/internal/login/presentation/login.page.tsx"),
 
+  // ─── Partner Layout (each partner — sees only own brand) ───
   layout("layouts/internal.layout.tsx", [
     route(
       "partner",

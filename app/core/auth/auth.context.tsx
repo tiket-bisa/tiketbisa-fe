@@ -1,21 +1,27 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 
+export type AuthRole = "admin" | "partner";
+
 export interface AuthUser {
   email: string;
   name: string;
   picture?: string;
+  role: AuthRole;
+  brand_slug?: string; // only for partner role
+  brand_name?: string; // only for partner role
 }
 
 interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
-  login: () => void;
+  loginAsAdmin: () => void;
+  loginAsPartner: (brandSlug: string, brandName: string) => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const AUTH_STORAGE_KEY = "tiketbisa_partner_auth";
+const AUTH_STORAGE_KEY = "tiketbisa_auth";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -35,13 +41,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = useCallback(() => {
-    // TODO: Integrate real Google OAuth flow
-    // For now, simulate a login
+  const loginAsAdmin = useCallback(() => {
     const mockUser: AuthUser = {
-      email: "partner@tiketbisa.com",
-      name: "Partner User",
-      picture: undefined,
+      email: "admin@tiketbisa.com",
+      name: "Admin Tiketbisa",
+      role: "admin",
+    };
+    setUser(mockUser);
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(mockUser));
+  }, []);
+
+  const loginAsPartner = useCallback((brandSlug: string, brandName: string) => {
+    const mockUser: AuthUser = {
+      email: `partner@${brandSlug}.com`,
+      name: brandName,
+      role: "partner",
+      brand_slug: brandSlug,
+      brand_name: brandName,
     };
     setUser(mockUser);
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(mockUser));
@@ -53,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, loginAsAdmin, loginAsPartner, logout }}>
       {children}
     </AuthContext.Provider>
   );

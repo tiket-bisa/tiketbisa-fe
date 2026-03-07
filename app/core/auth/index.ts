@@ -1,2 +1,2 @@
-export { AuthProvider, useAuth, type AuthUser } from "./auth.context";
+export { AuthProvider, useAuth, type AuthUser, type AuthRole } from "./auth.context";
 export { AuthGuard } from "./auth-guard";
