@@ -16,6 +16,7 @@ export interface EventSummary {
   id: string;
   name: string;
   brand: string;
+  brand_slug?: string;
   description: string;
   image_url?: string;
   date: string;
@@ -41,6 +42,7 @@ export interface Transaction {
   id: string;
   event_id: string;
   event_name: string;
+  brand_slug?: string;
   buyer_name: string;
   buyer_email: string;
   buyer_phone?: string;
@@ -82,6 +84,7 @@ export interface TicketScanResult {
 export interface TicketDashboardSummary {
   event_id: string;
   event_name: string;
+  brand_slug?: string;
   total_tickets: number;
   available_tickets: number;
   checked_in_tickets: number;

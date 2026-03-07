@@ -1,11 +1,12 @@
 import { Navigate } from "react-router";
-import { useAuth } from "./auth.context";
+import { useAuth, type AuthRole } from "./auth.context";
 
-/**
- * Guard that redirects unauthenticated users to /partner/login.
- * Wrap protected routes/layouts with this component.
- */
-export function AuthGuard({ children }: { children: React.ReactNode }) {
+interface AuthGuardProps {
+  children: React.ReactNode;
+  requiredRole?: AuthRole;
+}
+
+export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
@@ -17,7 +18,14 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) {
-    return <Navigate to="/partner/login" replace />;
+    const loginPath = requiredRole === "admin" ? "/admin/login" : "/partner/login";
+    return <Navigate to={loginPath} replace />;
+  }
+
+  // Role mismatch: redirect to the correct dashboard
+  if (requiredRole && user.role !== requiredRole) {
+    const redirectPath = user.role === "admin" ? "/admin" : "/partner";
+    return <Navigate to={redirectPath} replace />;
   }
 
   return <>{children}</>;

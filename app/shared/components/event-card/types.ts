@@ -10,3 +10,8 @@ export interface EventCardData {
   brandName?: string;
   brandLogoUrl?: string;
 }
+
+export interface EventCardProps {
+  event: EventCardData;
+  className?: string;
+}
