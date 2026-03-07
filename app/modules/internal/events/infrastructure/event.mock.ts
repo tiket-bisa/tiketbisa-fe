@@ -1,0 +1,55 @@
+import type { EventSummary } from "~/core/types";
+
+/** Mock events for development */
+export const mockEvents: EventSummary[] = [
+  {
+    id: "evt-1",
+    name: "Adhyaksa FC vs Persija Jakarta",
+    brand: "Adhyaksa FC",
+    description: "Pertandingan Liga 1 pekan ke-12",
+    date: "2026-03-15",
+    location: "Stadion Utama",
+    time: "19:00 WIB",
+    status: "published",
+  },
+  {
+    id: "evt-2",
+    name: "Adhyaksa FC vs Persib Bandung",
+    brand: "Adhyaksa FC",
+    description: "Pertandingan Liga 1 pekan ke-14",
+    date: "2026-03-29",
+    location: "Stadion Utama",
+    time: "15:30 WIB",
+    status: "published",
+  },
+  {
+    id: "evt-3",
+    name: "Adhyaksa FC vs Arema FC",
+    brand: "Adhyaksa FC",
+    description: "Pertandingan Liga 1 pekan ke-16",
+    date: "2026-04-12",
+    location: "Stadion Utama",
+    time: "19:00 WIB",
+    status: "draft",
+  },
+  {
+    id: "evt-4",
+    name: "Fan Meet & Greet",
+    brand: "Adhyaksa FC",
+    description: "Acara meet & greet dengan pemain Adhyaksa FC",
+    date: "2026-03-20",
+    location: "Hall A Convention Center",
+    time: "10:00 WIB",
+    status: "published",
+  },
+  {
+    id: "evt-5",
+    name: "Adhyaksa FC vs PSM Makassar",
+    brand: "Adhyaksa FC",
+    description: "Pertandingan Liga 1 pekan ke-10 (selesai)",
+    date: "2026-02-15",
+    location: "Stadion Utama",
+    time: "19:00 WIB",
+    status: "completed",
+  },
+];

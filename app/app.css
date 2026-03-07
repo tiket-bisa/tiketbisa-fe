@@ -132,6 +132,9 @@ body {
   --color-warning-text: #d97706;
   --color-destructive-bg: #fef2f2;
   --color-destructive-text: #dc2626;
+
+  --color-brand-primary-subtle: #ede9fe;
+  --color-brand-primary: #4c3fd1;
 }
 
 /* ── 5 & 11. Trust Mode (Checkout) ──
