@@ -30,8 +30,10 @@ export default [
     ),
   ]),
 
+  // ─── Partner Login (Standalone) ───
   route("partner/login", "modules/internal/login/presentation/login.page.tsx"),
 
+  // ─── Partner Layout (each partner — sees only own brand) ───
   layout("layouts/internal.layout.tsx", [
     route(
       "partner",

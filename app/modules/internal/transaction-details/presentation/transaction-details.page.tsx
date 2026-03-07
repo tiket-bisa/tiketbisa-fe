@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router";
 import { Card, Badge, Button } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
+import { useAuth } from "~/core/auth";
 import { mockTransactions } from "../../dashboard/infrastructure/transaction.mock";
 
 const STATUS_MAP = {
@@ -10,10 +11,11 @@ const STATUS_MAP = {
   refunded: { label: "Refund", variant: "default" as const },
 };
 
-/** Internal — Transaction Details */
+/** Partner — Transaction Details (only shows partner's own transactions) */
 export default function TransactionDetailsPage() {
   const { id } = useParams<{ id: string }>();
-  const tx = mockTransactions.find((t) => t.id === id);
+  const { user } = useAuth();
+  const tx = mockTransactions.find((t) => t.id === id && t.brand_slug === user?.brand_slug);
 
   if (!tx) {
     return (
