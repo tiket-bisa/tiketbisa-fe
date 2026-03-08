@@ -8,8 +8,8 @@ export interface NavbarAdminProps {
 }
 
 const navLinks = [
-  { to: "/partner/brands", label: "Pilih Brand" },
-  { to: "/partner/access", label: "Konfigurasi Akses" },
+  { to: "/internal/partner/brands", label: "Pilih Brand" },
+  { to: "/internal/partner/access", label: "Konfigurasi Akses" },
 ] as const;
 
 export function NavbarAdmin({
@@ -26,7 +26,7 @@ export function NavbarAdmin({
       <nav className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link
-          to="/partner/brands"
+          to="/internal/partner/brands"
           className="shrink-0"
           aria-label="Tiketbisa admin"
         >

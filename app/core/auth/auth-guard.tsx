@@ -18,13 +18,13 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
   }
 
   if (!user) {
-    const loginPath = requiredRole === "admin" ? "/admin/login" : "/partner/login";
+    const loginPath = requiredRole === "admin" ? "/internal/admin/login" : "/internal/partner/login";
     return <Navigate to={loginPath} replace />;
   }
 
   // Role mismatch: redirect to the correct dashboard
   if (requiredRole && user.role !== requiredRole) {
-    const redirectPath = user.role === "admin" ? "/admin" : "/partner";
+    const redirectPath = user.role === "admin" ? "/internal/admin" : "/internal/partner";
     return <Navigate to={redirectPath} replace />;
   }
 

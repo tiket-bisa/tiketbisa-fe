@@ -31,33 +31,33 @@ export default [
   ]),
 
   // ─── Partner Login (Standalone) ───
-  route("partner/login", "modules/internal/login/presentation/login.page.tsx"),
+  route("internal/partner/login", "modules/internal/login/presentation/login.page.tsx"),
 
   // ─── Partner Layout (each partner — sees only own brand) ───
   layout("layouts/internal.layout.tsx", [
     route(
-      "partner",
+      "internal/partner",
       "modules/internal/dashboard/presentation/dashboard.page.tsx",
       { index: true },
     ),
     route(
-      "partner/brands",
+      "internal/partner/brands",
       "modules/internal/brand-selection/presentation/brand-selection.page.tsx",
     ),
     route(
-      "partner/events",
+      "internal/partner/events",
       "modules/internal/events/presentation/events.page.tsx",
     ),
     route(
-      "partner/analytics",
+      "internal/partner/analytics",
       "modules/internal/revenue-analytics/presentation/revenue-analytics.page.tsx",
     ),
     route(
-      "partner/transactions/:id",
+      "internal/partner/transactions/:id",
       "modules/internal/transaction-details/presentation/transaction-details.page.tsx",
     ),
     route(
-      "partner/scan",
+      "internal/partner/scan",
       "modules/internal/ticket-scanning/presentation/ticket-scanning.page.tsx",
     ),
   ]),

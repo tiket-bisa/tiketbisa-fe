@@ -13,7 +13,7 @@ function LoginContent() {
 
   useEffect(() => {
     if (user && user.role === "partner") {
-      navigate("/partner", { replace: true });
+      navigate("/internal/partner", { replace: true });
     }
   }, [user, navigate]);
 
