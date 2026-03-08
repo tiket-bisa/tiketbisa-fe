@@ -111,7 +111,8 @@ export default function AdminDashboardPage() {
                   <th className="text-left px-4 py-3 font-medium">ID</th>
                   <th className="text-left px-4 py-3 font-medium">Event</th>
                   <th className="text-left px-4 py-3 font-medium">Pembeli</th>
-                  <th className="text-left px-4 py-3 font-medium">Tiket</th>
+                  <th className="text-left px-4 py-3 font-medium">Kategori</th>
+                  <th className="text-center px-4 py-3 font-medium">Qty</th>
                   <th className="text-right px-4 py-3 font-medium">Total</th>
                   <th className="text-center px-4 py-3 font-medium">Status</th>
                   <th className="text-center px-4 py-3 font-medium">Aksi</th>
@@ -125,7 +126,8 @@ export default function AdminDashboardPage() {
                       <td className="px-4 py-3 text-text-secondary font-mono text-xs">{tx.id}</td>
                       <td className="px-4 py-3 text-text-primary">{tx.event_name}</td>
                       <td className="px-4 py-3 text-text-primary">{tx.buyer_name}</td>
-                      <td className="px-4 py-3 text-text-secondary">{tx.ticket_name} &times; {tx.quantity}</td>
+                      <td className="px-4 py-3 text-text-secondary">{tx.ticket_name}</td>
+                      <td className="px-4 py-3 text-text-secondary text-center">{tx.quantity}</td>
                       <td className="px-4 py-3 text-text-primary text-right font-medium">{formatIDR(tx.total_price)}</td>
                       <td className="px-4 py-3 text-center"><Badge variant={status.variant}>{status.label}</Badge></td>
                       <td className="px-4 py-3 text-center">
@@ -138,7 +140,7 @@ export default function AdminDashboardPage() {
                 })}
                 {paged.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-12 text-center text-text-tertiary">Tidak ada transaksi ditemukan</td>
+                    <td colSpan={8} className="px-4 py-12 text-center text-text-tertiary">Tidak ada transaksi ditemukan</td>
                   </tr>
                 )}
               </tbody>
