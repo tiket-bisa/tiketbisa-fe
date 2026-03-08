@@ -9,7 +9,7 @@ function LoginContent() {
 
   useEffect(() => {
     if (user) {
-      navigate("/partner/brands", { replace: true });
+      navigate("/internal/partner/brands", { replace: true });
     }
   }, [user, navigate]);
 

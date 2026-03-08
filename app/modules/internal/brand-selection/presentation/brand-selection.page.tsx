@@ -42,7 +42,7 @@ export default function BrandSelectionPage() {
     // Navigate to the partner dashboard for this brand
     // Store selected brand in session
     sessionStorage.setItem("tiketbisa_selected_brand", brandSlug);
-    navigate("/partner");
+    navigate("/internal/partner");
   };
 
   return (

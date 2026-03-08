@@ -8,7 +8,7 @@ function AdminShell() {
 
   const handleLogout = () => {
     logout();
-    navigate("/admin/login");
+    navigate("/internal/admin/login");
   };
 
   return (

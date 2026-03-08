@@ -31,29 +31,29 @@ export default [
   ]),
 
   // ─── Admin Login (Standalone) ───
-  route("admin/login", "modules/admin/login/presentation/login.page.tsx"),
+  route("internal/admin/login", "modules/admin/login/presentation/login.page.tsx"),
 
   // ─── Admin Layout (internal team — sees all brands) ───
   layout("layouts/admin.layout.tsx", [
     route(
-      "admin",
+      "internal/admin",
       "modules/admin/dashboard/presentation/dashboard.page.tsx",
       { index: true },
     ),
     route(
-      "admin/brands",
+      "internal/admin/brands",
       "modules/admin/brands/presentation/brands.page.tsx",
     ),
     route(
-      "admin/events",
+      "internal/admin/events",
       "modules/admin/events/presentation/events.page.tsx",
     ),
     route(
-      "admin/analytics",
+      "internal/admin/analytics",
       "modules/admin/analytics/presentation/analytics.page.tsx",
     ),
     route(
-      "admin/transactions/:id",
+      "internal/admin/transactions/:id",
       "modules/admin/transactions/presentation/transaction-details.page.tsx",
     ),
   ]),

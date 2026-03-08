@@ -8,10 +8,10 @@ export interface NavbarAdminProps {
 }
 
 const navLinks: readonly { to: string; label: string; exact?: boolean }[] = [
-  { to: "/admin", label: "Beranda", exact: true },
-  { to: "/admin/brands", label: "Brand" },
-  { to: "/admin/events", label: "Event" },
-  { to: "/admin/analytics", label: "Analitik" },
+  { to: "/internal/admin", label: "Beranda", exact: true },
+  { to: "/internal/admin/brands", label: "Brand" },
+  { to: "/internal/admin/events", label: "Event" },
+  { to: "/internal/admin/analytics", label: "Analitik" },
 ];
 
 export function NavbarAdmin({
@@ -28,7 +28,7 @@ export function NavbarAdmin({
       <nav className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link
-          to="/admin"
+          to="/internal/admin"
           className="shrink-0"
           aria-label="Tiketbisa admin"
         >

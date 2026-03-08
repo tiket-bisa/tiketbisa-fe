@@ -19,7 +19,7 @@ export default function TransactionDetailsPage() {
     return (
       <div className="space-y-4">
         <Link
-          to="/partner"
+          to="/internal/partner"
           className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1"
         >
           <span className="material-symbols-outlined text-sm">arrow_back</span>
@@ -41,7 +41,7 @@ export default function TransactionDetailsPage() {
     <div className="space-y-6">
       {/* Back link */}
       <Link
-        to="/partner"
+        to="/internal/partner"
         className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1"
       >
         <span className="material-symbols-outlined text-sm">arrow_back</span>

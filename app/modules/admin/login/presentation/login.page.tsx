@@ -9,7 +9,7 @@ function AdminLoginContent() {
 
   useEffect(() => {
     if (user && user.role === "admin") {
-      navigate("/admin", { replace: true });
+      navigate("/internal/admin", { replace: true });
     }
   }, [user, navigate]);
 
