@@ -69,6 +69,10 @@ export default [
       { index: true },
     ),
     route(
+      "internal/partner/brands",
+      "modules/internal/brand-selection/presentation/brand-selection.page.tsx",
+    ),
+    route(
       "internal/partner/events",
       "modules/internal/events/presentation/events.page.tsx",
     ),
