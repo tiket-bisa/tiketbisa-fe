@@ -37,3 +37,14 @@ export interface PaymentSelection {
   agreedToPrivacy: boolean;
   promoCode?: string;
 }
+
+export type OrderStatus = "PENDING" | "PAID" | "EXPIRED" | "CANCELLED";
+
+export interface OrderResponse {
+  orderId: string;
+  status: OrderStatus;
+  totalAmount: number;
+  paymentMethod: PaymentMethod;
+  expiryTime: string;
+  paymentInstructions?: string;
+}

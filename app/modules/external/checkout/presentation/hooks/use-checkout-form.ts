@@ -1,16 +1,33 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { BuyerInfo } from "../../domain/checkout.types";
 
+const STORAGE_KEY = "tiketbisa_buyer_info";
+
 export function useCheckoutForm() {
-  const [buyerInfo, setBuyerInfo] = useState<BuyerInfo>({
-    fullName: "",
-    email: "",
-    phoneNumber: "",
-    identityType: "KTP",
-    identityNumber: "",
+  const [buyerInfo, setBuyerInfo] = useState<BuyerInfo>(() => {
+    if (typeof window === "undefined") return {
+      fullName: "",
+      email: "",
+      phoneNumber: "",
+      identityType: "KTP",
+      identityNumber: "",
+    };
+    
+    const saved = sessionStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : {
+      fullName: "",
+      email: "",
+      phoneNumber: "",
+      identityType: "KTP",
+      identityNumber: "",
+    };
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof BuyerInfo, string>>>({});
+
+  useEffect(() => {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(buyerInfo));
+  }, [buyerInfo]);
 
   const validate = useCallback((): boolean => {
     const newErrors: Partial<Record<keyof BuyerInfo, string>> = {};
@@ -57,7 +74,6 @@ export function useCheckoutForm() {
 
   const handleInputChange = useCallback((field: keyof BuyerInfo, value: string) => {
     setBuyerInfo((prev) => ({ ...prev, [field]: value }));
-    // Clear error when user types
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
