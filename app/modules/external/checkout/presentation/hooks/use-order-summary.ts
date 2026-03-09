@@ -27,7 +27,7 @@ export function useOrderSummary(event: Event, searchParams: URLSearchParams) {
     }
 
     const tax = subtotal * 0.1;
-    const serviceFee = subtotal > 0 ? 154800 : 0; 
+    const serviceFee = subtotal > 0 ? 10000 : 0; 
     const adminFee = subtotal > 0 ? 5000 : 0;
 
     return {
