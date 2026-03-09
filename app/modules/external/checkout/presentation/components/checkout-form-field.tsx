@@ -33,7 +33,7 @@ export function CheckoutFormField({
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <label htmlFor={id} className="text-sm font-bold text-gray-700 ml-1">
+      <label htmlFor={id} className="text-sm font-bold text-gray-500 ml-1">
         {label}
       </label>
       <Input

@@ -7,6 +7,7 @@ export interface OrderConfirmationProps {
   summary: OrderSummary;
   paymentMethod?: PaymentMethod;
   onNext: () => void;
+  onBack: () => void;
   isLoading?: boolean;
 }
 
@@ -15,6 +16,7 @@ export function OrderConfirmation({
   summary,
   paymentMethod,
   onNext,
+  onBack,
   isLoading,
 }: OrderConfirmationProps) {
   return (
@@ -87,7 +89,7 @@ export function OrderConfirmation({
                 </div>
               </div>
               <button 
-                onClick={() => window.history.back()}
+                onClick={onBack}
                 className="text-sm font-black text-brand-primary hover:underline self-start sm:self-center"
               >
                 Ubah Metode
@@ -97,18 +99,18 @@ export function OrderConfirmation({
         </div>
       </Card>
 
-      {/* Action Buttons */}
-      <div className="flex flex-col sm:flex-row gap-4 md:gap-6">
+      {/* Action Buttons - Hidden on Mobile (Handled by Sticky Bar) */}
+      <div className="hidden lg:flex flex-col sm:flex-row gap-4 md:gap-6">
         <button
-          onClick={() => window.history.back()}
-          className="flex-1 py-5 md:py-6 px-8 border-2 border-gray-200 rounded-2xl md:rounded-[1.5rem] text-gray-500 font-bold text-lg md:text-xl hover:bg-gray-50 transition-all"
+          onClick={onBack}
+          className="flex-1 py-5 md:py-6 px-8 border-2 border-gray-200 rounded-2xl text-gray-500 font-bold text-lg md:text-xl hover:bg-gray-50 transition-all"
         >
           Kembali
         </button>
         <Button
           onClick={onNext}
           isLoading={isLoading}
-          className="flex-[2] py-5 md:py-6 px-8 rounded-2xl md:rounded-[1.5rem] text-lg md:text-xl font-black tracking-tight shadow-xl shadow-brand-primary/20 hover:shadow-brand-primary/30 hover:-translate-y-1 transition-all"
+          className="flex-[2] py-5 md:py-6 px-8 rounded-2xl text-lg md:text-xl font-black tracking-tight shadow-xl shadow-brand-primary/20 hover:shadow-brand-primary/30 hover:-translate-y-1 transition-all"
         >
           Konfirmasi & Bayar Sekarang
         </Button>

@@ -86,7 +86,7 @@ function IdentityField({ data, error, onChange }: IdentityFieldProps) {
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-bold text-gray-700 ml-1">Identitas</label>
+      <label className="text-sm font-bold text-gray-500 ml-1">Identitas</label>
       <div className="grid grid-cols-12 gap-3 items-start">
         <div className="col-span-4">
           <Select
