@@ -16,6 +16,24 @@ export interface OrderItem {
 export interface OrderSummary {
   subtotal: number;
   adminFee: number;
+  serviceFee: number;
+  tax: number;
   totalPrice: number;
   items: OrderItem[];
+}
+
+export type PaymentCategory = "BANK_TRANSFER" | "E_WALLET_QRIS";
+
+export interface PaymentMethod {
+  id: string;
+  name: string;
+  logo: string;
+  category: PaymentCategory;
+}
+
+export interface PaymentSelection {
+  methodId: string | null;
+  agreedToTerms: boolean;
+  agreedToPrivacy: boolean;
+  promoCode?: string;
 }
