@@ -57,4 +57,36 @@ export default [
       "modules/admin/transactions/presentation/transaction-details.page.tsx",
     ),
   ]),
+
+  // ─── Partner Login (Standalone) ───
+  route("internal/partner/login", "modules/internal/login/presentation/login.page.tsx"),
+
+  // ─── Partner Layout (each partner — sees only own brand) ───
+  layout("layouts/internal.layout.tsx", [
+    route(
+      "internal/partner",
+      "modules/internal/dashboard/presentation/dashboard.page.tsx",
+      { index: true },
+    ),
+    route(
+      "internal/partner/brands",
+      "modules/internal/brand-selection/presentation/brand-selection.page.tsx",
+    ),
+    route(
+      "internal/partner/events",
+      "modules/internal/events/presentation/events.page.tsx",
+    ),
+    route(
+      "internal/partner/analytics",
+      "modules/internal/revenue-analytics/presentation/revenue-analytics.page.tsx",
+    ),
+    route(
+      "internal/partner/transactions/:id",
+      "modules/internal/transaction-details/presentation/transaction-details.page.tsx",
+    ),
+    route(
+      "internal/partner/scan",
+      "modules/internal/ticket-scanning/presentation/ticket-scanning.page.tsx",
+    ),
+  ]),
 ] satisfies RouteConfig;

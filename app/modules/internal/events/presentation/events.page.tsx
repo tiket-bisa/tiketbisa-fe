@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Card, Badge, SearchInput, Pagination, Tabs } from "~/core/design-system/components";
+import { useAuth } from "~/core/auth";
 import { mockEvents } from "../infrastructure/event.mock";
 
 const STATUS_MAP = {
@@ -18,21 +19,28 @@ const tabItems = [
 
 const ITEMS_PER_PAGE = 6;
 
-/** Internal — Event Management */
+/** Partner — Event Management (filtered by partner's brand) */
 export default function EventsPage() {
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Filter events to only this partner's brand
+  const brandEvents = useMemo(
+    () => mockEvents.filter((e) => e.brand_slug === user?.brand_slug),
+    [user?.brand_slug],
+  );
+
   const filtered = useMemo(() => {
-    return mockEvents.filter((evt) => {
+    return brandEvents.filter((evt) => {
       const matchesSearch =
         evt.name.toLowerCase().includes(search.toLowerCase()) ||
         evt.description.toLowerCase().includes(search.toLowerCase());
       const matchesTab = tab === "all" || evt.status === tab;
       return matchesSearch && matchesTab;
     });
-  }, [search, tab]);
+  }, [brandEvents, search, tab]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paged = filtered.slice(
@@ -49,8 +57,8 @@ export default function EventsPage() {
         items={tabItems.map((t) => ({
           ...t,
           count: t.value === "all"
-            ? mockEvents.length
-            : mockEvents.filter((e) => e.status === t.value).length,
+            ? brandEvents.length
+            : brandEvents.filter((e) => e.status === t.value).length,
         }))}
         value={tab}
         onChange={(val) => {
