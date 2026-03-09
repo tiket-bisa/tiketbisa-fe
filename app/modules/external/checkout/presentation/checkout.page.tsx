@@ -3,34 +3,53 @@ import { OrderDetailsForm } from "./components/order-details-form";
 import { CheckoutSidebar } from "./components/checkout-sidebar";
 import { EventInfoHeader } from "./components/event-info-header";
 import { CheckoutComingSoon } from "./components/checkout-coming-soon";
+import { PaymentMethodSelection } from "./components/payment-method-selection";
 import { useOrderSummary } from "./hooks/use-order-summary";
 import { useCheckoutForm } from "./hooks/use-checkout-form";
+import { usePaymentSelection } from "./hooks/use-payment-selection";
 import { eventApi } from "../../event/infrastructure/event.api";
+import { paymentApi } from "../infrastructure/payment.api";
 import type { Route } from "./+types/checkout.page";
 
 export async function loader({ params }: Route.LoaderArgs) {
-  const event = await eventApi.getEventById(params.eventId);
+  const [event, paymentMethods] = await Promise.all([
+    eventApi.getEventById(params.eventId),
+    paymentApi.getPaymentMethods(),
+  ]);
+
   if (!event) throw new Response("Not Found", { status: 404 });
-  return { event };
+  return { event, paymentMethods };
 }
 
 export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
-  const { event } = loaderData;
+  const { event, paymentMethods } = loaderData;
   const [searchParams, setSearchParams] = useSearchParams();
   const currentStep = parseInt(searchParams.get("step") || "1", 10);
 
-  // Clean Logic using hooks
+  // Hooks for logic
   const summary = useOrderSummary(event, searchParams);
   const { buyerInfo, errors, validate, handleInputChange } = useCheckoutForm();
+  const { 
+    selection, 
+    setMethodId, 
+    setAgreedToTerms, 
+    setAgreedToPrivacy 
+  } = usePaymentSelection();
 
   const handleNext = () => {
-    if (validate()) {
-      setSearchParams({ step: (currentStep + 1).toString() });
+    if (currentStep === 1) {
+      if (validate()) {
+        setSearchParams({ ...Object.fromEntries(searchParams), step: "2" });
+      }
+    } else if (currentStep === 2) {
+      if (selection.methodId && selection.agreedToTerms && selection.agreedToPrivacy) {
+        setSearchParams({ ...Object.fromEntries(searchParams), step: "3" });
+      }
     }
   };
 
-  // Step 2+ View 
-  if (currentStep !== 1) {
+  // Step 3+ View 
+  if (currentStep > 2) {
     return <CheckoutComingSoon />;
   }
 
@@ -40,14 +59,23 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
       <div className="lg:col-span-8 space-y-8">
         <EventInfoHeader event={event} />
 
-        <OrderDetailsForm 
-          data={buyerInfo} 
-          errors={errors}
-          onChange={handleInputChange} 
-          className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100"
-        />
+        {currentStep === 1 ? (
+          <OrderDetailsForm 
+            data={buyerInfo} 
+            errors={errors}
+            onChange={handleInputChange} 
+            className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100"
+          />
+        ) : (
+          <PaymentMethodSelection
+            methods={paymentMethods}
+            selectedMethodId={selection.methodId}
+            onSelect={setMethodId}
+            className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100"
+          />
+        )}
         
-        <ImportantGuides />
+        {currentStep === 1 && <ImportantGuides />}
       </div>
 
       {/* Sidebar */}
@@ -55,9 +83,15 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
         <CheckoutSidebar 
           summary={summary} 
           onNext={handleNext} 
+          step={currentStep}
+          agreedToTerms={selection.agreedToTerms}
+          agreedToPrivacy={selection.agreedToPrivacy}
+          onToggleTerms={setAgreedToTerms}
+          onTogglePrivacy={setAgreedToPrivacy}
+          isMethodSelected={!!selection.methodId}
         />
         
-        <PaymentPartners />
+        {currentStep === 1 && <PaymentPartners />}
       </aside>
     </div>
   );

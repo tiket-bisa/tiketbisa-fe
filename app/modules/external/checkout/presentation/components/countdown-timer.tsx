@@ -26,18 +26,19 @@ export function CountdownTimer({ initialMinutes = 15, onExpire, className = "" }
   const seconds = timeLeft % 60;
 
   return (
-    <div className={`flex items-center justify-between p-5 bg-brand-primary/[0.03] border border-brand-primary/10 rounded-2xl ${className}`}>
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-brand-primary/10 rounded-xl">
-          <svg className="h-5 w-5 text-brand-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </div>
-        <span className="text-sm font-bold text-gray-700">Selesaikan dalam</span>
-      </div>
-      <span className="text-xl font-mono font-black text-brand-primary">
+    <div className={`flex items-center justify-center gap-6 py-5 px-8 bg-white border border-gray-100 rounded-3xl shadow-sm ${className}`}>
+      <span className="text-2xl font-black text-gray-900 font-mono tracking-tight">
         {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
       </span>
+      <div className="h-6 w-[2px] bg-gray-100" />
+      <div className="flex flex-col">
+        <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] leading-none">
+          Sisa Waktu
+        </span>
+        <span className="text-xs font-bold text-gray-600 mt-1 uppercase tracking-tighter">
+          Batas Waktu Tersisa
+        </span>
+      </div>
     </div>
   );
 }
