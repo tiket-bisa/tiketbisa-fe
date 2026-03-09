@@ -26,11 +26,16 @@ export function useOrderSummary(event: Event, searchParams: URLSearchParams) {
       }
     }
 
+    const tax = subtotal * 0.1;
+    const serviceFee = subtotal > 0 ? 154800 : 0; 
     const adminFee = subtotal > 0 ? 5000 : 0;
+
     return {
       subtotal,
       adminFee,
-      totalPrice: subtotal + adminFee,
+      serviceFee,
+      tax,
+      totalPrice: subtotal + adminFee + serviceFee + tax,
       items,
     };
   }, [event.tickets, searchParams]);
