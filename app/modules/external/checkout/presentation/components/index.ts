@@ -9,3 +9,4 @@ export * from "./payment-method-selection";
 export * from "./checkout-sticky-bar";
 export * from "./order-summary-card";
 export * from "./payment-extras";
+export * from "./payment-instruction";
