@@ -12,11 +12,16 @@ function AdminShell() {
     navigate("/internal/admin/login");
   };
 
+  const handleScanTicket = () => {
+    navigate("/internal/admin/scan");
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-surface-primary" data-theme="light">
       <NavbarAdmin
         userEmail={user?.email}
         onLogout={handleLogout}
+        onScanTicket={handleScanTicket}
       />
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
         <Outlet />

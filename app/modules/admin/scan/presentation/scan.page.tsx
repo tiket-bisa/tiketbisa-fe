@@ -1,8 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Card, Tabs } from "~/core/design-system/components";
-import { useAuth } from "~/core/auth";
-import { mockTicketDashboard } from "../infrastructure/ticket.mock";
-import { ScanSection, QrGeneratorSection } from "./components";
+import { mockTicketDashboard } from "~/modules/internal/ticket-scanning/infrastructure/ticket.mock";
+import { ScanSection, QrGeneratorSection } from "~/modules/internal/ticket-scanning/presentation/components";
 
 const tabItems = [
   { value: "scan", label: "Scan Tiket" },
@@ -10,8 +9,8 @@ const tabItems = [
   { value: "dashboard", label: "Dashboard Tiket" },
 ];
 
-/** Partner — Ticket Scanning (filtered by partner's brand) */
-export default function TicketScanningPage() {
+/** Admin — Ticket Scanning (sees all brands) */
+export default function AdminScanPage() {
   const [tab, setTab] = useState("scan");
 
   return (
@@ -22,22 +21,16 @@ export default function TicketScanningPage() {
 
       {tab === "scan" && <ScanSection />}
       {tab === "generate" && <QrGeneratorSection />}
-      {tab === "dashboard" && <DashboardSection />}
+      {tab === "dashboard" && <AdminDashboardSection />}
     </div>
   );
 }
 
-/** Ticket dashboard showing available vs checked-in (filtered by partner brand) */
-function DashboardSection() {
-  const { user } = useAuth();
-  const brandTickets = useMemo(
-    () => mockTicketDashboard.filter((t) => t.brand_slug === user?.brand_slug),
-    [user?.brand_slug],
-  );
-
+/** Ticket dashboard showing all brands (no brand_slug filter) */
+function AdminDashboardSection() {
   return (
     <div className="space-y-4">
-      {brandTickets.map((summary) => {
+      {mockTicketDashboard.map((summary) => {
         const soldPercent =
           summary.total_tickets > 0
             ? Math.round((summary.sold_tickets / summary.total_tickets) * 100)
