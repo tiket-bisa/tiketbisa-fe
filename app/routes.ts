@@ -53,6 +53,10 @@ export default [
       "modules/admin/analytics/presentation/analytics.page.tsx",
     ),
     route(
+      "internal/admin/scan",
+      "modules/admin/scan/presentation/scan.page.tsx",
+    ),
+    route(
       "internal/admin/transactions/:id",
       "modules/admin/transactions/presentation/transaction-details.page.tsx",
     ),

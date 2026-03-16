@@ -73,11 +73,12 @@ export interface RevenueDataPoint {
 /** Ticket Scan Result */
 export interface TicketScanResult {
   ticket_id: string;
-  event_name: string;
-  ticket_name: string;
-  buyer_name: string;
+  event_name?: string;
+  ticket_name?: string;
+  buyer_name?: string;
   status: "valid" | "already_checked_in" | "invalid" | "expired";
   checked_in_at?: string;
+  message?: string;
 }
 
 /** Ticket dashboard summary */
