@@ -6,6 +6,7 @@ export interface EventCardData {
   imageUrl: string;
   date: string;
   location: string;
+  minPrice?: number;
   tickets: EventTicket[];
   brandName?: string;
   brandLogoUrl?: string;
