@@ -140,6 +140,7 @@ export default function EventPage({ loaderData }: Route.ComponentProps) {
                   imageUrl: event.imageUrl,
                   date: event.date,
                   location: event.location,
+                  minPrice: event.minPrice,
                   tickets: event.tickets,
                   brandName: event.brand,
                 }}
