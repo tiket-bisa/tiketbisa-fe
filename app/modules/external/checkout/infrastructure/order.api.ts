@@ -1,60 +1,147 @@
+import { apiFetch } from "~/core/api";
+import type { ApiResponse } from "~/core/api";
 import type { BuyerInfo, OrderResponse, OrderSummary, PaymentMethod } from "../domain/checkout.types";
+
+interface TicketRequest {
+  categoryId: string;
+  quantity: number;
+  price: number;
+}
+
+interface CreateTransactionRq {
+  userId?: string;
+  eventId: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  source: string;
+  paymentMethod: string;
+  isComplimentary: boolean;
+  tickets: TicketRequest[];
+}
+
+export interface TicketIssued {
+  ticketId: string;
+  code: string;
+  codeType: string;
+  categoryId: string;
+  status: string;
+}
+
+export interface CompleteOrderResponse {
+  transactionId: string;
+  customerName: string;
+  totalPrice: number;
+  tickets: TicketIssued[];
+  paymentDate: string;
+}
 
 export const orderApi = {
   async createOrder(params: {
+    eventId: string;
     buyerInfo: BuyerInfo;
     summary: OrderSummary;
     paymentMethod: PaymentMethod;
   }): Promise<OrderResponse> {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    const tickets: TicketRequest[] = params.summary.items.map((item: any) => ({
+      categoryId: item.ticketId || item.id,
+      quantity: item.quantity,
+      price: item.price
+    }));
 
-    // Simulate successful order creation
-    const expiryDate = new Date();
-    expiryDate.setHours(expiryDate.getHours() + 2);
+    let backendPaymentMethod = "MANUAL_TRANSFER";
+    if (params.paymentMethod.category === "BANK_TRANSFER") {
+      backendPaymentMethod = params.paymentMethod.id === "manual" ? "MANUAL_TRANSFER" : "VA";
+    } else if (params.paymentMethod.category === "E_WALLET_QRIS") {
+      backendPaymentMethod = "QRIS";
+    }
 
-    return {
-      orderId: `TB-${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
-      status: "PENDING",
-      totalAmount: params.summary.totalPrice,
-      paymentMethod: params.paymentMethod,
-      expiryTime: expiryDate.toISOString(),
-      paymentInstructions: "Silakan selesaikan pembayaran sebelum batas waktu yang ditentukan.",
+    const payload: CreateTransactionRq = {
+      eventId: params.eventId,
+      customerName: params.buyerInfo.fullName,
+      customerEmail: params.buyerInfo.email,
+      customerPhone: params.buyerInfo.phoneNumber,
+      source: "WEBSITE",
+      paymentMethod: backendPaymentMethod,
+      isComplimentary: false,
+      tickets: tickets
     };
+
+    try {
+      // First Flow: Lock tickets (returns userId/lockId)
+      const lockResponse = await apiFetch<ApiResponse<{ userId: string; expiresAt: number }>>("/transaction", {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+
+      if (!lockResponse.success || !lockResponse.data?.userId) {
+        throw new Error("Failed to acquire ticket lock");
+      }
+
+      const lockId = lockResponse.data.userId;
+
+      // Second Flow: Store temporary transaction
+      await apiFetch(`/transaction/temp/${lockId}`, {
+        method: "POST",
+        body: JSON.stringify({
+          ...payload,
+          userId: lockId
+        })
+      });
+
+      const expiryDate = new Date(lockResponse.data.expiresAt || (Date.now() + 15 * 60 * 1000));
+
+      return {
+        orderId: lockId,
+        status: "PENDING",
+        totalAmount: params.summary.totalPrice,
+        paymentMethod: params.paymentMethod,
+        expiryTime: expiryDate.toISOString(),
+        paymentInstructions: "Silakan selesaikan pembayaran sebelum batas waktu yang ditentukan.",
+      };
+    } catch (error: any) {
+      throw error;
+    }
+  },
+
+  async completeOrder(orderId: string): Promise<CompleteOrderResponse> {
+    const response = await apiFetch<ApiResponse<CompleteOrderResponse>>(`/transaction/${orderId}/complete`, {
+      method: "POST"
+    });
+    return response.data;
   },
 
   async getOrderById(orderId: string): Promise<OrderResponse | null> {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    // Mock data for existing order
-    const expiryDate = new Date();
-    expiryDate.setHours(expiryDate.getHours() + 1);
-
-    // In a real app, we would fetch the specific order and its method
-    const isBank = orderId.includes("BCA") || Math.random() > 0.5;
-
-    return {
-      orderId,
-      status: "PENDING",
-      totalAmount: 155000,
-      paymentMethod: isBank ? {
-        id: "bca",
-        name: "BCA Transfer",
-        logo: "/logos/bca.png",
-        category: "BANK_TRANSFER"
-      } : {
-        id: "qris",
-        name: "QRIS",
-        logo: "/logos/qris.png",
-        category: "E_WALLET_QRIS"
-      },
-      expiryTime: expiryDate.toISOString(),
-      paymentInstructions: isBank 
-        ? "Silakan transfer tepat sesuai nominal hingga 3 digit terakhir."
-        : "Pindai kode QR menggunakan aplikasi pembayaran Anda.",
-      virtualAccount: isBank ? "123456789012345" : undefined,
-      qrCodeUrl: !isBank ? "/qris-placeholder.png" : undefined,
-    };
+    try {
+      const response = await apiFetch<ApiResponse<any>>(`/transaction/${orderId}`);
+      
+      const isBank = Math.random() > 0.5;
+      
+      return {
+        orderId,
+        status: "PENDING",
+        totalAmount: 150000, 
+        paymentMethod: isBank ? {
+          id: "bca",
+          name: "BCA Transfer",
+          logo: "/logos/bca.png",
+          category: "BANK_TRANSFER"
+        } : {
+          id: "qris",
+          name: "QRIS",
+          logo: "/logos/qris.png",
+          category: "E_WALLET_QRIS"
+        },
+        expiryTime: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        paymentInstructions: isBank 
+          ? "Silakan transfer tepat sesuai nominal hingga 3 digit terakhir."
+          : "Pindai kode QR menggunakan aplikasi pembayaran Anda.",
+        virtualAccount: isBank ? "123456789012345" : undefined,
+        qrCodeUrl: !isBank ? "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=TIKETBISA_MOCK_QRIS" : undefined,
+      };
+    } catch (e) {
+      console.error("Failed to fetch transaction status", e);
+      return null;
+    }
   }
 };

@@ -7,6 +7,7 @@ export function useOrderConfirmation() {
   const [error, setError] = useState<string | null>(null);
 
   const confirmOrder = useCallback(async (params: {
+    eventId: string;
     buyerInfo: BuyerInfo;
     summary: OrderSummary;
     paymentMethod: PaymentMethod;
