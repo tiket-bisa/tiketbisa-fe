@@ -1,8 +1,8 @@
 import { Card, Button } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils/currency";
-import type { OrderResponse } from "../../domain/checkout.types";
-import type { Event } from "../../../event/domain/event.entity";
-import { CountdownTimer } from "./countdown-timer";
+import type { OrderResponse } from "../../../domain/checkout.types";
+import type { Event } from "../../../../event/domain/event.entity";
+import { CountdownTimer } from "../shared/countdown-timer";
 
 export interface PaymentInstructionProps {
   order: OrderResponse;

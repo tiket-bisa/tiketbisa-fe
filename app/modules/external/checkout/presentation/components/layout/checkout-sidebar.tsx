@@ -1,8 +1,8 @@
 import { Card, Button } from "~/core/design-system/components";
-import type { OrderSummary } from "../../domain/checkout.types";
-import { CountdownTimer } from "./countdown-timer";
-import { OrderSummaryCard } from "./order-summary-card";
-import { PromoSection, PaymentConsent } from "./payment-extras";
+import type { OrderSummary } from "../../../domain/checkout.types";
+import { CountdownTimer } from "../shared/countdown-timer";
+import { OrderSummaryCard } from "../shared/order-summary-card";
+import { PromoSection, PaymentConsent } from "../shared/payment-extras";
 
 export interface CheckoutSidebarProps {
   summary: OrderSummary;

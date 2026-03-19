@@ -1,10 +1,11 @@
 import { Card, Button } from "~/core/design-system/components";
-import type { CompleteOrderResponse } from "../../infrastructure/order.api";
+import type { CompleteOrderResponse } from "../../../infrastructure/order.api";
+import type { Event } from "../../../../event/domain/event.entity";
 import { CheckoutComingSoon } from "./checkout-coming-soon";
-import { OrderEmailNotice } from "./checkout-extras";
+import { OrderEmailNotice } from "../shared/checkout-extras";
 
 interface OrderSuccessProps {
-  event: any;
+  event: Event;
   order: CompleteOrderResponse | null;
   onAction: () => void;
 }

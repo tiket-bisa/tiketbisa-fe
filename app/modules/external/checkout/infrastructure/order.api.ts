@@ -68,7 +68,6 @@ export const orderApi = {
     };
 
     try {
-      // First Flow: Lock tickets (returns userId/lockId)
       const lockResponse = await apiFetch<ApiResponse<{ userId: string; expiresAt: number }>>("/transaction", {
         method: "POST",
         body: JSON.stringify(payload)
@@ -80,7 +79,6 @@ export const orderApi = {
 
       const lockId = lockResponse.data.userId;
 
-      // Second Flow: Store temporary transaction
       await apiFetch(`/transaction/temp/${lockId}`, {
         method: "POST",
         body: JSON.stringify({
@@ -114,22 +112,28 @@ export const orderApi = {
   async getOrderById(orderId: string): Promise<OrderResponse | null> {
     try {
       const response = await apiFetch<ApiResponse<any>>(`/transaction/${orderId}`);
-      
-      const isBank = Math.random() > 0.5;
-      
+
+      if (!response.success || !response.data) {
+        return null;
+      }
+
+      const data = response.data;
+
+      const isBank = data.paymentMethod === "VA" || data.paymentMethod === "MANUAL_TRANSFER";
+
       return {
-        orderId,
+        orderId: orderId,
         status: "PENDING",
-        totalAmount: 150000, 
+        totalAmount: data.totalPrice || 0,
         paymentMethod: isBank ? {
           id: "bca",
           name: "BCA Transfer",
-          logo: "/logos/bca.png",
+          logo: "/logo/bca.png",
           category: "BANK_TRANSFER"
         } : {
           id: "qris",
           name: "QRIS",
-          logo: "/logos/qris.png",
+          logo: "/logo/qris.png",
           category: "E_WALLET_QRIS"
         },
         expiryTime: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
@@ -140,7 +144,6 @@ export const orderApi = {
         qrCodeUrl: !isBank ? "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=TIKETBISA_MOCK_QRIS" : undefined,
       };
     } catch (e) {
-      console.error("Failed to fetch transaction status", e);
       return null;
     }
   }

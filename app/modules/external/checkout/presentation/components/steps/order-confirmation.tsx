@@ -1,6 +1,6 @@
 import { Card, Button } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils/currency";
-import type { BuyerInfo, OrderSummary, PaymentMethod } from "../../domain/checkout.types";
+import type { BuyerInfo, OrderSummary, PaymentMethod } from "../../../domain/checkout.types";
 
 export interface OrderConfirmationProps {
   buyerInfo: BuyerInfo;

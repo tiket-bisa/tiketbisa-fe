@@ -1,7 +1,7 @@
 import { Button } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils/currency";
-import { CountdownTimer } from "./countdown-timer";
-import type { OrderSummary } from "../../domain/checkout.types";
+import { CountdownTimer } from "../shared/countdown-timer";
+import type { OrderSummary } from "../../../domain/checkout.types";
 
 export interface CheckoutStickyBarProps {
   summary: OrderSummary;

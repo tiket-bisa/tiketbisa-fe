@@ -1,4 +1,4 @@
-import type { Event } from "../../../event/domain/event.entity";
+import type { Event } from "../../../../event/domain/event.entity";
 
 export interface EventInfoHeaderProps {
   event: Event;

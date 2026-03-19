@@ -1,6 +1,6 @@
 import { Card } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils/currency";
-import type { OrderSummary } from "../../domain/checkout.types";
+import type { OrderSummary } from "../../../domain/checkout.types";
 
 export interface OrderSummaryCardProps {
   summary: OrderSummary;
