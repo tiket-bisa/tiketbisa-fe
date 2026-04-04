@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router";
 import { Card, Badge, SearchInput, Pagination, Tabs, Select } from "~/core/design-system/components";
 import { useApiQuery } from "~/core/api";
 import { eventApi, mapEventApiToFe } from "~/core/api/services/event.api";
@@ -23,6 +24,7 @@ const ITEMS_PER_PAGE = 6;
 
 /** Admin — Events across all brands */
 export default function AdminEventsPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("all");
   const [brandFilter, setBrandFilter] = useState("all");
@@ -169,6 +171,17 @@ export default function AdminEventsPage() {
                   </div>
                 </div>
                 <Badge variant={status.variant}>{status.label}</Badge>
+              </div>
+              <div className="mt-4 flex justify-end border-t border-border-subtle pt-3">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => navigate(`/internal/admin/events/${evt.id}/tickets/new`)}
+                  className="flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-sm">add</span>
+                  Tambah Tiket
+                </Button>
               </div>
             </Card>
           );

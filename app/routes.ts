@@ -49,6 +49,10 @@ export default [
       "modules/admin/events/presentation/events.page.tsx",
     ),
     route(
+      "internal/admin/events/:eventId/tickets/new",
+      "modules/internal/events/presentation/create-ticket.page.tsx",
+    ),
+    route(
       "internal/admin/analytics",
       "modules/admin/analytics/presentation/analytics.page.tsx",
     ),
@@ -79,6 +83,10 @@ export default [
     route(
       "internal/partner/events",
       "modules/internal/events/presentation/events.page.tsx",
+    ),
+    route(
+      "internal/partner/events/:eventId/tickets/new",
+      "modules/internal/events/presentation/create-ticket.page.tsx",
     ),
     route(
       "internal/partner/analytics",
