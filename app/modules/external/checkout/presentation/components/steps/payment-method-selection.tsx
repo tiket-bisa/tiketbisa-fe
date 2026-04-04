@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Card } from "~/core/design-system/components";
-import type { PaymentMethod, PaymentCategory } from "../../domain/checkout.types";
+import type { PaymentMethod, PaymentCategory } from "../../../domain/checkout.types";
 
 export interface PaymentMethodSelectionProps {
   methods: PaymentMethod[];

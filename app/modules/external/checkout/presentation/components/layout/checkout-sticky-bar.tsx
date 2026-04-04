@@ -1,7 +1,7 @@
 import { Button } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils/currency";
-import { CountdownTimer } from "./countdown-timer";
-import type { OrderSummary } from "../../domain/checkout.types";
+import { CountdownTimer } from "../shared/countdown-timer";
+import type { OrderSummary } from "../../../domain/checkout.types";
 
 export interface CheckoutStickyBarProps {
   summary: OrderSummary;
@@ -11,6 +11,7 @@ export interface CheckoutStickyBarProps {
   onExpire?: () => void;
   isLoading?: boolean;
   canSubmit?: boolean;
+  orderCategory?: string;
 }
 
 export function CheckoutStickyBar({
@@ -21,7 +22,16 @@ export function CheckoutStickyBar({
   onExpire,
   isLoading,
   canSubmit = true,
+  orderCategory,
 }: CheckoutStickyBarProps) {
+  const getButtonLabel = () => {
+    if (currentStep === 3) return "Bayar Sekarang";
+    if (currentStep === 4) {
+      return orderCategory === "BANK_TRANSFER" ? "Upload Bukti" : "Bayar Sekarang";
+    }
+    return "Lanjut";
+  };
+
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[100] lg:hidden animate-in slide-in-from-bottom duration-500">
       {/* Timer - Full width and attached to the bar */}
@@ -65,7 +75,7 @@ export function CheckoutStickyBar({
                 : "bg-brand-primary/30 shadow-none grayscale"
             }`}
           >
-            {currentStep === 3 ? "Bayar Sekarang" : "Lanjut"}
+            {getButtonLabel()}
           </Button>
         </div>
       </div>

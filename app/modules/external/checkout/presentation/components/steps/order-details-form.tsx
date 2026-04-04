@@ -1,6 +1,6 @@
 import { Card, Select, Input } from "~/core/design-system/components";
-import type { BuyerInfo } from "../../domain/checkout.types";
-import { CheckoutFormField } from "./checkout-form-field";
+import type { BuyerInfo } from "../../../domain/checkout.types";
+import { CheckoutFormField } from "../shared/checkout-form-field";
 
 export interface OrderDetailsFormProps {
   data: BuyerInfo;
