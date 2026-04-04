@@ -58,19 +58,19 @@ function buildQuery(params?: EventListParams): string {
 
 export const eventApi = {
     getList: (params?: EventListParams) =>
-        httpClient.get<EventListResponse>(`/event${buildQuery(params)}`),
+        httpClient.get<EventListResponse>(`/internal-tb/event${buildQuery(params)}`),
 
     getById: (id: string) =>
-        httpClient.get<EventApiData>(`/event/${id}`),
+        httpClient.get<EventApiData>(`/internal-tb/event/${id}`),
 
     create: (data: Partial<EventApiData>) =>
-        httpClient.post<EventApiData>("/event", data),
+        httpClient.post<EventApiData>("/internal-tb/event", data),
 
     update: (id: string, data: Partial<EventApiData>) =>
-        httpClient.put<EventApiData>(`/event/${id}`, data),
+        httpClient.put<EventApiData>(`/internal-tb/event/${id}`, data),
 
     delete: (id: string) =>
-        httpClient.delete<null>(`/event/${id}`),
+        httpClient.delete<null>(`/internal-tb/event/${id}`),
 };
 
 /* ── Mapper: BE → FE type ── */

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import { jwtDecode } from "jwt-decode";
 
 export type AuthRole = "admin" | "partner";
 
@@ -7,6 +8,7 @@ export interface AuthUser {
   name: string;
   picture?: string;
   role: AuthRole;
+  idToken: string;
   brand_slug?: string; // only for partner role
   brand_name?: string; // only for partner role
 }
@@ -15,8 +17,12 @@ interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
 
-  loginAsAdmin: () => void;
-  loginAsPartner: (brandSlug: string, brandName: string) => void;
+  loginWithSession: (sessionParams: {
+    idToken: string;
+    role: string;
+    brandSlug?: string;
+    brandName?: string;
+  }) => void;
   logout: () => void;
 }
 
@@ -42,27 +48,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const loginAsAdmin = useCallback(() => {
-    const mockUser: AuthUser = {
-      email: "admin@tiketbisa.com",
-      name: "Admin Tiketbisa",
-      role: "admin",
-    };
-    setUser(mockUser);
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(mockUser));
-  }, []);
-
-  const loginAsPartner = useCallback((brandSlug: string, brandName: string) => {
-    const mockUser: AuthUser = {
-      email: `partner@${brandSlug}.com`,
-      name: brandName,
-      role: "partner",
-      brand_slug: brandSlug,
-      brand_name: brandName,
-    };
-    setUser(mockUser);
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(mockUser));
-  }, []);
+  const loginWithSession = useCallback(
+    ({
+      idToken,
+      role,
+      brandSlug,
+      brandName,
+    }: {
+      idToken: string;
+      role: string;
+      brandSlug?: string;
+      brandName?: string;
+    }) => {
+      try {
+        const decoded = jwtDecode<{ email?: string; name?: string; picture?: string }>(idToken);
+        const newUser: AuthUser = {
+          email: decoded.email || "",
+          name: decoded.name || "Unknown",
+          picture: decoded.picture,
+          role: role as AuthRole,
+          idToken,
+          brand_slug: brandSlug,
+          brand_name: brandName,
+        };
+        setUser(newUser);
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newUser));
+      } catch (err) {
+        console.error("Failed to decode token", err);
+      }
+    },
+    []
+  );
 
   const logout = useCallback(() => {
     setUser(null);
@@ -70,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, loginAsAdmin, loginAsPartner, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, loginWithSession, logout }}>
       {children}
     </AuthContext.Provider>
   );

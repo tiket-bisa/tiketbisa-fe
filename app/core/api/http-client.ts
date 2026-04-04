@@ -8,9 +8,21 @@ async function request<T>(
   body?: unknown,
 ): Promise<ApiResponse<T>> {
   try {
+    const defaultHeaders: Record<string, string> = { "Content-Type": "application/json" };
+    try {
+      const stored = localStorage.getItem("tiketbisa_auth");
+      if (stored) {
+        const user = JSON.parse(stored);
+        if (user.email) defaultHeaders["x-tb-identifier"] = user.email;
+        if (user.idToken) defaultHeaders["x-tb-internal-token"] = user.idToken;
+      }
+    } catch {
+      // ignore
+    }
+
     const response = await fetch(`${BASE_URL}${path}`, {
       method,
-      headers: { "Content-Type": "application/json" },
+      headers: defaultHeaders,
       body: body ? JSON.stringify(body) : undefined,
     });
 

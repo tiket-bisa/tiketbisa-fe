@@ -1,35 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { Button, Select } from "~/core/design-system/components";
+import { useGoogleLogin } from "@react-oauth/google";
+import { Button } from "~/core/design-system/components";
 import { AuthProvider, useAuth } from "~/core/auth";
-import { useApiQuery } from "~/core/api";
-import { brandApi, mapBrandApiToFe } from "~/core/api/services/brand.api";
-import type { Brand } from "~/core/types";
+import { httpClient } from "~/core/api/http-client";
 
 function LoginContent() {
-  const { user, loginAsPartner } = useAuth();
+  const { user, loginWithSession } = useAuth();
   const navigate = useNavigate();
-
-  // Fetch brands from real API
-  const { data: brands, loading } = useApiQuery(
-    async () => {
-      const res = await brandApi.getList({ limit: 100, offset: 0 });
-      if (!res.success || !res.data) return [] as Brand[];
-      return (res.data.brands ?? []).map(mapBrandApiToFe);
-    },
-    [],
-  );
-
-  const brandList = brands ?? [];
-  const brandOptions = brandList.map((b) => ({ value: b.slug, label: b.name }));
-  const [selectedBrand, setSelectedBrand] = useState("");
-
-  // Set default selection once brands load
-  useEffect(() => {
-    if (brandOptions.length > 0 && !selectedBrand) {
-      setSelectedBrand(brandOptions[0].value);
-    }
-  }, [brandOptions, selectedBrand]);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (user && user.role === "partner") {
@@ -37,12 +17,41 @@ function LoginContent() {
     }
   }, [user, navigate]);
 
-  const handleLogin = () => {
-    const brand = brandList.find((b) => b.slug === selectedBrand);
-    if (brand) {
-      loginAsPartner(brand.slug, brand.name);
-    }
-  };
+  const googleLogin = useGoogleLogin({
+    flow: 'auth-code',
+    onSuccess: async (codeResponse) => {
+      setLoading(true);
+      setErrorMsg(null);
+      try {
+        const res = await httpClient.post<{ idToken: string; role: string; brandSlug?: string; brandName?: string }>('/internal-tb/token/request', {
+          authCode: codeResponse.code,
+        });
+
+        if (res.success && res.data) {
+          if (res.data.role !== "partner") {
+             setErrorMsg("Unauthorized: Not a partner account");
+          } else {
+             loginWithSession({
+               idToken: res.data.idToken,
+               role: res.data.role,
+               brandSlug: res.data.brandSlug,
+               brandName: res.data.brandName,
+             });
+          }
+        } else {
+          setErrorMsg(res.error || "Login failed on server");
+        }
+      } catch (err) {
+        setErrorMsg("Network error during login");
+      } finally {
+        setLoading(false);
+      }
+    },
+    onError: errorResponse => {
+      setErrorMsg("Google login prompt failed");
+      console.error(errorResponse);
+    },
+  });
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface-primary px-4" data-theme="light">
@@ -62,27 +71,15 @@ function LoginContent() {
           </div>
         </div>
 
-        {/* Brand Selection — fetched from real API */}
-        <div className="text-left">
-          {loading ? (
-            <p className="text-text-tertiary text-sm py-3">Memuat brand...</p>
-          ) : (
-            <Select
-              options={brandOptions}
-              value={selectedBrand}
-              onChange={(e) => setSelectedBrand(e.target.value)}
-              label="Pilih Brand"
-            />
-          )}
-        </div>
+        {errorMsg && <p className="text-status-error text-sm mt-2">{errorMsg}</p>}
 
         {/* Google Sign In */}
         <Button
           variant="secondary"
           size="lg"
           fullWidth
-          onClick={handleLogin}
-          disabled={loading || !selectedBrand}
+          onClick={() => googleLogin()}
+          disabled={loading}
           className="flex items-center justify-center gap-3"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">

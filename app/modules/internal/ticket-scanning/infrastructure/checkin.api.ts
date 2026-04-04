@@ -14,5 +14,5 @@ export interface CheckInResponse {
 
 export const checkinApi = {
   checkIn: (request: CheckInRequest) =>
-    httpClient.post<CheckInResponse>("/transaction/checkin", request),
+    httpClient.post<CheckInResponse>("/internal-tb/transaction/checkin", request),
 };

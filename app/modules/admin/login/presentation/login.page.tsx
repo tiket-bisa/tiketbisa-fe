@@ -1,17 +1,57 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
+import { useGoogleLogin } from "@react-oauth/google";
 import { Button } from "~/core/design-system/components";
 import { AuthProvider, useAuth } from "~/core/auth";
+import { httpClient } from "~/core/api/http-client";
 
 function AdminLoginContent() {
-  const { user, loginAsAdmin } = useAuth();
+  const { user, loginWithSession } = useAuth();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (user && user.role === "admin") {
       navigate("/internal/admin", { replace: true });
     }
   }, [user, navigate]);
+
+  const googleLogin = useGoogleLogin({
+    flow: 'auth-code',
+    onSuccess: async (codeResponse) => {
+      setLoading(true);
+      setErrorMsg(null);
+      try {
+        const res = await httpClient.post<{ idToken: string; role: string; brandSlug?: string; brandName?: string }>('/internal-tb/token/request', {
+          authCode: codeResponse.code,
+        });
+
+        if (res.success && res.data) {
+          if (res.data.role !== "admin") {
+             setErrorMsg("Unauthorized: Not an admin account");
+          } else {
+             loginWithSession({
+               idToken: res.data.idToken,
+               role: res.data.role,
+               brandSlug: res.data.brandSlug,
+               brandName: res.data.brandName,
+             });
+          }
+        } else {
+          setErrorMsg(res.error || "Login failed on server");
+        }
+      } catch (err) {
+        setErrorMsg("Network error during login");
+      } finally {
+        setLoading(false);
+      }
+    },
+    onError: errorResponse => {
+      setErrorMsg("Google login prompt failed");
+      console.error(errorResponse);
+    },
+  });
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface-primary px-4" data-theme="light">
@@ -24,11 +64,14 @@ function AdminLoginContent() {
           </div>
         </div>
 
+        {errorMsg && <p className="text-status-error text-sm mt-2">{errorMsg}</p>}
+
         <Button
           variant="secondary"
           size="lg"
           fullWidth
-          onClick={loginAsAdmin}
+          disabled={loading}
+          onClick={() => googleLogin()}
           className="flex items-center justify-center gap-3"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">

@@ -45,8 +45,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
+import { GoogleOAuthProvider } from "@react-oauth/google";
+
 export default function App() {
-  return <Outlet />;
+  const clientId = import.meta.env.VITE_GOOGLE_AUTH_CLIENT_ID || "";
+  return (
+    <GoogleOAuthProvider clientId={clientId}>
+      <Outlet />
+    </GoogleOAuthProvider>
+  );
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {

@@ -25,10 +25,10 @@ export interface TicketCategoryListResponse {
 
 export const ticketCategoryApi = {
     getByEvent: (eventId: string) =>
-        httpClient.get<TicketCategoryApiData[]>(`/ticket-category/event/${eventId}`),
+        httpClient.get<TicketCategoryApiData[]>(`/internal-tb/ticket-category/event/${eventId}`),
 
     getById: (id: string) =>
-        httpClient.get<TicketCategoryApiData>(`/ticket-category/${id}`),
+        httpClient.get<TicketCategoryApiData>(`/internal-tb/ticket-category/${id}`),
 
     getList: (params?: { limit?: number; offset?: number }) => {
         const qs = new URLSearchParams();
@@ -36,7 +36,7 @@ export const ticketCategoryApi = {
         if (params?.offset != null) qs.set("offset", String(params.offset));
         const str = qs.toString();
         return httpClient.get<TicketCategoryListResponse>(
-            `/ticket-category${str ? `?${str}` : ""}`,
+            `/internal-tb/ticket-category${str ? \`?\${str}\` : ""}`,
         );
     },
 };

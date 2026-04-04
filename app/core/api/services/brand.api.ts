@@ -46,25 +46,25 @@ function buildQuery(params?: BrandListParams): string {
 
 export const brandApi = {
     getList: (params?: BrandListParams) =>
-        httpClient.get<BrandListResponse>(`/brand${buildQuery(params)}`),
+        httpClient.get<BrandListResponse>(`/internal-tb/brand${buildQuery(params)}`),
 
     getById: (id: string) =>
-        httpClient.get<BrandApiData>(`/brand/${id}`),
+        httpClient.get<BrandApiData>(`/internal-tb/brand/${id}`),
 
     create: (data: Partial<BrandApiData>, createBy: string) =>
-        httpClient.post<BrandApiData>("/brand", {
+        httpClient.post<BrandApiData>("/internal-tb/brand", {
             ...data,
             headers: { "X-TB-Identifier": createBy },
         }),
 
     update: (id: string, data: Partial<BrandApiData>, updateBy: string) =>
-        httpClient.put<BrandApiData>(`/brand/${id}`, {
+        httpClient.put<BrandApiData>(`/internal-tb/brand/${id}`, {
             ...data,
             headers: { "X-TB-Identifier": updateBy },
         }),
 
     delete: (id: string) =>
-        httpClient.delete<null>(`/brand/${id}`),
+        httpClient.delete<null>(`/internal-tb/brand/${id}`),
 };
 
 /* ── Mapper: BE → FE type ── */

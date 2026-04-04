@@ -17,9 +17,9 @@ export interface CheckInResponse {
 export const transactionApi = {
     /** Get single transaction status */
     getStatus: (id: string) =>
-        httpClient.get<unknown>(`/transaction/${id}`),
+        httpClient.get<unknown>(`/internal-tb/transaction/${id}`),
 
     /** Check in ticket by scanning */
     checkIn: (request: CheckInRequest) =>
-        httpClient.post<CheckInResponse>("/transaction/checkin", request),
+        httpClient.post<CheckInResponse>("/internal-tb/transaction/checkin", request),
 };
