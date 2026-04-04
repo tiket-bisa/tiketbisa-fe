@@ -52,18 +52,21 @@ export default function BrandDetailPage({ loaderData }: Route.ComponentProps) {
   const totalPages = Math.ceil(count / limit);
 
   function updateParam(key: string, value: string) {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (value) {
-        next.set(key, value);
-      } else {
-        next.delete(key);
-      }
-      if (key !== "page") {
-        next.delete("page");
-      }
-      return next;
-    });
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (value) {
+          next.set(key, value);
+        } else {
+          next.delete(key);
+        }
+        if (key !== "page") {
+          next.delete("page");
+        }
+        return next;
+      },
+      { preventScrollReset: true },
+    );
   }
 
   return (

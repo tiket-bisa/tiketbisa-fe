@@ -1,64 +1,54 @@
+import { apiFetch } from "~/core/api";
+import type { PaginatedApiResponse, ApiResponse } from "~/core/api";
 import type { BrandFilterParams } from "./brand-filter.params";
 import type { Brand } from "../domain/brand.entity";
+import type { BrandDto } from "./brand.dto";
+import { mapBrandDtoToEntity } from "./brand.mapper";
 
-// Dummy data implementation to simulate API request
-const DUMMY_BRANDS: Brand[] = Array.from({ length: 50 }).map((_, i) => ({
-  id: `brand-${i + 1}`,
-  name: `Brand ${i + 1}`,
-  slug: `brand-${i + 1}`,
-  logoUrl: `https://ui-avatars.com/api/?name=Brand+${i + 1}&background=random`,
-  bannerUrl: `https://picsum.photos/seed/brand-${i + 1}/1200/400`,
-  description: `Ini adalah deskripsi untuk Brand ${i + 1}. Brand ini berfokus pada kualitas dan pengalaman terbaik untuk para pelanggannya.`,
-  category: ["sepak-bola", "lari", "musik"][i % 3],
-  location: ["jakarta", "bandung", "surabaya"][i % 3],
-  joinedSince: "Januari 2024",
-  socialMedia: [
-    { platform: "instagram", url: "https://instagram.com" },
-    { platform: "twitter", url: "https://twitter.com" },
-  ],
-}));
+interface BrandListResponseData {
+  limit: number;
+  offset: number;
+  totalCount: number;
+  brands: BrandDto[];
+}
 
 export const brandApi = {
-  getBrands: async (params: BrandFilterParams) => {
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
-    let filtered = [...DUMMY_BRANDS];
-
-    if (params.category) {
-      filtered = filtered.filter((b) => b.category === params.category);
-    }
-    if (params.location) {
-      filtered = filtered.filter((b) => b.location === params.location);
-    }
-
-    if (params.order_by === "name_asc") {
-      filtered.sort((a, b) => a.name.localeCompare(b.name));
-    } else if (params.order_by === "name_desc") {
-      filtered.sort((a, b) => b.name.localeCompare(a.name));
-    }
-
-    const count = filtered.length;
-    const limit = params.limit ?? 12;
-    const offset = params.offset ?? 0;
+  getBrands: async (params: BrandFilterParams): Promise<PaginatedApiResponse<Brand>> => {
+    const queryParams = new URLSearchParams();
     
-    const paginated = filtered.slice(offset, offset + limit);
+    // We map category and location to 'name' search for now 
+    // since the backend GET /brand only supports name filtering.
+    if (params.category) queryParams.append("name", params.category);
+    else if (params.location) queryParams.append("name", params.location);
+
+    if (params.limit !== undefined) queryParams.append("limit", params.limit.toString());
+    if (params.offset !== undefined) queryParams.append("offset", params.offset.toString());
+    if (params.order_by) queryParams.append("orderBy", params.order_by);
+
+    const response = await apiFetch<ApiResponse<BrandListResponseData>>(
+      `/brand?${queryParams.toString()}`
+    );
 
     return {
+      ...response,
       data: {
-        brand_list: paginated,
-        count,
-        limit,
-        offset,
+        limit: response.data.limit,
+        offset: response.data.offset,
+        count: response.data.totalCount,
+        brand_list: (response.data.brands || []).map(mapBrandDtoToEntity),
       },
     };
   },
 
   getBrandBySlug: async (slug: string): Promise<Brand | null> => {
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    
-    const brand = DUMMY_BRANDS.find((b) => b.slug === slug);
-    return brand ?? null;
+    // The slug is treated as the ID since that's what our mapper output
+    try {
+      const response = await apiFetch<ApiResponse<BrandDto>>(`/brand/${slug}`);
+      if (!response.data) return null;
+      return mapBrandDtoToEntity(response.data);
+    } catch (e) {
+      console.error("Failed to fetch brand by slug/id", e);
+      return null;
+    }
   }
 };
