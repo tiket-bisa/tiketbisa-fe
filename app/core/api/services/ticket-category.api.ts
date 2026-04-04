@@ -39,6 +39,9 @@ export const ticketCategoryApi = {
             `/ticket-category${str ? `?${str}` : ""}`,
         );
     },
+
+    create: (data: { eventId: string; name: string; description?: string; categoryCode: string; totalTicket: number; price: number }) =>
+        httpClient.post<TicketCategoryApiData>("/internal-tb/ticket-category", data),
 };
 
 /* ── Mapper: BE → FE type ── */

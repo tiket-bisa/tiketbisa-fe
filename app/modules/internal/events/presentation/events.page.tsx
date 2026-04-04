@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router";
 import { Card, Badge, SearchInput, Pagination, Tabs } from "~/core/design-system/components";
 import { useAuth } from "~/core/auth";
 import { useApiQuery } from "~/core/api";
@@ -25,6 +26,7 @@ const ITEMS_PER_PAGE = 6;
 /** Partner — Event Management (filtered by partner's brand) */
 export default function EventsPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -163,6 +165,17 @@ export default function EventsPage() {
                   </div>
                 </div>
                 <Badge variant={status.variant}>{status.label}</Badge>
+              </div>
+              <div className="mt-4 flex justify-end border-t border-border-subtle pt-3">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => navigate(`/internal/partner/events/${evt.id}/tickets/new`)}
+                  className="flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-sm">add</span>
+                  Tambah Tiket
+                </Button>
               </div>
             </Card>
           );
