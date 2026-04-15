@@ -5,17 +5,17 @@ import type { BuyerInfo, OrderResponse, OrderSummary, PaymentMethod } from "../d
 interface TicketRequest {
   categoryId: string;
   quantity: number;
-  price: number;
+  price?: number;
 }
 
 interface CreateTransactionRq {
   userId?: string;
   eventId: string;
-  customerName: string;
-  customerEmail: string;
-  customerPhone: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
   source: string;
-  paymentMethod: string;
+  paymentMethod?: string;
   isComplimentary: boolean;
   tickets: TicketRequest[];
 }
@@ -36,77 +36,137 @@ export interface CompleteOrderResponse {
   paymentDate: string;
 }
 
+export interface LockResponse {
+  userId: string;
+  eventId: string;
+  tickets: TicketRequest[];
+  timestamp: number;
+  expiresAt: number;
+}
+
 export const orderApi = {
-  async createOrder(params: {
-    eventId: string;
-    buyerInfo: BuyerInfo;
-    summary: OrderSummary;
-    paymentMethod: PaymentMethod;
-  }): Promise<OrderResponse> {
-    const tickets: TicketRequest[] = params.summary.items.map((item: any) => ({
+  /**
+   * Phase 1: Lock tickets (DDD - Acquire Lock)
+   * This should be called early in the checkout process
+   */
+  async acquireLock(eventId: string, summary: OrderSummary): Promise<LockResponse> {
+    const tickets: TicketRequest[] = summary.items.map((item: any) => ({
+      categoryId: item.ticketId || item.id,
+      quantity: item.quantity,
+      price: item.price
+    }));
+
+    const payload: CreateTransactionRq = {
+      eventId,
+      source: "WEBSITE",
+      isComplimentary: false,
+      tickets
+    };
+
+    const response = await apiFetch<ApiResponse<LockResponse>>("/transaction", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.success || !response.data) {
+      throw new Error(response.message || "Failed to acquire ticket lock");
+    }
+
+    return response.data;
+  },
+
+  /**
+   * Phase 2: Store temporary transaction with buyer info (DDD - Store Context)
+   */
+  async storeTempTransaction(
+    lockId: string, 
+    eventId: string, 
+    buyerInfo: BuyerInfo, 
+    summary: OrderSummary,
+    paymentMethod: PaymentMethod
+  ): Promise<void> {
+    const tickets: TicketRequest[] = summary.items.map((item: any) => ({
       categoryId: item.ticketId || item.id,
       quantity: item.quantity,
       price: item.price
     }));
 
     let backendPaymentMethod = "MANUAL_TRANSFER";
-    if (params.paymentMethod.category === "BANK_TRANSFER") {
-      backendPaymentMethod = params.paymentMethod.id === "manual" ? "MANUAL_TRANSFER" : "VA";
-    } else if (params.paymentMethod.category === "E_WALLET_QRIS") {
+    if (paymentMethod.category === "BANK_TRANSFER") {
+      backendPaymentMethod = paymentMethod.id === "manual" ? "MANUAL_TRANSFER" : "VA";
+    } else if (paymentMethod.category === "E_WALLET_QRIS") {
       backendPaymentMethod = "QRIS";
     }
 
     const payload: CreateTransactionRq = {
-      eventId: params.eventId,
-      customerName: params.buyerInfo.fullName,
-      customerEmail: params.buyerInfo.email,
-      customerPhone: params.buyerInfo.phoneNumber,
+      userId: lockId,
+      eventId,
+      customerName: buyerInfo.fullName,
+      customerEmail: buyerInfo.email,
+      customerPhone: buyerInfo.phoneNumber,
       source: "WEBSITE",
       paymentMethod: backendPaymentMethod,
       isComplimentary: false,
-      tickets: tickets
+      tickets
     };
 
-    try {
-      const lockResponse = await apiFetch<ApiResponse<{ userId: string; expiresAt: number }>>("/transaction", {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
+    const response = await apiFetch<ApiResponse<string>>(`/transaction/temp/${lockId}`, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
 
-      if (!lockResponse.success || !lockResponse.data?.userId) {
-        throw new Error("Failed to acquire ticket lock");
-      }
-
-      const lockId = lockResponse.data.userId;
-
-      await apiFetch(`/transaction/temp/${lockId}`, {
-        method: "POST",
-        body: JSON.stringify({
-          ...payload,
-          userId: lockId
-        })
-      });
-
-      const expiryDate = new Date(lockResponse.data.expiresAt || (Date.now() + 15 * 60 * 1000));
-
-      return {
-        orderId: lockId,
-        status: "PENDING",
-        totalAmount: params.summary.totalPrice,
-        paymentMethod: params.paymentMethod,
-        expiryTime: expiryDate.toISOString(),
-        paymentInstructions: "Silakan selesaikan pembayaran sebelum batas waktu yang ditentukan.",
-      };
-    } catch (error: any) {
-      throw error;
+    if (!response.success) {
+      throw new Error(response.message || "Failed to store temporary transaction");
     }
   },
 
-  async completeOrder(orderId: string): Promise<CompleteOrderResponse> {
-    const response = await apiFetch<ApiResponse<CompleteOrderResponse>>(`/transaction/${orderId}/complete`, {
+  /**
+   * Phase 3: Finalize and execute order (DDD - Finalize Transaction)
+   */
+  async executeOrder(lockId: string): Promise<CompleteOrderResponse> {
+    const response = await apiFetch<ApiResponse<CompleteOrderResponse>>(`/transaction/${lockId}/complete`, {
       method: "POST"
     });
+
+    if (!response.success || !response.data) {
+      throw new Error(response.message || "Failed to complete transaction");
+    }
+
     return response.data;
+  },
+
+  /**
+   * Legacy method for backward compatibility/simpler flow
+   * Handles the whole flow internally
+   */
+  async createOrder(params: {
+    eventId: string;
+    buyerInfo: BuyerInfo;
+    summary: OrderSummary;
+    paymentMethod: PaymentMethod;
+  }): Promise<OrderResponse> {
+    // 1. Lock
+    const lock = await this.acquireLock(params.eventId, params.summary);
+    
+    // 2. Store
+    await this.storeTempTransaction(
+      lock.userId, 
+      params.eventId, 
+      params.buyerInfo, 
+      params.summary, 
+      params.paymentMethod
+    );
+
+    const expiryDate = new Date(lock.expiresAt);
+
+    return {
+      orderId: lock.userId,
+      status: "PENDING",
+      totalAmount: params.summary.totalPrice,
+      paymentMethod: params.paymentMethod,
+      expiryTime: expiryDate.toISOString(),
+      paymentInstructions: "Silakan selesaikan pembayaran sebelum batas waktu yang ditentukan.",
+    };
   },
 
   async getOrderById(orderId: string): Promise<OrderResponse | null> {
@@ -118,7 +178,6 @@ export const orderApi = {
       }
 
       const data = response.data;
-
       const isBank = data.paymentMethod === "VA" || data.paymentMethod === "MANUAL_TRANSFER";
 
       return {
