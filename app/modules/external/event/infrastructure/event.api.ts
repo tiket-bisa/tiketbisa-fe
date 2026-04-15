@@ -6,7 +6,7 @@ import type { EventDto } from "./event.dto";
 import { mapEventDtoToEntity } from "./event.mapper";
 
 /* ─── Dummy Event DTOs ─── */
-const DUMMY_EVENTS: EventDto[] = [
+const DUMMY_EVENTS: any[] = [
   {
     id: "evt-001",
     name: "Persija vs Persib — Liga 1 2026",

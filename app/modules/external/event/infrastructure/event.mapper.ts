@@ -64,11 +64,12 @@ function generatePlaceholderDate(index: number): string {
 }
 
 export function mapEventDtoToEntity(dto: EventDto, index: number): Event {
+  const anyDto = dto as any;
   return {
     id: dto.id,
     name: dto.name,
-    brand: dto.brand,
-    description: dto.description,
+    brand: anyDto.brand || dto.brandId || "Unknown",
+    description: dto.description || anyDto.description || "",
     imageUrl: placeholderImages[index % placeholderImages.length],
     date: generatePlaceholderDate(index),
     location: placeholderLocations[index % placeholderLocations.length],

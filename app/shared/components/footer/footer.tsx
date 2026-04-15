@@ -19,7 +19,7 @@ const footerColumns = [
   {
     title: "Bantuan",
     links: [
-      { label: "FAQ", to: "#" },
+      { label: "FAQ", to: "/faq" },
       { label: "Hubungi Kami", to: "/hubungi" },
       { label: "Syarat & Ketentuan", to: "#" },
     ],
