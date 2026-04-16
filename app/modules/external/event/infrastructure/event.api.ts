@@ -25,7 +25,7 @@ export const eventApi: EventRepository = {
     queryParams.append("isPublished", "true");
 
     const response = await apiFetch<ApiResponse<EventListResponseData>>(
-      `/event?${queryParams.toString()}`
+      `/event?${queryParams.toString()}`,
     );
 
     return {
