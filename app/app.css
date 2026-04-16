@@ -72,10 +72,6 @@
   --color-divider: #1c1735;
 
   /* Tambahkan animasi custom di sini */
-  @keyframes fadeInRight {
-    from { opacity: 0; transform: translateX(20px); }
-    to { opacity: 1; transform: translateX(0); }
-  }
   --animate-scroll-left-text: scroll-left-text 10s linear infinite;
   --animate-fade-in-left: fadeInLeft 0.5s ease-in-out;
   --animate-fade-in-right: fadeInRight 0.5s ease-in-out;
