@@ -9,6 +9,9 @@ export default [
   // ─── External Layout (tiketbisa.com) ───
   layout("layouts/external.layout.tsx", [
     index("modules/external/landing/presentation/landing.page.tsx"),
+    route("tentang", "modules/external/static/tentang.page.tsx"),
+    route("hubungi", "modules/external/static/hubungi.page.tsx"),
+    route("faq", "modules/external/static/faq.page.tsx"),
     route("event", "modules/external/event/presentation/event.page.tsx"),
     route("event/:eventId", "modules/external/event/presentation/event-detail.page.tsx"),
     route("brand", "modules/external/brand/presentation/brand.page.tsx", {
@@ -19,8 +22,6 @@ export default [
       "modules/external/brand/presentation/brand-detail.page.tsx",
       { id: "brand-detail" },
     ),
-    route("tentang", "modules/external/static/tentang.page.tsx"),
-    route("hubungi", "modules/external/static/hubungi.page.tsx"),
   ]),
 
   layout("layouts/checkout.layout.tsx", [

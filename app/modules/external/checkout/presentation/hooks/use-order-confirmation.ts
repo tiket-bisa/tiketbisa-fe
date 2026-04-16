@@ -6,7 +6,13 @@ export function useOrderConfirmation() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Phase 2: Store temporary transaction with identities
+   * This is part of the granular DDD flow
+   */
   const confirmOrder = useCallback(async (params: {
+    lockId: string;
+    eventId: string;
     buyerInfo: BuyerInfo;
     summary: OrderSummary;
     paymentMethod: PaymentMethod;
@@ -14,15 +20,33 @@ export function useOrderConfirmation() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await orderApi.createOrder(params);
+      // DDD Phase 2: Attach customer identity to existing lock
+      await orderApi.storeTempTransaction(
+        params.lockId,
+        params.eventId,
+        params.buyerInfo,
+        params.summary,
+        params.paymentMethod
+      );
       
-      // Clear checkout data after successful order
+      // Phase 3: Prepare the final view (Step 4)
+      // Since it's stored on backend, we return the order context
+      const orderResponse: OrderResponse = {
+        orderId: params.lockId,
+        status: "PENDING",
+        totalAmount: params.summary.totalPrice,
+        paymentMethod: params.paymentMethod,
+        expiryTime: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // Fallback
+        paymentInstructions: "Silakan selesaikan pembayaran sebelum batas waktu yang ditentukan.",
+      };
+
+      // Clear checkout data after successful identity storage
       sessionStorage.removeItem("tiketbisa_buyer_info");
       sessionStorage.removeItem("tiketbisa_payment_selection");
       
-      return response;
-    } catch (err) {
-      setError("Gagal membuat pesanan. Silakan coba lagi.");
+      return orderResponse;
+    } catch (err: any) {
+      setError(err.message || "Gagal membuat pesanan. Silakan coba lagi.");
       return null;
     } finally {
       setIsLoading(false);

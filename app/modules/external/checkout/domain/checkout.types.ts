@@ -47,4 +47,6 @@ export interface OrderResponse {
   paymentMethod: PaymentMethod;
   expiryTime: string;
   paymentInstructions?: string;
+  virtualAccount?: string;
+  qrCodeUrl?: string;
 }
