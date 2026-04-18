@@ -28,7 +28,7 @@ export default function AdminBrandsPage() {
       result.sort((a, b) => b.name.localeCompare(a.name));
     }
     return result;
-  }, [search, sortBy]);
+  }, [search, sortBy, allBrands]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paged = filtered.slice(
@@ -51,7 +51,7 @@ export default function AdminBrandsPage() {
       };
     }
     return stats;
-  }, []);
+  }, [allBrands, allEvents, allTransactions]);
 
   return (
     <div className="space-y-6">
