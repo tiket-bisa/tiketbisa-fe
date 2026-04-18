@@ -55,6 +55,7 @@ export function useRevenueAnalyticsData(brandSlug?: string) {
   const revenueTimeline = useMemo(() => {
     const map: Record<string, { date: string; revenue: number; transactions: number }> = {};
     for (const tx of paidTransactions) {
+      if (!tx.created_at) continue;
       const date = tx.created_at.slice(0, 10);
       if (!map[date]) {
         map[date] = { date, revenue: 0, transactions: 0 };

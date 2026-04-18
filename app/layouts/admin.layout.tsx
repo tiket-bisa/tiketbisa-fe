@@ -1,36 +1,22 @@
 import { Outlet, useNavigate } from "react-router";
 import { AuthProvider, useAuth } from "~/core/auth/auth.context";
 import { AuthGuard } from "~/core/auth/auth-guard";
-import { NavbarInternal } from "~/shared/components";
+import { NavbarAdmin } from "~/shared/components";
 
-/**
- * Internal Layout — Partner Dashboard ([subdomain].tiketbisa.com)
- *
- * Structure: AuthProvider → AuthGuard → Header → <Outlet /> → Footer
- * Nav items: Beranda, Event, Analitik
- * Action: "Scan Tiket" button
- */
-
-function InternalShell() {
+function AdminShell() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
-    navigate("/internal/partner/login");
-  };
-
-  const handleScanTicket = () => {
-    navigate("/internal/partner/scan");
+    navigate("/internal/admin/login");
   };
 
   return (
     <div className="flex min-h-screen flex-col bg-surface-primary" data-theme="light">
-      <NavbarInternal
+      <NavbarAdmin
         userEmail={user?.email}
-        brandName={user?.brand_name}
         onLogout={handleLogout}
-        onScanTicket={handleScanTicket}
       />
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
         <Outlet />
@@ -42,11 +28,11 @@ function InternalShell() {
   );
 }
 
-export default function InternalLayout() {
+export default function AdminLayout() {
   return (
     <AuthProvider>
-      <AuthGuard requiredRole="partner">
-        <InternalShell />
+      <AuthGuard requiredRole="admin">
+        <AdminShell />
       </AuthGuard>
     </AuthProvider>
   );

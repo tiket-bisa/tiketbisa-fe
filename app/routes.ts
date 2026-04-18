@@ -11,13 +11,13 @@ export default [
     index("modules/external/landing/presentation/landing.page.tsx"),
     route("event", "modules/external/event/presentation/event.page.tsx"),
     route("event/:eventId", "modules/external/event/presentation/event-detail.page.tsx"),
-    route("brand", "modules/external/brand-selection/presentation/brand-selection.page.tsx", {
-      id: "brand-selection",
+    route("brand", "modules/external/brand/presentation/brand.page.tsx", {
+      id: "brand",
     }),
     route(
       "brand/:slug",
-      "modules/external/brand-selection/presentation/brand-selection.page.tsx",
-      { id: "brand-selection-slug" },
+      "modules/external/brand/presentation/brand-detail.page.tsx",
+      { id: "brand-detail" },
     ),
     route("tentang", "modules/external/static/tentang.page.tsx"),
     route("hubungi", "modules/external/static/hubungi.page.tsx"),
@@ -30,8 +30,34 @@ export default [
     ),
   ]),
 
-  // ─── Partner Login (Standalone) ───
+  // ─── Admin Login (Standalone) ───
+  route("internal/admin/login", "modules/admin/login/presentation/login.page.tsx"),
   route("internal/partner/login", "modules/internal/login/presentation/login.page.tsx"),
+
+  // ─── Admin Layout (internal team — sees all brands) ───
+  layout("layouts/admin.layout.tsx", [
+    route(
+      "internal/admin",
+      "modules/admin/dashboard/presentation/dashboard.page.tsx",
+      { index: true },
+    ),
+    route(
+      "internal/admin/brands",
+      "modules/admin/brands/presentation/brands.page.tsx",
+    ),
+    route(
+      "internal/admin/events",
+      "modules/admin/events/presentation/events.page.tsx",
+    ),
+    route(
+      "internal/admin/analytics",
+      "modules/admin/analytics/presentation/analytics.page.tsx",
+    ),
+    route(
+      "internal/admin/transactions/:id",
+      "modules/admin/transactions/presentation/transaction-details.page.tsx",
+    ),
+  ]),
 
   // ─── Partner Layout (each partner — sees only own brand) ───
   layout("layouts/internal.layout.tsx", [
@@ -42,7 +68,7 @@ export default [
     ),
     route(
       "internal/partner/brands",
-      "modules/internal/brand-selection/presentation/brand-selection.page.tsx",
+      "modules/internal/brand/presentation/brand.page.tsx",
     ),
     route(
       "internal/partner/events",
