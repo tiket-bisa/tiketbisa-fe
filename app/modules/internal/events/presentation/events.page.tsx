@@ -32,6 +32,23 @@ export default function EventsPage() {
     [user?.brand_slug],
   );
 
+  const tabCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      all: brandEvents.length,
+      published: 0,
+      draft: 0,
+      completed: 0,
+      cancelled: 0,
+    };
+
+    for (const evt of brandEvents) {
+      const status = evt.status ?? "draft";
+      counts[status] = (counts[status] ?? 0) + 1;
+    }
+
+    return counts;
+  }, [brandEvents]);
+
   const filtered = useMemo(() => {
     return brandEvents.filter((evt) => {
       const matchesSearch =
@@ -56,9 +73,7 @@ export default function EventsPage() {
       <Tabs
         items={tabItems.map((t) => ({
           ...t,
-          count: t.value === "all"
-            ? brandEvents.length
-            : brandEvents.filter((e) => e.status === t.value).length,
+          count: tabCounts[t.value] ?? 0,
         }))}
         value={tab}
         onChange={(val) => {
