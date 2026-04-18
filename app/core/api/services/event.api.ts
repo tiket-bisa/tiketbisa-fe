@@ -1,4 +1,5 @@
 import { httpClient } from "../http-client";
+import { buildQuery } from "~/core/utils/api";
 
 /* ── BE data shapes ── */
 
@@ -42,17 +43,7 @@ export interface EventListParams {
 
 /* ── API functions ── */
 
-function buildQuery(params?: EventListParams): string {
-    if (!params) return "";
-    const qs = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-        if (value != null) {
-            qs.set(key, String(value));
-        }
-    });
-    const str = qs.toString();
-    return str ? `?${str}` : "";
-}
+// buildQuery moved to core utils (generalized, accepts Record<string, any>)
 
 export const eventApi = {
     getList: (params?: EventListParams) =>
