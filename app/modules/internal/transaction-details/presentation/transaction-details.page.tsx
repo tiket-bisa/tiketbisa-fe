@@ -116,10 +116,12 @@ export default function TransactionDetailsPage() {
                 Tanggal Transaksi
               </dt>
               <dd className="text-text-primary mt-0.5">
-                {new Date(tx.created_at).toLocaleString("id-ID", {
-                  dateStyle: "long",
-                  timeStyle: "short",
-                })}
+                {tx.created_at
+                  ? new Date(tx.created_at).toLocaleString("id-ID", {
+                    dateStyle: "long",
+                    timeStyle: "short",
+                  })
+                  : "-"}
               </dd>
             </div>
           </dl>

@@ -88,7 +88,9 @@ export default function AdminTransactionDetailsPage() {
             <div>
               <dt className="text-text-tertiary text-xs uppercase tracking-wide">Tanggal Transaksi</dt>
               <dd className="text-text-primary mt-0.5">
-                {new Date(tx.created_at).toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" })}
+                {tx.created_at
+                  ? new Date(tx.created_at).toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" })
+                  : "-"}
               </dd>
             </div>
           </dl>
