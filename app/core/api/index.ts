@@ -10,3 +10,5 @@ export type {
 } from "./pagination.type";
 
 export { DEFAULT_PAGINATION } from "./pagination.type";
+
+export { getPaginationFromSearchParams } from "./pagination-utils";
