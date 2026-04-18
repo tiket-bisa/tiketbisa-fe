@@ -45,13 +45,11 @@ export interface EventListParams {
 function buildQuery(params?: EventListParams): string {
     if (!params) return "";
     const qs = new URLSearchParams();
-    if (params.limit != null) qs.set("limit", String(params.limit));
-    if (params.offset != null) qs.set("offset", String(params.offset));
-    if (params.brandId) qs.set("brandId", params.brandId);
-    if (params.name) qs.set("name", params.name);
-    if (params.status) qs.set("status", params.status);
-    if (params.isPublished != null) qs.set("isPublished", String(params.isPublished));
-    if (params.city) qs.set("city", params.city);
+    Object.entries(params).forEach(([key, value]) => {
+        if (value != null) {
+            qs.set(key, String(value));
+        }
+    });
     const str = qs.toString();
     return str ? `?${str}` : "";
 }
