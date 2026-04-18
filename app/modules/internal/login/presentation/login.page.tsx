@@ -18,6 +18,7 @@ function LoginContent() {
   }, [user, navigate]);
 
   const handleLogin = () => {
+    // TODO: Replace mockBrands find logic with actual API fetch
     const brand = mockBrands.find((b) => b.slug === selectedBrand);
     if (brand) {
       loginAsPartner(brand.slug, brand.name);
