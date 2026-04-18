@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Button } from "~/core/design-system/components";
-import { AuthProvider, useAuth } from "~/core/auth";
+import { AuthProvider, useAuth } from "~/core/auth/auth.context";
 
 function LoginContent() {
   const { user, login } = useAuth();
