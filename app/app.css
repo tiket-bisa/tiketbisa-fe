@@ -121,8 +121,8 @@ body {
    to light-mode values. Used on external page content area. */
 
 [data-theme="light"] {
-  --color-surface-primary: #f9fafb;
-  --color-surface-alt: #f9fafb;
+  --color-surface-primary: #ffffff;
+  --color-surface-alt: #ffffff;
   --color-surface-hover: #f3f4f6;
   --color-surface-inverse: #0f0b1f;
 
