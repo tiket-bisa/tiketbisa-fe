@@ -5,11 +5,9 @@ import { useBrand } from "~/shared/hooks/use-brand";
 import { brandApi } from "../infrastructure/brand.api";
 import type { BrandFilterParams } from "../infrastructure/brand-filter.params";
 import type { Brand } from "../domain/brand.entity";
-import {
-  BrandFilters,
-  BrandGrid,
-  BrandPagination,
-} from "./components";
+import { BrandFilters } from "./components/brand-filters";
+import { BrandGrid } from "./components/brand-grid";
+import { BrandPagination } from "./components/brand-pagination";
 import type { Route } from "./+types/brand.page";
 
 export async function loader({ request }: Route.LoaderArgs) {
