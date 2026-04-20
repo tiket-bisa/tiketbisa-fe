@@ -27,7 +27,7 @@ export function OrderSuccess({ event, order, onAction }: OrderSuccessProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
-          <Card className="p-8 border-gray-100 shadow-sm rounded-3xl overflow-hidden relative">
+          <Card className="p-8 border-gray-100 shadow-sm rounded-3xl overflow-hidden relative bg-white">
              <div className="absolute top-0 right-0 p-6 opacity-5">
                <svg className="w-32 h-32 rotate-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
@@ -84,12 +84,12 @@ export function OrderSuccess({ event, order, onAction }: OrderSuccessProps) {
              </div>
           </Card>
 
-          <Card className="p-8 border-gray-100 shadow-sm rounded-3xl">
+          <Card className="p-8 border-gray-100 shadow-sm rounded-3xl bg-white">
              <h3 className="text-xs font-black text-gray-400 mb-6 uppercase tracking-[0.2em]">Informasi Event</h3>
              <div className="flex gap-6">
                <img src={event.imageUrl || "/featured-event.png"} className="w-24 h-24 rounded-2xl object-cover" alt="" />
                <div className="space-y-3">
-                 <h4 className="font-black text-xl text-gray-900 leading-tight">{event.name}</h4>
+                  <h4 className="font-black text-xl text-brand-primary leading-tight">{event.name}</h4>
                  <div className="flex items-center gap-2 text-sm font-bold text-gray-500">
                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -109,30 +109,30 @@ export function OrderSuccess({ event, order, onAction }: OrderSuccessProps) {
         </div>
 
         <div className="space-y-6">
-          <Card className="p-8 border-gray-100 shadow-sm rounded-3xl bg-gray-900 text-white">
+          <Card className="p-8 border-gray-100 shadow-sm rounded-3xl bg-white">
             <h3 className="text-xs font-black text-gray-400 mb-6 uppercase tracking-[0.2em]">Detail Transaksi</h3>
             <div className="space-y-6">
-              <div className="flex justify-between items-center pb-6 border-b border-white/10">
-                <div className="text-xs font-bold text-white/50">ID Transaksi</div>
-                <div className="text-sm font-mono font-bold">{order.transactionId.substring(0, 8)}...</div>
+              <div className="flex justify-between items-center pb-6 border-b border-gray-100">
+                <div className="text-xs font-bold text-gray-500">ID Transaksi</div>
+                <div className="text-sm font-mono font-bold text-gray-900">{order.transactionId.substring(0, 8)}...</div>
               </div>
               
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
-                  <svg className="w-4 h-4 text-white/30 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="w-4 h-4 text-gray-300 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                   <div>
-                    <div className="text-[10px] font-black text-white/30 uppercase tracking-widest">PEMBELI</div>
-                    <div className="text-sm font-bold">{order.customerName}</div>
+                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">PEMBELI</div>
+                    <div className="text-sm font-bold text-gray-900">{order.customerName}</div>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <svg className="w-4 h-4 text-white/30 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="w-4 h-4 text-gray-300 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                   </svg>
                   <div>
-                    <div className="text-[10px] font-black text-white/30 uppercase tracking-widest">TOTAL PEMBAYARAN</div>
+                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">TOTAL PEMBAYARAN</div>
                     <div className="text-lg font-black text-brand-primary">Rp {order.totalPrice.toLocaleString()}</div>
                   </div>
                 </div>
@@ -141,7 +141,7 @@ export function OrderSuccess({ event, order, onAction }: OrderSuccessProps) {
               <div className="pt-6">
                 <Button 
                   onClick={onAction}
-                  className="w-full bg-white text-gray-900 hover:bg-gray-100 rounded-2xl py-6 font-black group"
+                  className="w-full rounded-2xl py-6 font-black group"
                 >
                   Kembali ke Beranda 
                   <svg className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>

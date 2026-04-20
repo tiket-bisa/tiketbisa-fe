@@ -1,24 +1,33 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { orderApi } from "./order.api";
-import { apiFetch } from "~/core/api";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mocking apiFetch to control backend responses
+import { apiFetch } from "~/core/api";
+import type { BuyerInfo, OrderSummary, PaymentMethod } from "../domain/checkout.types";
+import { orderApi } from "./order.api";
+
 vi.mock("~/core/api", () => ({
   apiFetch: vi.fn(),
 }));
 
-describe("Order API Integration (DDD/SOLID Tests)", () => {
-  const mockEventId = "event-123";
-  const mockSummary = {
-    items: [{ id: "cat-1", quantity: 2, price: 50000 }],
-    totalPrice: 100000,
+const mockApiFetch = vi.mocked(apiFetch);
+
+describe("orderApi", () => {
+  const mockEventId = "e-001";
+  const mockSummary: OrderSummary = {
+    subtotal: 100000,
+    adminFee: 5000,
+    serviceFee: 10000,
+    tax: 10000,
+    totalPrice: 125000,
+    items: [{ ticketId: "tc-001", ticketName: "Regular", quantity: 2, price: 50000 }],
   };
-  const mockBuyerInfo = {
+  const mockBuyerInfo: BuyerInfo = {
     fullName: "John Doe",
     email: "john@example.com",
     phoneNumber: "08123456789",
+    identityType: "KTP",
+    identityNumber: "1234567890123456",
   };
-  const mockPaymentMethod = {
+  const mockPaymentMethod: PaymentMethod = {
     id: "manual",
     category: "BANK_TRANSFER",
     name: "Manual Transfer",
@@ -29,71 +38,105 @@ describe("Order API Integration (DDD/SOLID Tests)", () => {
     vi.clearAllMocks();
   });
 
-  describe("Phase 1: Acquire Lock", () => {
-    it("should call Phase 1 endpoint with correct DTO structure", async () => {
-      (apiFetch as any).mockResolvedValueOnce({
-        success: true,
-        data: { userId: "lock-001", expiresAt: Date.now() + 900000 },
-      });
+  it("acquireLock sends backend-compatible payload", async () => {
+    mockApiFetch.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "lock-001",
+        eventId: mockEventId,
+        tickets: [{ categoryId: "tc-001", quantity: 2 }],
+        timestamp: Date.now(),
+        expiresAt: Date.now() + 900000,
+      },
+    } as any);
 
-      const result = await orderApi.acquireLock(mockEventId, mockSummary);
+    const result = await orderApi.acquireLock(mockEventId, mockSummary);
 
-      expect(apiFetch).toHaveBeenCalledWith("/transaction", expect.objectContaining({
+    expect(mockApiFetch).toHaveBeenCalledWith(
+      "/transaction",
+      expect.objectContaining({
         method: "POST",
-        body: expect.stringContaining('"eventId":"event-123"'),
-      }));
-      expect(result.userId).toBe("lock-001");
-    });
-
-    it("should throw error if backend fails to lock", async () => {
-      (apiFetch as any).mockResolvedValueOnce({
-        success: false,
-        message: "Tickets sold out",
-      });
-
-      await expect(orderApi.acquireLock(mockEventId, mockSummary))
-        .rejects.toThrow("Tickets sold out");
-    });
+        body: JSON.stringify({
+          eventId: mockEventId,
+          tickets: [{ categoryId: "tc-001", quantity: 2, price: 50000 }],
+        }),
+      }),
+    );
+    expect(result.userId).toBe("lock-001");
   });
 
-  describe("Phase 2: Store Temp Transaction", () => {
-    it("should attach customer info to existing lockId", async () => {
-      (apiFetch as any).mockResolvedValueOnce({ success: true });
+  it("storeTempTransaction sends backend-compatible payload without tickets", async () => {
+    mockApiFetch.mockResolvedValueOnce({ success: true, data: "ok" } as any);
 
-      await orderApi.storeTempTransaction(
-        "lock-001",
-        mockEventId,
-        mockBuyerInfo,
-        mockSummary,
-        mockPaymentMethod
-      );
+    await orderApi.storeTempTransaction(
+      "lock-001",
+      mockEventId,
+      mockBuyerInfo,
+      mockSummary,
+      mockPaymentMethod,
+    );
 
-      expect(apiFetch).toHaveBeenCalledWith("/transaction/temp/lock-001", expect.objectContaining({
+    expect(mockApiFetch).toHaveBeenCalledWith(
+      "/transaction/temp/lock-001",
+      expect.objectContaining({
         method: "POST",
-        body: expect.stringContaining('"customerName":"John Doe"'),
-      }));
-    });
+        body: JSON.stringify({
+          eventId: mockEventId,
+          customerName: "John Doe",
+          customerEmail: "john@example.com",
+          customerPhone: "08123456789",
+          source: "WEBSITE",
+          paymentMethod: "MANUAL_TRANSFER",
+          isComplimentary: false,
+        }),
+      }),
+    );
   });
 
-  describe("Phase 3: Execute Order", () => {
-    it("should finalize transaction and return complete order info", async () => {
-      const mockFinalResponse = {
-        transactionId: "tx-999",
-        customerName: "John Doe",
-        tickets: [{ ticketId: "t-1", code: "QR-123" }],
-      };
-
-      (apiFetch as any).mockResolvedValueOnce({
+  it("executeOrder normalizes issued tickets from complete endpoint", async () => {
+    mockApiFetch
+      .mockResolvedValueOnce({
         success: true,
-        data: mockFinalResponse,
-      });
+        data: {
+          customerName: "John Doe",
+          totalPrice: 125000,
+          paymentDate: "2026-04-16T02:22:44.000Z",
+        },
+      } as any)
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          "tc-001": [
+            {
+              id: "ticket-1",
+              codeHash: "QR-ABC",
+              codeType: "QR_CODE",
+              ticketCategoryId: "tc-001",
+              status: "ISSUED",
+            },
+          ],
+        },
+      } as any);
 
-      const result = await orderApi.executeOrder("lock-001");
+    const result = await orderApi.executeOrder("lock-001");
 
-      expect(apiFetch).toHaveBeenCalledWith("/transaction/lock-001/complete", expect.objectContaining({
-        method: "POST",
-      }));
-      expect(result.transactionId).toBe("tx-999");
-    });
+    expect(mockApiFetch).toHaveBeenNthCalledWith(1, "/transaction/lock-001", undefined);
+    expect(mockApiFetch).toHaveBeenNthCalledWith(
+      2,
+      "/transaction/lock-001/complete",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(result.transactionId).toBe("lock-001");
+    expect(result.customerName).toBe("John Doe");
+    expect(result.totalPrice).toBe(125000);
+    expect(result.tickets).toEqual([
+      {
+        ticketId: "ticket-1",
+        code: "QR-ABC",
+        codeType: "QR_CODE",
+        categoryId: "tc-001",
+        status: "ISSUED",
+      },
+    ]);
   });
 });

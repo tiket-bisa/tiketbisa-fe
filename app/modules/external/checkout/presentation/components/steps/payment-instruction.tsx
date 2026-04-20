@@ -7,14 +7,27 @@ import { CountdownTimer } from "../shared/countdown-timer";
 export interface PaymentInstructionProps {
   order: OrderResponse;
   event: Event;
+  fallbackTotalAmount?: number;
   onAction: () => void;
   onBack: () => void;
   onExpire: () => void;
   isLoading?: boolean;
 }
 
-export function PaymentInstruction({ order, event, onAction, onBack, onExpire, isLoading }: PaymentInstructionProps) {
+export function PaymentInstruction({
+  order,
+  event,
+  fallbackTotalAmount,
+  onAction,
+  onBack,
+  onExpire,
+  isLoading,
+}: PaymentInstructionProps) {
   const isBank = order.paymentMethod.category === "BANK_TRANSFER";
+  const totalAmount =
+    Number(order.totalAmount) > 0
+      ? Number(order.totalAmount)
+      : Number(fallbackTotalAmount || 0);
   
   const deadline = new Date(order.expiryTime).toLocaleTimeString('id-ID', { 
     hour: '2-digit', 
@@ -26,7 +39,7 @@ export function PaymentInstruction({ order, event, onAction, onBack, onExpire, i
   if (!isBank) {
     return (
       <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
-        <Card className="overflow-hidden bg-white border-2 border-gray-100 rounded-[2.5rem] shadow-sm">
+        <Card className="overflow-hidden border-gray-100 rounded-3xl shadow-sm bg-white">
           <div className="p-6 md:p-12 space-y-12">
             {/* Top Section: Timer & Deadline */}
             <div className="flex flex-col items-center text-center space-y-6">
@@ -83,19 +96,19 @@ export function PaymentInstruction({ order, event, onAction, onBack, onExpire, i
             <div className="pt-12 border-t-2 border-dashed border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
               <div className="space-y-4">
                 <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Metode Pembayaran</p>
-                <div className="flex items-center gap-4 p-5 border-2 border-gray-50 rounded-3xl bg-gray-50/30">
+                <div className="flex items-center gap-4 p-5 border-2 border-gray-100 rounded-3xl bg-white">
                   <div className="p-3 bg-white rounded-xl shadow-sm border border-gray-100">
                     <img src={order.paymentMethod.logo} alt={order.paymentMethod.name} className="h-8 w-auto object-contain" />
                   </div>
                   <div className="space-y-0.5">
                     <p className="font-black text-gray-900">{order.paymentMethod.name}</p>
-                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-tight">Total: {formatIDR(order.totalAmount)}</p>
+                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-tight">Total: {formatIDR(totalAmount)}</p>
                   </div>
                 </div>
               </div>
               <div className="space-y-4">
                 <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Detail Acara</p>
-                <div className="flex items-center gap-4 p-5 border-2 border-gray-50 rounded-3xl bg-white">
+                <div className="flex items-center gap-4 p-5 border-2 border-gray-100 rounded-3xl bg-white">
                   <div className="w-16 h-16 bg-gray-100 rounded-2xl flex-shrink-0 overflow-hidden">
                      <img src={event.imageUrl || "/logo/tiketbisa.png"} alt={event.name} className="w-full h-full object-cover" />
                   </div>
@@ -119,9 +132,9 @@ export function PaymentInstruction({ order, event, onAction, onBack, onExpire, i
   // --- 2. BANK TRANSFER LAYOUT (Traditional Style) ---
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
-      <Card className="overflow-hidden bg-white border-2 border-gray-100 rounded-3xl md:rounded-[2.5rem]">
+      <Card className="overflow-hidden border-gray-100 rounded-3xl shadow-sm bg-white">
         {/* Header Status */}
-        <div className="p-6 md:p-8 border-b border-gray-50 bg-gray-50/30 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="p-6 md:p-8 border-b border-gray-100 bg-white flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-3">
             <span className="relative flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
@@ -139,7 +152,7 @@ export function PaymentInstruction({ order, event, onAction, onBack, onExpire, i
             <p className="text-sm font-medium text-gray-500">Total Tagihan</p>
             <div className="flex flex-col items-center gap-2">
               <h2 className="text-4xl md:text-5xl font-black text-brand-primary tracking-tighter">
-                {formatIDR(order.totalAmount)}
+                {formatIDR(totalAmount)}
               </h2>
               <button className="text-xs font-black text-brand-primary uppercase tracking-widest hover:underline flex items-center gap-2">
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -155,7 +168,7 @@ export function PaymentInstruction({ order, event, onAction, onBack, onExpire, i
               <span className="w-1.5 h-5 md:h-6 bg-brand-primary rounded-full" />
               Metode Pembayaran
             </h3>
-            <div className="flex items-center gap-6 p-6 border-2 border-gray-50 rounded-2xl bg-white">
+            <div className="flex items-center gap-6 p-6 border-2 border-gray-100 rounded-2xl bg-white">
               <img src={order.paymentMethod.logo} alt={order.paymentMethod.name} className="h-8 w-auto object-contain" />
               <div className="space-y-1">
                 <p className="text-lg font-black text-gray-900">{order.paymentMethod.name}</p>
@@ -169,7 +182,7 @@ export function PaymentInstruction({ order, event, onAction, onBack, onExpire, i
               <span className="w-1.5 h-5 md:h-6 bg-brand-primary rounded-full" />
               Nomor Virtual Account
             </h3>
-            <div className="p-8 border-2 border-gray-50 rounded-3xl bg-white text-center space-y-4">
+            <div className="p-8 border-2 border-gray-100 rounded-3xl bg-white text-center space-y-4">
               <span className="text-3xl md:text-4xl font-black text-gray-900 tracking-wider">
                 {order.virtualAccount}
               </span>
@@ -179,7 +192,7 @@ export function PaymentInstruction({ order, event, onAction, onBack, onExpire, i
             </div>
           </section>
 
-          <section className="bg-gray-50 rounded-3xl p-8 space-y-4">
+          <section className="bg-white border-2 border-gray-100 rounded-3xl p-8 space-y-4">
             <h4 className="text-sm font-black text-gray-900">Cara Melakukan Transfer:</h4>
             <ul className="space-y-3">
               {[

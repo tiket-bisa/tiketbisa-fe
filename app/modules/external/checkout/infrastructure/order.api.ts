@@ -8,16 +8,19 @@ interface TicketRequest {
   price?: number;
 }
 
-interface CreateTransactionRq {
-  userId?: string;
+interface LockTicketRq {
   eventId: string;
-  customerName?: string;
-  customerEmail?: string;
-  customerPhone?: string;
-  source: string;
-  paymentMethod?: string;
-  isComplimentary: boolean;
   tickets: TicketRequest[];
+}
+
+interface StoreTempTransactionRq {
+  eventId: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  source: string;
+  paymentMethod: string;
+  isComplimentary: boolean;
 }
 
 export interface TicketIssued {
@@ -44,6 +47,81 @@ export interface LockResponse {
   expiresAt: number;
 }
 
+interface TicketIssuedFromApi {
+  id: string;
+  codeHash: string;
+  codeType: string;
+  ticketCategoryId: string;
+  status: string;
+}
+
+interface TransactionStatusFromApi {
+  customerName?: string;
+  totalPrice?: number;
+  paymentDate?: string;
+  paymentMethod?: string;
+  tickets?: TicketRequest[];
+}
+
+function getApiErrorMessage(response: unknown, fallback: string): string {
+  const payload = response as any;
+  if (payload?.error?.message) return String(payload.error.message);
+  if (typeof payload?.error === "string" && payload.error) return payload.error;
+  if (payload?.reason) return String(payload.reason);
+  return fallback;
+}
+
+function calculateTotalFromTickets(tickets: TicketRequest[] | undefined): number {
+  if (!tickets || tickets.length === 0) return 0;
+  return tickets.reduce((sum, ticket) => {
+    const price = Number(ticket.price || 0);
+    const quantity = Number(ticket.quantity || 0);
+    return sum + price * quantity;
+  }, 0);
+}
+
+function mapPaymentMethod(paymentMethodRaw: string | undefined): PaymentMethod {
+  const normalized = String(paymentMethodRaw || "").toUpperCase();
+
+  switch (normalized) {
+    case "VA":
+      return {
+        id: "va",
+        name: "Virtual Account",
+        logo: "",
+        category: "BANK_TRANSFER",
+      };
+    case "MANUAL_TRANSFER":
+      return {
+        id: "manual_transfer",
+        name: "Manual Transfer",
+        logo: "",
+        category: "BANK_TRANSFER",
+      };
+    case "QRIS":
+      return {
+        id: "qris",
+        name: "QRIS",
+        logo: "",
+        category: "E_WALLET_QRIS",
+      };
+    case "EWALLET":
+      return {
+        id: "ewallet",
+        name: "E-Wallet",
+        logo: "",
+        category: "E_WALLET_QRIS",
+      };
+    default:
+      return {
+        id: "unknown",
+        name: normalized || "Payment",
+        logo: "",
+        category: "BANK_TRANSFER",
+      };
+  }
+}
+
 export const orderApi = {
   /**
    * Phase 1: Lock tickets (DDD - Acquire Lock)
@@ -56,10 +134,8 @@ export const orderApi = {
       price: item.price
     }));
 
-    const payload: CreateTransactionRq = {
+    const payload: LockTicketRq = {
       eventId,
-      source: "WEBSITE",
-      isComplimentary: false,
       tickets
     };
 
@@ -69,7 +145,7 @@ export const orderApi = {
     });
 
     if (!response.success || !response.data) {
-      throw new Error(response.message || "Failed to acquire ticket lock");
+      throw new Error(getApiErrorMessage(response, "Failed to acquire ticket lock"));
     }
 
     return response.data;
@@ -85,12 +161,6 @@ export const orderApi = {
     summary: OrderSummary,
     paymentMethod: PaymentMethod
   ): Promise<void> {
-    const tickets: TicketRequest[] = summary.items.map((item: any) => ({
-      categoryId: item.ticketId || item.id,
-      quantity: item.quantity,
-      price: item.price
-    }));
-
     let backendPaymentMethod = "MANUAL_TRANSFER";
     if (paymentMethod.category === "BANK_TRANSFER") {
       backendPaymentMethod = paymentMethod.id === "manual" ? "MANUAL_TRANSFER" : "VA";
@@ -98,16 +168,14 @@ export const orderApi = {
       backendPaymentMethod = "QRIS";
     }
 
-    const payload: CreateTransactionRq = {
-      userId: lockId,
+    const payload: StoreTempTransactionRq = {
       eventId,
       customerName: buyerInfo.fullName,
       customerEmail: buyerInfo.email,
       customerPhone: buyerInfo.phoneNumber,
       source: "WEBSITE",
       paymentMethod: backendPaymentMethod,
-      isComplimentary: false,
-      tickets
+      isComplimentary: false
     };
 
     const response = await apiFetch<ApiResponse<string>>(`/transaction/temp/${lockId}`, {
@@ -116,23 +184,63 @@ export const orderApi = {
     });
 
     if (!response.success) {
-      throw new Error(response.message || "Failed to store temporary transaction");
+      throw new Error(getApiErrorMessage(response, "Failed to store temporary transaction"));
     }
   },
 
   /**
    * Phase 3: Finalize and execute order (DDD - Finalize Transaction)
    */
-  async executeOrder(lockId: string): Promise<CompleteOrderResponse> {
-    const response = await apiFetch<ApiResponse<CompleteOrderResponse>>(`/transaction/${lockId}/complete`, {
+  async executeOrder(
+    lockId: string,
+    fallbackTotalPrice?: number,
+  ): Promise<CompleteOrderResponse> {
+    const transactionSnapshot = await this.getTransactionSnapshot(lockId);
+
+    const response = await apiFetch<ApiResponse<Record<string, TicketIssuedFromApi[]>>>(`/transaction/${lockId}/complete`, {
       method: "POST"
     });
 
     if (!response.success || !response.data) {
-      throw new Error(response.message || "Failed to complete transaction");
+      throw new Error(getApiErrorMessage(response, "Failed to complete transaction"));
     }
 
-    return response.data;
+    const normalizedTickets = Object.values(response.data)
+      .flat()
+      .map((ticket) => ({
+      ticketId: ticket.id,
+      code: ticket.codeHash,
+      codeType: ticket.codeType,
+      categoryId: ticket.ticketCategoryId,
+      status: ticket.status,
+      }));
+
+    const calculatedTotalPrice = Number(
+      transactionSnapshot?.totalPrice ||
+        calculateTotalFromTickets(transactionSnapshot?.tickets),
+    );
+
+    const totalPrice = calculatedTotalPrice > 0
+      ? calculatedTotalPrice
+      : Number(fallbackTotalPrice || 0);
+
+    return {
+      transactionId: lockId,
+      customerName: transactionSnapshot?.customerName || "",
+      totalPrice,
+      paymentDate: transactionSnapshot?.paymentDate || new Date().toISOString(),
+      tickets: normalizedTickets,
+    };
+  },
+
+  async getTransactionSnapshot(lockId: string): Promise<TransactionStatusFromApi | null> {
+    try {
+      const response = await apiFetch<ApiResponse<TransactionStatusFromApi>>(`/transaction/${lockId}`);
+      if (!response.success || !response.data) return null;
+      return response.data;
+    } catch {
+      return null;
+    }
   },
 
   /**
@@ -178,29 +286,47 @@ export const orderApi = {
       }
 
       const data = response.data;
-      const isBank = data.paymentMethod === "VA" || data.paymentMethod === "MANUAL_TRANSFER";
+      const paymentMethod = mapPaymentMethod(data.paymentMethod);
+      let totalAmount = Number(
+        data.totalPrice || calculateTotalFromTickets(data.tickets),
+      );
+
+      if (!(totalAmount > 0)) {
+        const cachedSummaryRaw =
+          typeof window !== "undefined"
+            ? sessionStorage.getItem("tiketbisa_checkout_summary")
+            : null;
+        if (cachedSummaryRaw) {
+          try {
+            const cachedSummary = JSON.parse(cachedSummaryRaw) as {
+              totalPrice?: number;
+            };
+            if (Number(cachedSummary?.totalPrice) > 0) {
+              totalAmount = Number(cachedSummary.totalPrice);
+            }
+          } catch {
+            // Keep existing fallback behavior
+          }
+        }
+      }
 
       return {
         orderId: orderId,
         status: "PENDING",
-        totalAmount: data.totalPrice || 0,
-        paymentMethod: isBank ? {
-          id: "bca",
-          name: "BCA Transfer",
-          logo: "/logo/bca.png",
-          category: "BANK_TRANSFER"
-        } : {
-          id: "qris",
-          name: "QRIS",
-          logo: "/logo/qris.png",
-          category: "E_WALLET_QRIS"
-        },
+        totalAmount,
+        paymentMethod,
         expiryTime: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-        paymentInstructions: isBank 
+        paymentInstructions: paymentMethod.category === "BANK_TRANSFER"
           ? "Silakan transfer tepat sesuai nominal hingga 3 digit terakhir."
           : "Pindai kode QR menggunakan aplikasi pembayaran Anda.",
-        virtualAccount: isBank ? "123456789012345" : undefined,
-        qrCodeUrl: !isBank ? "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=TIKETBISA_MOCK_QRIS" : undefined,
+        virtualAccount:
+          paymentMethod.category === "BANK_TRANSFER"
+            ? "123456789012345"
+            : undefined,
+        qrCodeUrl:
+          paymentMethod.category !== "BANK_TRANSFER"
+            ? "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=TIKETBISA_MOCK_QRIS"
+            : undefined,
       };
     } catch (e) {
       return null;

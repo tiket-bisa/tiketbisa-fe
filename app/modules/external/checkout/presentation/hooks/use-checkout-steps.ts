@@ -32,6 +32,13 @@ export function useCheckoutSteps(
 
   const isStep2Valid = !!(selection.methodId && selection.agreedToTerms && selection.agreedToPrivacy);
 
+  const handlePaymentMethodSelect = useCallback((methodId: string) => {
+    setMethodId(methodId);
+    setAgreedToTerms(true);
+    setAgreedToPrivacy(true);
+    setSearchParams({ ...Object.fromEntries(searchParams), step: "3" });
+  }, [searchParams, setSearchParams, setMethodId, setAgreedToTerms, setAgreedToPrivacy]);
+
   /**
    * Phase 1: Ticket Locking (DDD - Intent Acquisition)
    * Ensures tickets are reserved before user spends too much time on the form.
@@ -49,8 +56,8 @@ export function useCheckoutSteps(
         return newParams;
       }, { replace: true });
       
-      // Store deadline in session for UI Timer sync
-      sessionStorage.setItem("tiketbisa_checkout_deadline", new Date(lock.expiresAt).toISOString());
+      // Store deadline in session for UI timer sync (epoch milliseconds)
+      sessionStorage.setItem("tiketbisa_checkout_deadline", String(lock.expiresAt));
     } catch (error) {
       console.error("Failed to acquire initial ticket lock", error);
     } finally {
@@ -65,26 +72,41 @@ export function useCheckoutSteps(
     }
   }, [currentStep, acquireInitialLock]);
 
+  useEffect(() => {
+    if (summary.items.length === 0 && currentStep <= 3) {
+      sessionStorage.removeItem("tiketbisa_checkout_deadline");
+    }
+  }, [summary.items.length, currentStep]);
+
   const handleNext = useCallback(async () => {
     switch (currentStep) {
       case 1:
         if (validateForm()) {
-          // If lock failed initially, try one last time before moving forward
-          if (!lockId) {
+          if (summary.items.length === 0) {
+            alert("Pilih tiket dulu sebelum lanjut ke pembayaran.");
+            navigate(`/event/${event.id}`);
+            return;
+          }
+
+          // Reuse existing lock from state/query if present before trying to lock again
+          const activeLockId = lockId || searchParams.get("lockId");
+
+          if (!activeLockId) {
              setIsActionLoading(true);
              try {
                const lock = await orderApi.acquireLock(event.id, summary);
                setLockId(lock.userId);
                setSearchParams({ ...Object.fromEntries(searchParams), step: "2", lockId: lock.userId });
-             } catch (e) {
-               alert("Maaf, tiket tidak tersedia atau gagal dikunci. Silakan coba lagi.");
-               return;
+             } catch (e: any) {
+               alert(e?.message || "Maaf, tiket tidak tersedia atau gagal dikunci. Silakan coba lagi.");
+                return;
              } finally {
                setIsActionLoading(false);
              }
-          } else {
-            setSearchParams({ ...Object.fromEntries(searchParams), step: "2" });
-          }
+           } else {
+            setLockId(activeLockId);
+            setSearchParams({ ...Object.fromEntries(searchParams), step: "2", lockId: activeLockId });
+           }
         }
         break;
       case 2:
@@ -107,7 +129,8 @@ export function useCheckoutSteps(
             setSearchParams({ 
               ...Object.fromEntries(searchParams), 
               step: "4", 
-              orderId: result.orderId 
+              orderId: result.orderId,
+              lockId: lockId,
             });
           }
         } else {
@@ -118,18 +141,43 @@ export function useCheckoutSteps(
         setIsActionLoading(true);
         try {
           // DDD Phase 3: Finalize Transaction
-          if (lockId) {
-            const result = await orderApi.executeOrder(lockId);
+          const activeLockId = lockId || searchParams.get("lockId") || searchParams.get("orderId");
+          if (activeLockId) {
+            const result = await orderApi.executeOrder(
+              activeLockId,
+              summary.totalPrice,
+            );
             setCompletedOrder(result);
-            setSearchParams({ ...Object.fromEntries(searchParams), step: "5" });
+            setSearchParams({
+              ...Object.fromEntries(searchParams),
+              step: "5",
+              lockId: activeLockId,
+              orderId: activeLockId,
+            });
+          } else {
+            alert("Sesi checkout tidak ditemukan. Silakan ulangi dari halaman event.");
+            navigate(`/event/${params.eventId}`);
           }
-        } catch (error) {
+        } catch (error: any) {
+          const message = error?.message || "Gagal menyelesaikan transaksi.";
           console.error("Failed to execute final order", error);
+
+          if (message.includes("404") || message.toLowerCase().includes("expired") || message.toLowerCase().includes("not found")) {
+            alert("Sesi transaksi kamu sudah tidak valid atau kedaluwarsa. Silakan checkout ulang.");
+            sessionStorage.removeItem("tiketbisa_checkout_deadline");
+            navigate(`/event/${params.eventId}`);
+          } else {
+            alert(message);
+          }
         } finally {
           setIsActionLoading(false);
         }
         break;
       case 5:
+        sessionStorage.removeItem("tiketbisa_checkout_deadline");
+        sessionStorage.removeItem("tiketbisa_buyer_info");
+        sessionStorage.removeItem("tiketbisa_payment_selection");
+        sessionStorage.removeItem("tiketbisa_checkout_summary");
         navigate("/event");
         break;
     }
@@ -140,8 +188,13 @@ export function useCheckoutSteps(
       sessionStorage.removeItem("tiketbisa_checkout_deadline");
       sessionStorage.removeItem("tiketbisa_buyer_info");
       sessionStorage.removeItem("tiketbisa_payment_selection");
+      sessionStorage.removeItem("tiketbisa_checkout_summary");
       navigate(`/event/${params.eventId}`);
     } else if (currentStep === 5) {
+      sessionStorage.removeItem("tiketbisa_checkout_deadline");
+      sessionStorage.removeItem("tiketbisa_buyer_info");
+      sessionStorage.removeItem("tiketbisa_payment_selection");
+      sessionStorage.removeItem("tiketbisa_checkout_summary");
       navigate("/event");
     } else {
       navigate(-1);
@@ -152,6 +205,7 @@ export function useCheckoutSteps(
     sessionStorage.removeItem("tiketbisa_checkout_deadline");
     sessionStorage.removeItem("tiketbisa_buyer_info");
     sessionStorage.removeItem("tiketbisa_payment_selection");
+    sessionStorage.removeItem("tiketbisa_checkout_summary");
     navigate(`/event/${params.eventId}`);
   }, [navigate, params.eventId]);
 
@@ -165,6 +219,7 @@ export function useCheckoutSteps(
     paymentSelection: selection,
     selectedPaymentMethod,
     isStep2Valid,
+    handlePaymentMethodSelect,
     setMethodId,
     setAgreedToTerms,
     setAgreedToPrivacy,
