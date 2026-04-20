@@ -1,2 +1,3 @@
 export { EventCard } from "./event-card";
-export type { EventCardProps, EventCardData } from "./types";
+export type { EventCardProps } from "./types";
+export type { EventCardData } from "./types";

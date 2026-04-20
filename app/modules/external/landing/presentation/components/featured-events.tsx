@@ -82,6 +82,7 @@ export function FeaturedEvents({ events }: FeaturedEventsProps) {
                       date: event.date,
                       location: event.location,
                       tickets: event.tickets,
+                      minPrice: event.minPrice,
                       brandName: event.brand,
                     }}
                     className="shadow-2xl border-none"

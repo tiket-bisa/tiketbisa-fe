@@ -7,7 +7,7 @@ import type { Event } from "../../event/domain/event.entity";
 const MOCK_BANNERS: Banner[] = [
   {
     id: "banner-1",
-    imageUrl: "https://picsum.photos/seed/banner1/1200/400",
+    imageUrl: "/banner/Homepage.svg",
     alt: "Promo Spesial",
     title: "Diskon 50% Tiket Konser",
     description: "Nikmati penawaran terbatas untuk konser musik favoritmu bulan ini.",
@@ -15,7 +15,7 @@ const MOCK_BANNERS: Banner[] = [
   },
   {
     id: "banner-2",
-    imageUrl: "https://picsum.photos/seed/banner2/1200/400",
+    imageUrl: "/banner/KategoriEvent.svg",
     alt: "Liga 1",
     title: "Nonton Tim Kesayanganmu",
     description: "Tiket pertandingan Liga 1 2026 sudah tersedia. Beli sekarang sebelum kehabisan!",
@@ -23,7 +23,7 @@ const MOCK_BANNERS: Banner[] = [
   },
   {
     id: "banner-3",
-    imageUrl: "https://picsum.photos/seed/banner3/1200/400",
+    imageUrl: "/banner/Homepage.svg",
     alt: "Festival",
     title: "Festival Musik Terbesar 2026",
     description: "Hadirkan pengalaman tak terlupakan bersama musisi internasional pilihan.",

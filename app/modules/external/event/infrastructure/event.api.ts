@@ -13,6 +13,10 @@ interface EventListResponseData {
   events: EventDto[];
 }
 
+interface TicketCategoryListItem {
+  price: number | string;
+}
+
 export const eventApi: EventRepository = {
   async getEvents(
     params: EventFilterParams,
@@ -25,7 +29,35 @@ export const eventApi: EventRepository = {
     queryParams.append("isPublished", "true");
 
     const response = await apiFetch<ApiResponse<EventListResponseData>>(
-      `/event?${queryParams.toString()}`,
+      `/event?${queryParams.toString()}`
+    );
+
+    const mappedEvents = await Promise.all(
+      response.data.events.map(async (dto, idx) => {
+        const mapped = mapEventDtoToEntity(dto, idx);
+
+        if (mapped.minPrice !== undefined && mapped.minPrice !== null) {
+          return mapped;
+        }
+
+        try {
+          const ticketResponse = await apiFetch<ApiResponse<TicketCategoryListItem[]>>(
+            `/ticket-category/event/${dto.id}`,
+          );
+
+          const prices = (ticketResponse.data || [])
+            .map((ticket) => Number(ticket.price))
+            .filter((price) => Number.isFinite(price) && price >= 0);
+
+          if (prices.length > 0) {
+            mapped.minPrice = Math.min(...prices);
+          }
+        } catch {
+          // Keep fallback behavior when ticket category fetch fails.
+        }
+
+        return mapped;
+      }),
     );
 
     return {
@@ -34,9 +66,7 @@ export const eventApi: EventRepository = {
         limit: response.data.limit,
         offset: response.data.offset,
         count: response.data.totalCount,
-        event_list: response.data.events.map((dto, idx) =>
-          mapEventDtoToEntity(dto, idx),
-        ),
+        event_list: mappedEvents,
       },
     };
   },
