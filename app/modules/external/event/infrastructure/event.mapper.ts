@@ -36,6 +36,7 @@ function formatEventDate(dateStr: string): string {
 }
 
 export function mapEventDtoToEntity(dto: EventDto, index: number): Event {
+  const anyDto = dto as any;
   return {
     id: dto.id,
     name: dto.name,
