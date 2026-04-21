@@ -3,19 +3,21 @@ import { Button } from "~/core/design-system/components";
 
 export interface NavbarInternalProps {
   userEmail?: string;
+  brandName?: string;
   onLogout?: () => void;
   onScanTicket?: () => void;
   className?: string;
 }
 
 const navLinks: readonly { to: string; label: string; exact?: boolean }[] = [
-  { to: "/partner", label: "Beranda", exact: true },
-  { to: "/partner/events", label: "Event" },
-  { to: "/partner/analytics", label: "Analitik" },
+  { to: "/internal/partner", label: "Beranda", exact: true },
+  { to: "/internal/partner/events", label: "Event" },
+  { to: "/internal/partner/analytics", label: "Analitik" },
 ];
 
 export function NavbarInternal({
   userEmail,
+  brandName,
   onLogout,
   onScanTicket,
   className = "",
@@ -28,13 +30,20 @@ export function NavbarInternal({
     >
       <nav className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
         {/* Logo */}
-        <Link to="/partner" className="shrink-0" aria-label="Tiketbisa partner">
+        <Link to="/internal/partner" className="shrink-0" aria-label="Tiketbisa partner">
           <img
             src="/logo/tiketbisa-white.png"
             alt="Tiketbisa"
             className="w-auto h-8 lg:h-10 cursor-pointer"
           />
         </Link>
+
+        {/* Brand name */}
+        {brandName && (
+          <span className="hidden sm:inline-flex items-center rounded-md bg-surface-hover px-2 py-0.5 text-xs font-medium text-text-secondary truncate max-w-[160px]">
+            {brandName}
+          </span>
+        )}
 
         {/* Nav links */}
         <ul className="hidden md:flex items-center gap-1">

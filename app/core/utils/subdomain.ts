@@ -6,7 +6,7 @@
  */
 
 /** Change this once the subdomain is confirmed */
-const INTERNAL_SUBDOMAIN = import.meta.env.VITE_INTERNAL_SUBDOMAIN ?? "partner";
+const INTERNAL_SUBDOMAIN = import.meta.env.VITE_INTERNAL_SUBDOMAIN ?? "internal";
 
 export type AppMode = "external" | "internal";
 

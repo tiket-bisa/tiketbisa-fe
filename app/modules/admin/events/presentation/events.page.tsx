@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
-import { Card, Badge, SearchInput, Pagination, Tabs } from "~/core/design-system/components";
-import { useAuth } from "~/core/auth";
-import { mockEvents } from "../infrastructure/event.mock";
+import { Card, Badge, SearchInput, Pagination, Tabs, Select } from "~/core/design-system/components";
+import { allEvents } from "../infrastructure/event.mock";
 
 const STATUS_MAP = {
   draft: { label: "Draft", variant: "default" as const },
@@ -19,84 +18,74 @@ const tabItems = [
 
 const ITEMS_PER_PAGE = 6;
 
-/** Partner — Event Management (filtered by partner's brand) */
-export default function EventsPage() {
-  const { user } = useAuth();
+/** Admin — Events across all brands */
+export default function AdminEventsPage() {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("all");
+  const [brandFilter, setBrandFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Filter events to only this partner's brand
-  const brandEvents = useMemo(
-    () => mockEvents.filter((e) => e.brand_slug === user?.brand_slug),
-    [user?.brand_slug],
-  );
-
-  const tabCounts = useMemo(() => {
-    const counts: Record<string, number> = {
-      all: brandEvents.length,
-      published: 0,
-      draft: 0,
-      completed: 0,
-      cancelled: 0,
-    };
-
-    for (const evt of brandEvents) {
-      const status = evt.status ?? "draft";
-      counts[status] = (counts[status] ?? 0) + 1;
-    }
-
-    return counts;
-  }, [brandEvents]);
+  // Unique brand names from events
+  const brandOptions = useMemo(() => {
+    const brands = [...new Set(allEvents.map((e) => e.brand))].sort();
+    return [
+      { value: "all", label: "Semua Brand" },
+      ...brands.map((b) => ({ value: b, label: b })),
+    ];
+  }, []);
 
   const filtered = useMemo(() => {
-    return brandEvents.filter((evt) => {
+    return allEvents.filter((evt) => {
       const matchesSearch =
         evt.name.toLowerCase().includes(search.toLowerCase()) ||
-        evt.description.toLowerCase().includes(search.toLowerCase());
+        evt.description.toLowerCase().includes(search.toLowerCase()) ||
+        evt.brand.toLowerCase().includes(search.toLowerCase());
       const matchesTab = tab === "all" || evt.status === tab;
-      return matchesSearch && matchesTab;
+      const matchesBrand = brandFilter === "all" || evt.brand === brandFilter;
+      return matchesSearch && matchesTab && matchesBrand;
     });
-  }, [brandEvents, search, tab]);
+  }, [search, tab, brandFilter]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paged = filtered.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    currentPage * ITEMS_PER_PAGE,
   );
 
   return (
     <div className="space-y-6">
-      <h1 className="text-text-primary text-2xl font-bold">Event</h1>
+      <h1 className="text-text-primary text-2xl font-bold">Semua Event</h1>
 
-      {/* Tabs */}
       <Tabs
         items={tabItems.map((t) => ({
           ...t,
-          count: tabCounts[t.value] ?? 0,
+          count: t.value === "all"
+            ? allEvents.length
+            : allEvents.filter((e) => e.status === t.value).length,
         }))}
         value={tab}
-        onChange={(val) => {
-          setTab(val);
-          setCurrentPage(1);
-        }}
+        onChange={(val) => { setTab(val); setCurrentPage(1); }}
       />
 
-      {/* Search */}
-      <SearchInput
-        placeholder="Cari event..."
-        value={search}
-        onChange={(e) => {
-          setSearch(e.target.value);
-          setCurrentPage(1);
-        }}
-        onClear={() => {
-          setSearch("");
-          setCurrentPage(1);
-        }}
-      />
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex-1">
+          <SearchInput
+            placeholder="Cari event atau brand..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+            onClear={() => { setSearch(""); setCurrentPage(1); }}
+          />
+        </div>
+        <div className="w-full sm:w-48">
+          <Select
+            options={brandOptions}
+            value={brandFilter}
+            onChange={(e) => { setBrandFilter(e.target.value); setCurrentPage(1); }}
+            label=""
+          />
+        </div>
+      </div>
 
-      {/* Event List */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {paged.map((evt) => {
           const status = STATUS_MAP[evt.status ?? "draft"];
@@ -104,13 +93,13 @@ export default function EventsPage() {
             <Card key={evt.id} hoverable padding="md">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-text-primary font-semibold truncate">
-                    {evt.name}
-                  </h3>
-                  <p className="text-text-secondary text-sm mt-1">
-                    {evt.description}
-                  </p>
+                  <h3 className="text-text-primary font-semibold truncate">{evt.name}</h3>
+                  <p className="text-text-secondary text-sm mt-1">{evt.description}</p>
                   <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-text-tertiary">
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">group</span>
+                      {evt.brand}
+                    </span>
                     <span className="flex items-center gap-1">
                       <span className="material-symbols-outlined text-sm">calendar_today</span>
                       {evt.date}
@@ -136,21 +125,15 @@ export default function EventsPage() {
         })}
       </div>
 
-      {/* Empty */}
       {paged.length === 0 && (
         <div className="text-center py-12 text-text-tertiary">
           <p>Tidak ada event ditemukan</p>
         </div>
       )}
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex justify-center">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
+          <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </div>
       )}
     </div>
