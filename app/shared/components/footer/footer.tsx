@@ -34,8 +34,8 @@ const footerColumns = [
   {
     title: "Partner",
     links: [
-      { label: "Daftarkan Event", to: "/partner/login" },
-      { label: "Partner Login", to: "/partner/login" },
+      { label: "Daftarkan Event", to: "/internal-tb/partner/login" },
+      { label: "Partner Login", to: "/internal-tb/partner/login" },
     ],
   },
 ] as const;

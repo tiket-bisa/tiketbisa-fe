@@ -13,6 +13,14 @@ interface EventListResponseData {
   events: EventDto[];
 }
 
+interface TicketCategoryDto {
+  id: string;
+  name: string;
+  price: number | string;
+  totalTicket: number;
+  issuedTicket: number;
+}
+
 export const eventApi: EventRepository = {
   async getEvents(
     params: EventFilterParams,
@@ -44,7 +52,7 @@ export const eventApi: EventRepository = {
   async getEventById(id: string): Promise<Event | null> {
     const [eventResponse, ticketsResponse] = await Promise.all([
       apiFetch<ApiResponse<EventDto>>(`/event/${id}`),
-      apiFetch<ApiResponse<any[]>>(`/ticket-category/event/${id}`),
+      apiFetch<ApiResponse<TicketCategoryDto[]>>(`/ticket-category/event/${id}`),
     ]);
 
     if (!eventResponse.data) return null;
@@ -62,7 +70,7 @@ export const eventApi: EventRepository = {
             "Dilarang membawa makanan dan minuman dari luar.",
             "Penyelenggara berhak menolak pengunjung yang melanggar aturan.",
           ],
-      tickets: (ticketsResponse.data || []).map((t: any) => ({
+      tickets: (ticketsResponse.data || []).map((t) => ({
         id: t.id,
         name: t.name,
         price: Number(t.price),
