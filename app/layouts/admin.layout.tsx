@@ -9,11 +9,11 @@ function AdminShell() {
 
   const handleLogout = () => {
     logout();
-    navigate("/internal/admin/login");
+    navigate("/internal-tb/admin/login");
   };
 
   const handleScanTicket = () => {
-    navigate("/internal/admin/scan");
+    navigate("/internal-tb/admin/scan");
   };
 
   return (

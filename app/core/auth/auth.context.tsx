@@ -1,9 +1,12 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import type { InternalTokenResponseData } from "./internal-auth.api";
+import { AUTH_STORAGE_KEY } from "./auth.constants";
 
 export interface BaseAuthUser {
   email: string;
   name: string;
   picture?: string;
+  internal_token?: string;
 }
 
 export interface AdminUser extends BaseAuthUser {
@@ -26,12 +29,31 @@ interface AuthContextValue {
   isLoading: boolean;
   loginAsAdmin: () => void;
   loginAsPartner: (brandSlug: string, brandName: string) => void;
+  loginWithOAuth: (payload: InternalTokenResponseData) => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const AUTH_STORAGE_KEY = "tiketbisa_auth";
+interface GoogleIdTokenPayload {
+  email?: string;
+  name?: string;
+  picture?: string;
+}
+
+function decodeJwtPayload(token: string): GoogleIdTokenPayload {
+  const payloadPart = token.split(".")[1];
+  if (!payloadPart) return {};
+
+  try {
+    const normalized = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+    const decoded = atob(padded);
+    return JSON.parse(decoded) as GoogleIdTokenPayload;
+  } catch {
+    return {};
+  }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -52,7 +74,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loginAsAdmin = useCallback(() => {
-    // TODO: Replace mock authentication with actual API call
     const mockUser: AuthUser = {
       email: "admin@tiketbisa.com",
       name: "Admin Tiketbisa",
@@ -63,7 +84,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loginAsPartner = useCallback((brandSlug: string, brandName: string) => {
-    // TODO: Replace mock authentication with actual API call
     const mockUser: AuthUser = {
       email: `partner@${brandSlug}.com`,
       name: brandName,
@@ -75,13 +95,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(mockUser));
   }, []);
 
+  const loginWithOAuth = useCallback((payload: InternalTokenResponseData) => {
+    const profile = decodeJwtPayload(payload.idToken);
+    const email = profile.email ?? "";
+    const name = profile.name ?? email ?? "Tiketbisa User";
+
+    if (!email) {
+      throw new Error("ID token does not contain email");
+    }
+
+    if (payload.role === "admin") {
+      const adminUser: AuthUser = {
+        email,
+        name,
+        picture: profile.picture,
+        role: "admin",
+        internal_token: payload.idToken,
+      };
+      setUser(adminUser);
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(adminUser));
+      return;
+    }
+
+    if (!payload.brandSlug || !payload.brandName) {
+      throw new Error("Partner account is missing brand details");
+    }
+
+    const partnerUser: AuthUser = {
+      email,
+      name: payload.brandName || name,
+      picture: profile.picture,
+      role: "partner",
+      brand_slug: payload.brandSlug,
+      brand_name: payload.brandName,
+      internal_token: payload.idToken,
+    };
+    setUser(partnerUser);
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(partnerUser));
+  }, []);
+
   const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem(AUTH_STORAGE_KEY);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, loginAsAdmin, loginAsPartner, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, loginAsAdmin, loginAsPartner, loginWithOAuth, logout }}>
       {children}
     </AuthContext.Provider>
   );

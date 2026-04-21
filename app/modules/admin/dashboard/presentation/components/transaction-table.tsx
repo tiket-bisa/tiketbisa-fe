@@ -40,7 +40,7 @@ export function TransactionTable({ transactions }: TransactionTableProps) {
                     <Badge variant={status.variant}>{status.label}</Badge>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <Link to={`/internal/admin/transactions/${tx.id}`} className="text-brand-primary text-xs hover:underline">
+                    <Link to={`/internal-tb/admin/transactions/${tx.id}`} className="text-brand-primary text-xs hover:underline">
                       Detail
                     </Link>
                   </td>

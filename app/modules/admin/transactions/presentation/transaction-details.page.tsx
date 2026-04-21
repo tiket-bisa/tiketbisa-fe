@@ -18,7 +18,7 @@ export default function AdminTransactionDetailsPage() {
   if (!tx) {
     return (
       <div className="space-y-4">
-        <Link to="/internal/admin" className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1">
+        <Link to="/internal-tb/admin" className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1">
           <span className="material-symbols-outlined text-sm">arrow_back</span>
           Kembali ke Dashboard
         </Link>
@@ -34,7 +34,7 @@ export default function AdminTransactionDetailsPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/internal/admin" className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1">
+      <Link to="/internal-tb/admin" className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1">
         <span className="material-symbols-outlined text-sm">arrow_back</span>
         Kembali ke Dashboard
       </Link>

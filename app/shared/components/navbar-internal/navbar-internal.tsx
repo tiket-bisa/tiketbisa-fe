@@ -10,9 +10,9 @@ export interface NavbarInternalProps {
 }
 
 const navLinks: readonly { to: string; label: string; exact?: boolean }[] = [
-  { to: "/internal/partner", label: "Beranda", exact: true },
-  { to: "/internal/partner/events", label: "Event" },
-  { to: "/internal/partner/analytics", label: "Analitik" },
+  { to: "/internal-tb/partner", label: "Beranda", exact: true },
+  { to: "/internal-tb/partner/events", label: "Event" },
+  { to: "/internal-tb/partner/analytics", label: "Analitik" },
 ];
 
 export function NavbarInternal({
@@ -30,7 +30,7 @@ export function NavbarInternal({
     >
       <nav className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
         {/* Logo */}
-        <Link to="/internal/partner" className="shrink-0" aria-label="Tiketbisa partner">
+        <Link to="/internal-tb/partner" className="shrink-0" aria-label="Tiketbisa partner">
           <img
             src="/logo/tiketbisa-white.png"
             alt="Tiketbisa"

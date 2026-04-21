@@ -1,16 +1,45 @@
 import type { ApiResponse } from "./api-response.type";
+import { AUTH_STORAGE_KEY } from "~/core/auth/auth.constants";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
+const INTERNAL_API_PREFIX = "/internal-tb";
+
+interface StoredAuthSession {
+  email?: string;
+  internal_token?: string;
+}
+
+function getStoredAuthSession(): StoredAuthSession | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+  if (!stored) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(stored) as StoredAuthSession;
+  } catch {
+    return null;
+  }
+}
+
+function normalizePath(path: string): string {
+  return path.startsWith("/") ? path : `/${path}`;
+}
 
 async function request<T>(
   method: string,
   path: string,
   body?: unknown,
+  headers: Record<string, string> = {},
 ): Promise<ApiResponse<T>> {
   try {
-    const response = await fetch(`${BASE_URL}${path}`, {
+    const response = await fetch(`${BASE_URL}${normalizePath(path)}`, {
       method,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...headers },
       body: body ? JSON.stringify(body) : undefined,
     });
 
@@ -37,4 +66,23 @@ async function request<T>(
 export const httpClient = {
   post: <T>(path: string, body: unknown) => request<T>("POST", path, body),
   get: <T>(path: string) => request<T>("GET", path),
+};
+
+function getInternalAuthHeaders(): Record<string, string> {
+  const session = getStoredAuthSession();
+  if (!session?.email || !session.internal_token) {
+    return {};
+  }
+
+  return {
+    "x-tb-identifier": session.email,
+    "x-tb-internal-token": session.internal_token,
+  };
+}
+
+export const internalHttpClient = {
+  post: <T>(path: string, body: unknown) =>
+    request<T>("POST", `${INTERNAL_API_PREFIX}${normalizePath(path)}`, body, getInternalAuthHeaders()),
+  get: <T>(path: string) =>
+    request<T>("GET", `${INTERNAL_API_PREFIX}${normalizePath(path)}`, undefined, getInternalAuthHeaders()),
 };
