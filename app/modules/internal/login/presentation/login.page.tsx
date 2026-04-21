@@ -2,14 +2,34 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Button, Select } from "~/core/design-system/components";
 import { AuthProvider, useAuth } from "~/core/auth";
-import { mockBrands } from "../../brand-selection/infrastructure/brand.mock";
-
-const brandOptions = mockBrands.map((b) => ({ value: b.slug, label: b.name }));
+import { useApiQuery } from "~/core/api";
+import { brandApi, mapBrandApiToFe } from "~/core/api/services/brand.api";
+import type { Brand } from "~/core/types";
 
 function LoginContent() {
   const { user, loginAsPartner } = useAuth();
   const navigate = useNavigate();
-  const [selectedBrand, setSelectedBrand] = useState(brandOptions[0].value);
+
+  // Fetch brands from real API
+  const { data: brands, loading } = useApiQuery(
+    async () => {
+      const res = await brandApi.getList({ limit: 100, offset: 0 });
+      if (!res.success || !res.data) return [] as Brand[];
+      return (res.data.brands ?? []).map(mapBrandApiToFe);
+    },
+    [],
+  );
+
+  const brandList = brands ?? [];
+  const brandOptions = brandList.map((b) => ({ value: b.slug, label: b.name }));
+  const [selectedBrand, setSelectedBrand] = useState("");
+
+  // Set default selection once brands load
+  useEffect(() => {
+    if (brandOptions.length > 0 && !selectedBrand) {
+      setSelectedBrand(brandOptions[0].value);
+    }
+  }, [brandOptions, selectedBrand]);
 
   useEffect(() => {
     if (user && user.role === "partner") {
@@ -18,8 +38,7 @@ function LoginContent() {
   }, [user, navigate]);
 
   const handleLogin = () => {
-    // TODO: Replace mockBrands find logic with actual API fetch
-    const brand = mockBrands.find((b) => b.slug === selectedBrand);
+    const brand = brandList.find((b) => b.slug === selectedBrand);
     if (brand) {
       loginAsPartner(brand.slug, brand.name);
     }
@@ -43,14 +62,18 @@ function LoginContent() {
           </div>
         </div>
 
-        {/* Brand Selection (mock — in production, determined by OAuth) */}
+        {/* Brand Selection — fetched from real API */}
         <div className="text-left">
-          <Select
-            options={brandOptions}
-            value={selectedBrand}
-            onChange={(e) => setSelectedBrand(e.target.value)}
-            label="Pilih Brand"
-          />
+          {loading ? (
+            <p className="text-text-tertiary text-sm py-3">Memuat brand...</p>
+          ) : (
+            <Select
+              options={brandOptions}
+              value={selectedBrand}
+              onChange={(e) => setSelectedBrand(e.target.value)}
+              label="Pilih Brand"
+            />
+          )}
         </div>
 
         {/* Google Sign In */}
@@ -59,6 +82,7 @@ function LoginContent() {
           size="lg"
           fullWidth
           onClick={handleLogin}
+          disabled={loading || !selectedBrand}
           className="flex items-center justify-center gap-3"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">

@@ -4,6 +4,7 @@ import { Button } from "~/core/design-system/components";
 export interface NavbarAdminProps {
   userEmail?: string;
   onLogout?: () => void;
+  onScanTicket?: () => void;
   className?: string;
 }
 
@@ -17,6 +18,7 @@ const navLinks: readonly { to: string; label: string; exact?: boolean }[] = [
 export function NavbarAdmin({
   userEmail,
   onLogout,
+  onScanTicket,
   className = "",
 }: NavbarAdminProps) {
   const location = useLocation();
@@ -70,6 +72,12 @@ export function NavbarAdmin({
 
         {/* Right section */}
         <div className="ml-auto flex items-center gap-3">
+          {onScanTicket && (
+            <Button variant="secondary" size="sm" onClick={onScanTicket}>
+              Scan Tiket
+            </Button>
+          )}
+
           {userEmail && (
             <span className="hidden sm:block text-xs text-text-tertiary truncate max-w-[180px]">
               {userEmail}

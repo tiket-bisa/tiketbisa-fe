@@ -1,9 +1,7 @@
 import { useState, useMemo } from "react";
 import { SearchInput, Pagination, Select, Card, Avatar, Badge } from "~/core/design-system/components";
-import { allBrands } from "../infrastructure/brand.mock";
-import { allEvents } from "../../events/infrastructure/event.mock";
-import { allTransactions } from "../../dashboard/infrastructure/transaction.mock";
-import { formatIDR } from "~/core/utils";
+import { useApiQuery } from "~/core/api";
+import { brandApi, mapBrandApiToFe } from "~/core/api/services/brand.api";
 
 const ITEMS_PER_PAGE = 8;
 
@@ -18,6 +16,18 @@ export default function AdminBrandsPage() {
   const [sortBy, setSortBy] = useState("name_asc");
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Fetch brands from real API
+  const { data: brandsResponse, loading, error } = useApiQuery(
+    async () => {
+      const res = await brandApi.getList({ limit: 100, offset: 0 });
+      if (!res.success || !res.data) return [];
+      return (res.data.brands ?? []).map(mapBrandApiToFe);
+    },
+    [],
+  );
+
+  const allBrands = brandsResponse ?? [];
+
   const filtered = useMemo(() => {
     let result = allBrands.filter((b) =>
       b.name.toLowerCase().includes(search.toLowerCase()),
@@ -28,7 +38,7 @@ export default function AdminBrandsPage() {
       result.sort((a, b) => b.name.localeCompare(a.name));
     }
     return result;
-  }, [search, sortBy, allBrands]);
+  }, [allBrands, search, sortBy]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paged = filtered.slice(
@@ -36,22 +46,21 @@ export default function AdminBrandsPage() {
     currentPage * ITEMS_PER_PAGE,
   );
 
-  // Compute stats per brand
-  const brandStats = useMemo(() => {
-    const stats: Record<string, { events: number; revenue: number; transactions: number }> = {};
-    for (const brand of allBrands) {
-      const brandEvents = allEvents.filter((e) => e.brand === brand.name);
-      const brandTx = allTransactions.filter((t) =>
-        brandEvents.some((e) => e.id === t.event_id),
-      );
-      stats[brand.id] = {
-        events: brandEvents.length,
-        revenue: brandTx.filter((t) => t.status === "paid").reduce((s, t) => s + t.total_price, 0),
-        transactions: brandTx.length,
-      };
-    }
-    return stats;
-  }, [allBrands, allEvents, allTransactions]);
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <p className="text-text-tertiary">Memuat data brand...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <p className="text-destructive-text">Gagal memuat data brand: {error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -73,34 +82,23 @@ export default function AdminBrandsPage() {
 
       {/* Brand Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {paged.map((brand) => {
-          const stats = brandStats[brand.id];
-          return (
-            <Card key={brand.id} hoverable padding="md">
-              <div className="flex flex-col items-center gap-3 py-2">
-                <Avatar src={brand.logo_url} fallback={brand.name} size="xl" />
-                <span className="text-text-primary text-sm font-semibold text-center">{brand.name}</span>
-                {brand.description && (
-                  <span className="text-text-tertiary text-xs text-center">{brand.description}</span>
-                )}
-                <div className="w-full border-t border-border-subtle pt-3 mt-1 space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-text-tertiary">Event</span>
-                    <Badge variant="brand">{stats.events}</Badge>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-text-tertiary">Transaksi</span>
-                    <span className="text-text-primary font-medium">{stats.transactions}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-text-tertiary">Revenue</span>
-                    <span className="text-text-primary font-medium">{formatIDR(stats.revenue)}</span>
-                  </div>
+        {paged.map((brand) => (
+          <Card key={brand.id} hoverable padding="md">
+            <div className="flex flex-col items-center gap-3 py-2">
+              <Avatar src={brand.logo_url} fallback={brand.name} size="xl" />
+              <span className="text-text-primary text-sm font-semibold text-center">{brand.name}</span>
+              {brand.description && (
+                <span className="text-text-tertiary text-xs text-center">{brand.description}</span>
+              )}
+              <div className="w-full border-t border-border-subtle pt-3 mt-1 space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span className="text-text-tertiary">ID</span>
+                  <span className="text-text-primary font-mono text-[10px]">{brand.id}</span>
                 </div>
               </div>
-            </Card>
-          );
-        })}
+            </div>
+          </Card>
+        ))}
       </div>
 
       {paged.length === 0 && (
