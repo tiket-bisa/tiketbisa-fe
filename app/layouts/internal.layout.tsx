@@ -1,5 +1,6 @@
 import { Outlet, useNavigate } from "react-router";
-import { AuthProvider, AuthGuard, useAuth } from "~/core/auth";
+import { AuthProvider, useAuth } from "~/core/auth/auth.context";
+import { AuthGuard } from "~/core/auth/auth-guard";
 import { NavbarInternal } from "~/shared/components";
 
 /**
