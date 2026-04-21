@@ -2,9 +2,10 @@ import { useState, useMemo } from "react";
 import { Link } from "react-router";
 import { Card, Badge, SearchInput, Pagination, Select } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
+import { useApiQuery } from "~/core/api";
+import { brandApi } from "~/core/api/services/brand.api";
+import { eventApi } from "~/core/api/services/event.api";
 import { allTransactions } from "../infrastructure/transaction.mock";
-import { allBrands } from "../../brands/infrastructure/brand.mock";
-import { allEvents } from "../../events/infrastructure/event.mock";
 
 const STATUS_MAP = {
   paid: { label: "Lunas", variant: "success" as const },
@@ -29,10 +30,27 @@ export default function AdminDashboardPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Fetch real brand & event counts from API
+  const { data: brandCount } = useApiQuery(
+    async () => {
+      const res = await brandApi.getList({ limit: 1, offset: 0 });
+      return res.success && res.data ? res.data.total_count : 0;
+    },
+    [],
+  );
+
+  const { data: eventCount } = useApiQuery(
+    async () => {
+      const res = await eventApi.getList({ limit: 1, offset: 0 });
+      return res.success && res.data ? res.data.total_count : 0;
+    },
+    [],
+  );
+
+  // TODO: Replace with real API when GET /transaction list endpoint is available
   const totalRevenue = allTransactions
     .filter((t) => t.status === "paid")
     .reduce((sum, t) => sum + t.total_price, 0);
-  const totalTransactions = allTransactions.length;
   const totalTicketsSold = allTransactions
     .filter((t) => t.status === "paid")
     .reduce((sum, t) => sum + t.quantity, 0);
@@ -62,11 +80,11 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card padding="md">
           <p className="text-text-tertiary text-xs uppercase tracking-wide">Total Brand</p>
-          <p className="text-text-primary text-2xl font-bold mt-1">{allBrands.length}</p>
+          <p className="text-text-primary text-2xl font-bold mt-1">{brandCount ?? "..."}</p>
         </Card>
         <Card padding="md">
           <p className="text-text-tertiary text-xs uppercase tracking-wide">Total Event</p>
-          <p className="text-text-primary text-2xl font-bold mt-1">{allEvents.length}</p>
+          <p className="text-text-primary text-2xl font-bold mt-1">{eventCount ?? "..."}</p>
         </Card>
         <Card padding="md">
           <p className="text-text-tertiary text-xs uppercase tracking-wide">Total Revenue</p>
@@ -78,7 +96,7 @@ export default function AdminDashboardPage() {
         </Card>
       </div>
 
-      {/* Transaction List */}
+      {/* Transaction List — TODO: Replace with real API when GET /transaction list endpoint is available */}
       <div>
         <h2 className="text-text-primary text-lg font-semibold mb-4">
           Semua Transaksi

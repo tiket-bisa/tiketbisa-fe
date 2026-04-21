@@ -15,3 +15,4 @@ export { getPaginationFromSearchParams } from "./pagination-utils";
 
 export { httpClient } from "./http-client";
 
+export { useApiQuery } from "./use-api";

@@ -1,3 +1,8 @@
+/**
+ * TODO: Replace mock analytics data with real API calls when
+ * the backend adds aggregation/analytics endpoints (e.g. GET /analytics/revenue).
+ * Currently, the BE has no transaction list or revenue aggregation endpoint.
+ */
 import { useMemo } from "react";
 import { Card, Badge } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
