@@ -26,7 +26,7 @@ function AdminLoginContent() {
       const tokenData = await requestInternalGoogleToken(authCode);
 
       if (tokenData.role !== "admin") {
-        throw new Error("Akun ini tidak memiliki akses admin");
+        throw new Error(`Akun ini tidak memiliki akses admin (role: ${tokenData.role})`);
       }
 
       loginWithOAuth(tokenData);

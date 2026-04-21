@@ -26,7 +26,7 @@ function LoginContent() {
       const tokenData = await requestInternalGoogleToken(authCode);
 
       if (tokenData.role !== "partner") {
-        throw new Error("Akun ini tidak memiliki akses partner");
+        throw new Error(`Akun ini tidak memiliki akses partner (role: ${tokenData.role})`);
       }
 
       loginWithOAuth(tokenData);
