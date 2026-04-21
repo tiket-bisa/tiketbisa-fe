@@ -1,11 +1,13 @@
 import type { EventSummary } from "~/core/types";
 
-/** Mock events for development */
+/** Mock events for all brands — partner pages filter by brand_slug */
 export const mockEvents: EventSummary[] = [
+  // Adhyaksa FC events
   {
     id: "evt-1",
     name: "Adhyaksa FC vs Persija Jakarta",
     brand: "Adhyaksa FC",
+    brand_slug: "adhyaksa-fc",
     description: "Pertandingan Liga 1 pekan ke-12",
     date: "2026-03-15",
     location: "Stadion Utama",
@@ -16,6 +18,7 @@ export const mockEvents: EventSummary[] = [
     id: "evt-2",
     name: "Adhyaksa FC vs Persib Bandung",
     brand: "Adhyaksa FC",
+    brand_slug: "adhyaksa-fc",
     description: "Pertandingan Liga 1 pekan ke-14",
     date: "2026-03-29",
     location: "Stadion Utama",
@@ -26,6 +29,7 @@ export const mockEvents: EventSummary[] = [
     id: "evt-3",
     name: "Adhyaksa FC vs Arema FC",
     brand: "Adhyaksa FC",
+    brand_slug: "adhyaksa-fc",
     description: "Pertandingan Liga 1 pekan ke-16",
     date: "2026-04-12",
     location: "Stadion Utama",
@@ -36,6 +40,7 @@ export const mockEvents: EventSummary[] = [
     id: "evt-4",
     name: "Fan Meet & Greet",
     brand: "Adhyaksa FC",
+    brand_slug: "adhyaksa-fc",
     description: "Acara meet & greet dengan pemain Adhyaksa FC",
     date: "2026-03-20",
     location: "Hall A Convention Center",
@@ -46,10 +51,57 @@ export const mockEvents: EventSummary[] = [
     id: "evt-5",
     name: "Adhyaksa FC vs PSM Makassar",
     brand: "Adhyaksa FC",
+    brand_slug: "adhyaksa-fc",
     description: "Pertandingan Liga 1 pekan ke-10 (selesai)",
     date: "2026-02-15",
     location: "Stadion Utama",
     time: "19:00 WIB",
     status: "completed",
+  },
+  // Persija Jakarta events
+  {
+    id: "evt-6",
+    name: "Persija vs Bali United",
+    brand: "Persija Jakarta",
+    brand_slug: "persija-jakarta",
+    description: "Pertandingan Liga 1 pekan ke-13",
+    date: "2026-03-22",
+    location: "Stadion JIS",
+    time: "19:30 WIB",
+    status: "published",
+  },
+  {
+    id: "evt-7",
+    name: "Persija vs PSIS Semarang",
+    brand: "Persija Jakarta",
+    brand_slug: "persija-jakarta",
+    description: "Pertandingan Liga 1 pekan ke-15",
+    date: "2026-04-05",
+    location: "Stadion JIS",
+    time: "15:00 WIB",
+    status: "draft",
+  },
+  // Persib Bandung events
+  {
+    id: "evt-8",
+    name: "Persib vs Madura United",
+    brand: "Persib Bandung",
+    brand_slug: "persib-bandung",
+    description: "Pertandingan Liga 1 pekan ke-12",
+    date: "2026-03-16",
+    location: "Stadion GBLA",
+    time: "15:30 WIB",
+    status: "published",
+  },
+  {
+    id: "evt-9",
+    name: "Persib vs Arema FC",
+    brand: "Persib Bandung",
+    brand_slug: "persib-bandung",
+    description: "Pertandingan Liga 1 pekan ke-14",
+    date: "2026-03-30",
+    location: "Stadion GBLA",
+    time: "19:00 WIB",
+    status: "published",
   },
 ];

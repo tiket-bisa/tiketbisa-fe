@@ -1,11 +1,17 @@
+import { useMemo } from "react";
 import { Card } from "~/core/design-system/components";
 import { mockTicketDashboard } from "../../infrastructure/ticket.mock";
 
 /** Ticket dashboard showing available vs checked-in */
-export function DashboardSection() {
+export function DashboardSection({ brandSlug }: { brandSlug?: string }) {
+  const tickets = useMemo(
+    () => mockTicketDashboard.filter((t) => t.brand_slug === brandSlug),
+    [brandSlug],
+  );
+
   return (
     <div className="space-y-4">
-      {mockTicketDashboard.map((summary) => {
+      {tickets.map((summary) => {
         const soldPercent =
           summary.total_tickets > 0
             ? Math.round((summary.sold_tickets / summary.total_tickets) * 100)

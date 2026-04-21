@@ -59,6 +59,7 @@ export default [
     ),
   ]),
 
+  // ─── Partner Layout (each partner — sees only own brand) ───
   layout("layouts/internal.layout.tsx", [
     route(
       "internal/partner",
