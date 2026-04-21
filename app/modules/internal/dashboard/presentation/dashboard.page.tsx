@@ -179,7 +179,7 @@ export default function DashboardPage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <Link
-                          to={`/internal/partner/transactions/${tx.id}`}
+                          to={`/internal-tb/partner/transactions/${tx.id}`}
                           className="text-brand-primary text-xs hover:underline"
                         >
                           Detail
