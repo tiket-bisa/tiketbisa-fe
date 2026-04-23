@@ -124,7 +124,7 @@ export const orderApi = {
       return {
         orderId: orderId,
         status: "PENDING",
-        totalAmount: data.totalPrice || 0,
+        totalAmount: (data.totalPrice as number) || 0,
         paymentMethod: isBank ? {
           id: "bca",
           name: "BCA Transfer",

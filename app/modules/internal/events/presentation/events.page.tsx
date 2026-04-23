@@ -183,8 +183,8 @@ export default function EventsPage() {
               </div>
               <div className="mt-4 flex justify-end border-t border-border-subtle pt-3">
                 <Button 
-                  variant="outline" 
-                  size="sm" 
+                  variant="secondary" 
+                  size="sm"
                   onClick={() => navigate(`/internal/partner/events/${evt.id}/tickets/new`)}
                   className="flex items-center gap-1"
                 >

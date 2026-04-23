@@ -174,8 +174,8 @@ export default function AdminEventsPage() {
               </div>
               <div className="mt-4 flex justify-end border-t border-border-subtle pt-3">
                 <Button 
-                  variant="outline" 
-                  size="sm" 
+                  variant="secondary" 
+                  size="sm"
                   onClick={() => navigate(`/internal/admin/events/${evt.id}/tickets/new`)}
                   className="flex items-center gap-1"
                 >
