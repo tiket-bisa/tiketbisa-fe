@@ -1,8 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router";
 import { Card, Badge, SearchInput, Pagination, Select } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
 import { useAuth } from "~/core/auth";
+import { getDashboardStats, type DashboardStats } from "../../analytics/analytics.api";
 // TODO: Replace with real API when GET /transaction list endpoint is available
 import { mockTransactions } from "../infrastructure/transaction.mock";
 
@@ -29,6 +30,15 @@ export default function DashboardPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [isStatsLoading, setIsStatsLoading] = useState(true);
+
+  useEffect(() => {
+    getDashboardStats()
+      .then(setStats)
+      .catch((err) => console.error("Failed to load dashboard stats:", err))
+      .finally(() => setIsStatsLoading(false));
+  }, []);
 
   // TODO: Replace with real API when GET /transaction list endpoint is available
   // Filter transactions to only this partner's brand
@@ -36,14 +46,6 @@ export default function DashboardPage() {
     () => mockTransactions.filter((t) => t.brand_slug === user?.brand_slug),
     [user?.brand_slug],
   );
-
-  const totalRevenue = brandTransactions
-    .filter((t) => t.status === "paid")
-    .reduce((sum, t) => sum + t.total_price, 0);
-  const totalTransactions = brandTransactions.length;
-  const totalTicketsSold = brandTransactions
-    .filter((t) => t.status === "paid")
-    .reduce((sum, t) => sum + t.quantity, 0);
 
   const filtered = useMemo(() => {
     return brandTransactions.filter((t) => {
@@ -78,15 +80,7 @@ export default function DashboardPage() {
             Total Revenue
           </p>
           <p className="text-text-primary text-2xl font-bold mt-1">
-            {formatIDR(totalRevenue)}
-          </p>
-        </Card>
-        <Card padding="md">
-          <p className="text-text-tertiary text-xs uppercase tracking-wide">
-            Total Transaksi
-          </p>
-          <p className="text-text-primary text-2xl font-bold mt-1">
-            {totalTransactions}
+            {isStatsLoading ? "..." : formatIDR(stats?.totalRevenue ?? 0)}
           </p>
         </Card>
         <Card padding="md">
@@ -94,7 +88,15 @@ export default function DashboardPage() {
             Tiket Terjual
           </p>
           <p className="text-text-primary text-2xl font-bold mt-1">
-            {totalTicketsSold}
+            {isStatsLoading ? "..." : (stats?.totalTicketsSold ?? 0)}
+          </p>
+        </Card>
+        <Card padding="md">
+          <p className="text-text-tertiary text-xs uppercase tracking-wide">
+            Total Event
+          </p>
+          <p className="text-text-primary text-2xl font-bold mt-1">
+            {isStatsLoading ? "..." : (stats?.totalEvents ?? 0)}
           </p>
         </Card>
       </div>

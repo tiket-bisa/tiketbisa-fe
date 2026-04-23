@@ -73,3 +73,31 @@ export async function requestInternalGoogleToken(
     brandName: response.data.brandName ?? response.data.brand_name ?? null,
   };
 }
+
+export async function getMe(): Promise<Omit<InternalTokenResponseData, "idToken">> {
+  const response = await apiFetch<ApiResponse<RawInternalTokenResponseData>>(
+    "/internal-tb/user/me",
+    {
+      method: "GET",
+    },
+  );
+
+  if (!response.success) {
+    throw new Error(getErrorMessage(response.error) ?? "Failed to fetch user details");
+  }
+
+  if (!response.data) {
+    throw new Error("User details not found");
+  }
+
+  const role = response.data.role?.trim().toLowerCase();
+  if (role !== "admin" && role !== "partner") {
+    throw new Error("Invalid role received");
+  }
+
+  return {
+    role: role as "admin" | "partner",
+    brandSlug: response.data.brandSlug ?? response.data.brand_slug ?? null,
+    brandName: response.data.brandName ?? response.data.brand_name ?? null,
+  };
+}

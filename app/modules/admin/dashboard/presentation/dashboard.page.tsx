@@ -6,6 +6,7 @@ import { TransactionTable } from "./components/transaction-table";
 import { useApiQuery } from "~/core/api";
 import { brandApi } from "~/core/api/services/brand.api";
 import { eventApi } from "~/core/api/services/event.api";
+import { getDashboardStats } from "~/modules/internal/analytics/analytics.api";
 import { allTransactions } from "../infrastructure/transaction.mock";
 
 const ITEMS_PER_PAGE = 5;
@@ -16,7 +17,15 @@ export default function AdminDashboardPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Fetch real brand & event counts from API
+  // Fetch real dashboard stats
+  const { data: stats } = useApiQuery(
+    async () => {
+      return await getDashboardStats();
+    },
+    [],
+  );
+
+  // Fetch real brand count from API
   const { data: brandCount } = useApiQuery(
     async () => {
       const res = await brandApi.getList({ limit: 1, offset: 0 });
@@ -25,22 +34,7 @@ export default function AdminDashboardPage() {
     [],
   );
 
-  const { data: eventCount } = useApiQuery(
-    async () => {
-      const res = await eventApi.getList({ limit: 1, offset: 0 });
-      return res.success && res.data ? res.data.total_count : 0;
-    },
-    [],
-  );
-
   // TODO: Replace with real API when GET /transaction list endpoint is available
-  const totalRevenue = allTransactions
-    .filter((t) => t.status === "paid")
-    .reduce((sum, t) => sum + t.total_price, 0);
-  const totalTicketsSold = allTransactions
-    .filter((t) => t.status === "paid")
-    .reduce((sum, t) => sum + t.quantity, 0);
-
   const filtered = useMemo(() => {
     return allTransactions.filter((t) => {
       const matchesSearch =
@@ -70,15 +64,15 @@ export default function AdminDashboardPage() {
         </Card>
         <Card padding="md">
           <p className="text-text-tertiary text-xs uppercase tracking-wide">Total Event</p>
-          <p className="text-text-primary text-2xl font-bold mt-1">{eventCount ?? "..."}</p>
+          <p className="text-text-primary text-2xl font-bold mt-1">{stats?.totalEvents ?? "..."}</p>
         </Card>
         <Card padding="md">
           <p className="text-text-tertiary text-xs uppercase tracking-wide">Total Revenue</p>
-          <p className="text-text-primary text-2xl font-bold mt-1">{formatIDR(totalRevenue)}</p>
+          <p className="text-text-primary text-2xl font-bold mt-1">{stats ? formatIDR(stats.totalRevenue) : "..."}</p>
         </Card>
         <Card padding="md">
           <p className="text-text-tertiary text-xs uppercase tracking-wide">Tiket Terjual</p>
-          <p className="text-text-primary text-2xl font-bold mt-1">{totalTicketsSold}</p>
+          <p className="text-text-primary text-2xl font-bold mt-1">{stats?.totalTicketsSold ?? "..."}</p>
         </Card>
       </div>
 

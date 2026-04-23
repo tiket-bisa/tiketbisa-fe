@@ -12,8 +12,12 @@ function AdminLoginContent() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user && user.role === "admin") {
-      navigate("/internal-tb/admin", { replace: true });
+    if (user) {
+      if (user.role === "admin") {
+        navigate("/internal-tb/admin", { replace: true });
+      } else if (user.role === "partner") {
+        navigate("/internal-tb/partner", { replace: true });
+      }
     }
   }, [user, navigate]);
 
@@ -24,10 +28,6 @@ function AdminLoginContent() {
     try {
       const authCode = await requestGoogleAuthorizationCode();
       const tokenData = await requestInternalGoogleToken(authCode);
-
-      if (tokenData.role !== "admin") {
-        throw new Error(`Akun ini tidak memiliki akses admin (role: ${tokenData.role})`);
-      }
 
       loginWithOAuth(tokenData);
     } catch (e) {
