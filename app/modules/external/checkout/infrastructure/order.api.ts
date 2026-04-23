@@ -43,8 +43,8 @@ export const orderApi = {
     summary: OrderSummary;
     paymentMethod: PaymentMethod;
   }): Promise<OrderResponse> {
-    const tickets: TicketRequest[] = params.summary.items.map((item: any) => ({
-      categoryId: item.ticketId || item.id,
+    const tickets: TicketRequest[] = params.summary.items.map((item: { ticketId?: string; id?: string; quantity: number; price: number }) => ({
+      categoryId: (item.ticketId || item.id) as string,
       quantity: item.quantity,
       price: item.price
     }));
@@ -97,7 +97,7 @@ export const orderApi = {
         expiryTime: expiryDate.toISOString(),
         paymentInstructions: "Silakan selesaikan pembayaran sebelum batas waktu yang ditentukan.",
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw error;
     }
   },
@@ -111,7 +111,7 @@ export const orderApi = {
 
   async getOrderById(orderId: string): Promise<OrderResponse | null> {
     try {
-      const response = await apiFetch<ApiResponse<any>>(`/transaction/${orderId}`);
+      const response = await apiFetch<ApiResponse<Record<string, unknown>>>(`/transaction/${orderId}`);
 
       if (!response.success || !response.data) {
         return null;

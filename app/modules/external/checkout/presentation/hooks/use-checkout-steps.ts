@@ -6,11 +6,11 @@ import { useOrderConfirmation } from "./use-order-confirmation";
 import { usePaymentSelection } from "./use-payment-selection";
 
 export function useCheckoutSteps(
-  event: any, 
-  buyerInfo: any, 
-  summary: any, 
+  event: { id: string; [key: string]: unknown }, 
+  buyerInfo: unknown, 
+  summary: unknown, 
   validateForm: () => boolean,
-  paymentMethods: any[]
+  paymentMethods: { id: string; [key: string]: unknown }[]
 ) {
   const navigate = useNavigate();
   const params = useParams();
