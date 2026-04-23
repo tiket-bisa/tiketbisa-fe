@@ -21,7 +21,7 @@ export function useLandingFilters() {
         next.delete(key);
       }
       return next;
-    });
+    }, { preventScrollReset: true });
   };
 
   const resetEventFilters = () => {
@@ -29,7 +29,7 @@ export function useLandingFilters() {
       const next = new URLSearchParams(prev);
       EVENT_FILTERS.forEach((f) => next.delete(f.key));
       return next;
-    });
+    }, { preventScrollReset: true });
   };
 
   return {
