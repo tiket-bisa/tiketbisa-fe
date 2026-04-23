@@ -1,10 +1,14 @@
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
   if (!headers.has("Accept")) {
     headers.set("Accept", "application/json");
   }
 
-  const response = await fetch(path, {
+  const url = `${BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
+
+  const response = await fetch(url, {
     ...init,
     headers,
   });

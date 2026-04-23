@@ -1,7 +1,7 @@
 import type { ApiResponse } from "./api-response.type";
 import { AUTH_STORAGE_KEY } from "~/core/auth/auth.constants";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 const INTERNAL_API_PREFIX = "/internal-tb";
 
 interface StoredAuthSession {
