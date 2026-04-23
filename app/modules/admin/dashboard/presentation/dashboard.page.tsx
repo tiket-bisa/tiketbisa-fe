@@ -25,15 +25,6 @@ export default function AdminDashboardPage() {
     [],
   );
 
-  // Fetch real brand count from API
-  const { data: brandCount } = useApiQuery(
-    async () => {
-      const res = await brandApi.getList({ limit: 1, offset: 0 });
-      return res.success && res.data ? res.data.total_count : 0;
-    },
-    [],
-  );
-
   // TODO: Replace with real API when GET /transaction list endpoint is available
   const filtered = useMemo(() => {
     return allTransactions.filter((t) => {
@@ -60,7 +51,7 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card padding="md">
           <p className="text-text-tertiary text-xs uppercase tracking-wide">Total Brand</p>
-          <p className="text-text-primary text-2xl font-bold mt-1">{brandCount ?? "..."}</p>
+          <p className="text-text-primary text-2xl font-bold mt-1">{stats?.totalBrands ?? "..."}</p>
         </Card>
         <Card padding="md">
           <p className="text-text-tertiary text-xs uppercase tracking-wide">Total Event</p>
