@@ -50,8 +50,9 @@ export default [
       "modules/admin/events/presentation/events.page.tsx",
     ),
     route(
-      "internal/admin/events/:eventId/tickets/new",
+      "internal-tb/admin/events/:eventId/tickets/new",
       "modules/internal/events/presentation/create-ticket.page.tsx",
+      { id: "admin-create-ticket" } // <-- Added unique ID here
     ),
     route(
       "internal-tb/admin/analytics",
@@ -83,8 +84,9 @@ export default [
       "modules/internal/events/presentation/events.page.tsx",
     ),
     route(
-      "internal/partner/events/:eventId/tickets/new",
+      "internal-tb/partner/events/:eventId/tickets/new",
       "modules/internal/events/presentation/create-ticket.page.tsx",
+      { id: "partner-create-ticket" }
     ),
     route(
       "internal-tb/partner/analytics",
