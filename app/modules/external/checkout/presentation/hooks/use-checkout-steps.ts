@@ -5,12 +5,15 @@ import type { CompleteOrderResponse } from "../../infrastructure/order.api";
 import { useOrderConfirmation } from "./use-order-confirmation";
 import { usePaymentSelection } from "./use-payment-selection";
 
+import type { BuyerInfo, OrderSummary, PaymentMethod } from "../../domain/checkout.types";
+import type { EventSummary } from "~/core/types";
+
 export function useCheckoutSteps(
-  event: { id: string; [key: string]: unknown }, 
-  buyerInfo: unknown, 
-  summary: unknown, 
+  event: EventSummary, 
+  buyerInfo: BuyerInfo, 
+  summary: OrderSummary, 
   validateForm: () => boolean,
-  paymentMethods: { id: string; [key: string]: unknown }[]
+  paymentMethods: PaymentMethod[]
 ) {
   const navigate = useNavigate();
   const params = useParams();
