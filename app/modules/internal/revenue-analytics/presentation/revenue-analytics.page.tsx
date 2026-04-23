@@ -1,75 +1,20 @@
-/**
- * TODO: Replace mock analytics data with real API calls when
- * the backend adds aggregation/analytics endpoints.
- * Currently, the BE has no transaction list or revenue aggregation endpoint.
- */
-import { useMemo } from "react";
 import { Card, Badge } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
 import { useAuth } from "~/core/auth";
-// TODO: Replace with real API when GET /transaction list endpoint is available
-import { mockTransactions } from "../../dashboard/infrastructure/transaction.mock";
-import { mockEvents } from "../../events/infrastructure/event.mock";
+import { useRevenueAnalyticsData } from "./use-revenue-analytics";
 
 /** Partner — Revenue Analytics (filtered by partner's brand) */
 export default function RevenueAnalyticsPage() {
   const { user } = useAuth();
-
-  // Filter data by partner's brand
-  const brandTransactions = useMemo(
-    () => mockTransactions.filter((t) => t.brand_slug === user?.brand_slug),
-    [user?.brand_slug],
-  );
-  const brandEvents = useMemo(
-    () => mockEvents.filter((e) => e.brand_slug === user?.brand_slug),
-    [user?.brand_slug],
-  );
-
-  const paidTransactions = brandTransactions.filter((t) => t.status === "paid");
-  const totalRevenue = paidTransactions.reduce((s, t) => s + t.total_price, 0);
-  const totalTicketsSold = paidTransactions.reduce((s, t) => s + t.quantity, 0);
-
-  // Revenue by event
-  const revenueByEvent = useMemo(() => {
-    const map: Record<string, { event_name: string; revenue: number; tickets_sold: number }> = {};
-    for (const tx of paidTransactions) {
-      if (!map[tx.event_id]) {
-        map[tx.event_id] = { event_name: tx.event_name, revenue: 0, tickets_sold: 0 };
-      }
-      map[tx.event_id].revenue += tx.total_price;
-      map[tx.event_id].tickets_sold += tx.quantity;
-    }
-    return Object.values(map).sort((a, b) => b.revenue - a.revenue);
-  }, [paidTransactions]);
-
-  // Tickets sold per category (ticket_name)
-  const ticketsByCategory = useMemo(() => {
-    const map: Record<string, { category: string; quantity: number; revenue: number }> = {};
-    for (const tx of paidTransactions) {
-      if (!map[tx.ticket_name]) {
-        map[tx.ticket_name] = { category: tx.ticket_name, quantity: 0, revenue: 0 };
-      }
-      map[tx.ticket_name].quantity += tx.quantity;
-      map[tx.ticket_name].revenue += tx.total_price;
-    }
-    return Object.values(map).sort((a, b) => b.revenue - a.revenue);
-  }, [paidTransactions]);
-
-  // Revenue timeline (daily)
-  const revenueTimeline = useMemo(() => {
-    const map: Record<string, { date: string; revenue: number; transactions: number }> = {};
-    for (const tx of paidTransactions) {
-      const date = tx.created_at.slice(0, 10);
-      if (!map[date]) {
-        map[date] = { date, revenue: 0, transactions: 0 };
-      }
-      map[date].revenue += tx.total_price;
-      map[date].transactions += 1;
-    }
-    return Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
-  }, [paidTransactions]);
-
-  const maxRevenue = Math.max(...revenueTimeline.map((d) => d.revenue), 1);
+  const {
+    brandTransactions,
+    totalRevenue,
+    totalTicketsSold,
+    revenueByEvent,
+    ticketsByCategory,
+    revenueTimeline,
+    maxRevenue,
+  } = useRevenueAnalyticsData(user?.brand_slug);
 
   return (
     <div className="space-y-8">

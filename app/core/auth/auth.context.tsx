@@ -1,20 +1,29 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 
-export type AuthRole = "admin" | "partner";
-
-export interface AuthUser {
+export interface BaseAuthUser {
   email: string;
   name: string;
   picture?: string;
-  role: AuthRole;
-  brand_slug?: string; // only for partner role
-  brand_name?: string; // only for partner role
 }
+
+export interface AdminUser extends BaseAuthUser {
+  role: "admin";
+  brand_slug?: undefined;
+  brand_name?: undefined;
+}
+
+export interface PartnerUser extends BaseAuthUser {
+  role: "partner";
+  brand_slug: string;
+  brand_name: string;
+}
+
+export type AuthUser = AdminUser | PartnerUser;
+export type AuthRole = AuthUser["role"];
 
 interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
-
   loginAsAdmin: () => void;
   loginAsPartner: (brandSlug: string, brandName: string) => void;
   logout: () => void;
@@ -43,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loginAsAdmin = useCallback(() => {
+    // TODO: Replace mock authentication with actual API call
     const mockUser: AuthUser = {
       email: "admin@tiketbisa.com",
       name: "Admin Tiketbisa",
@@ -53,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loginAsPartner = useCallback((brandSlug: string, brandName: string) => {
+    // TODO: Replace mock authentication with actual API call
     const mockUser: AuthUser = {
       email: `partner@${brandSlug}.com`,
       name: brandName,

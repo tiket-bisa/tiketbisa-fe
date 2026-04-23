@@ -32,6 +32,7 @@ export default [
 
   // ─── Admin Login (Standalone) ───
   route("internal/admin/login", "modules/admin/login/presentation/login.page.tsx"),
+  route("internal/partner/login", "modules/internal/login/presentation/login.page.tsx"),
 
   // ─── Admin Layout (internal team — sees all brands) ───
   layout("layouts/admin.layout.tsx", [
@@ -65,9 +66,6 @@ export default [
       "modules/admin/transactions/presentation/transaction-details.page.tsx",
     ),
   ]),
-
-  // ─── Partner Login (Standalone) ───
-  route("internal/partner/login", "modules/internal/login/presentation/login.page.tsx"),
 
   // ─── Partner Layout (each partner — sees only own brand) ───
   layout("layouts/internal.layout.tsx", [

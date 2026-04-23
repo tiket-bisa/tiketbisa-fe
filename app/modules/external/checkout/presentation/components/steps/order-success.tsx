@@ -87,7 +87,7 @@ export function OrderSuccess({ event, order, onAction }: OrderSuccessProps) {
           <Card className="p-8 border-gray-100 shadow-sm rounded-3xl">
              <h3 className="text-xs font-black text-gray-400 mb-6 uppercase tracking-[0.2em]">Informasi Event</h3>
              <div className="flex gap-6">
-               <img src={event.image || "/featured-event.png"} className="w-24 h-24 rounded-2xl object-cover" alt="" />
+               <img src={event.imageUrl || "/featured-event.png"} className="w-24 h-24 rounded-2xl object-cover" alt="" />
                <div className="space-y-3">
                  <h4 className="font-black text-xl text-gray-900 leading-tight">{event.name}</h4>
                  <div className="flex items-center gap-2 text-sm font-bold text-gray-500">
