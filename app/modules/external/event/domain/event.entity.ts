@@ -14,6 +14,7 @@ export interface Event {
   imageUrl: string;
   date: string;
   location: string;
+  minPrice?: number;
   time?: string;
   tickets: EventTicket[];
   terms?: string[];

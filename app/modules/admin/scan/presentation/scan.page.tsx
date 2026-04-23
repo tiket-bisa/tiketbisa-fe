@@ -1,11 +1,12 @@
-import { useMemo } from "react";
-import { Card, Badge } from "~/core/design-system/components";
+import { useState, useMemo } from "react";
+import { Card, Tabs, Badge } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
 import { useApiQuery } from "~/core/api";
 import { eventApi, mapEventApiToFe } from "~/core/api/services/event.api";
 import { brandApi, mapBrandApiToFe } from "~/core/api/services/brand.api";
 import { ticketCategoryApi, aggregateTicketDashboard } from "~/core/api/services/ticket-category.api";
 import type { TicketDashboardSummary } from "~/core/types";
+import { ScanSection, QrGeneratorSection } from "~/modules/internal/ticket-scanning/presentation/components";
 
 /** Admin — Ticket Scanning with real ticket-category API */
 export default function AdminScanPage() {
@@ -82,10 +83,6 @@ export default function AdminScanPage() {
 }
 
 /* ── Sub-components ── */
-
-import { useState } from "react";
-import { Tabs } from "~/core/design-system/components";
-import { ScanSection, QrGeneratorSection } from "~/modules/internal/ticket-scanning/presentation/components";
 
 const tabItems = [
   { value: "scan", label: "Scan Tiket" },

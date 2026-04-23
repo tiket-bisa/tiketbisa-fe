@@ -17,11 +17,11 @@ function InternalShell() {
 
   const handleLogout = () => {
     logout();
-    navigate("/internal/partner/login");
+    navigate("/internal-tb/partner/login");
   };
 
   const handleScanTicket = () => {
-    navigate("/internal/partner/scan");
+    navigate("/internal-tb/partner/scan");
   };
 
   return (

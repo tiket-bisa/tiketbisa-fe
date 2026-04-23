@@ -1,46 +1,39 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { Button, Select } from "~/core/design-system/components";
+import { Button } from "~/core/design-system/components";
 import { AuthProvider, useAuth } from "~/core/auth";
-import { useApiQuery } from "~/core/api";
-import { brandApi, mapBrandApiToFe } from "~/core/api/services/brand.api";
-import type { Brand } from "~/core/types";
+import { requestGoogleAuthorizationCode } from "~/core/auth/google-oauth.client";
+import { requestInternalGoogleToken } from "~/core/auth/internal-auth.api";
 
 function LoginContent() {
-  const { user, loginAsPartner } = useAuth();
+  const { user, loginWithOAuth } = useAuth();
   const navigate = useNavigate();
-
-  // Fetch brands from real API
-  const { data: brands, loading } = useApiQuery(
-    async () => {
-      const res = await brandApi.getList({ limit: 100, offset: 0 });
-      if (!res.success || !res.data) return [] as Brand[];
-      return (res.data.brands ?? []).map(mapBrandApiToFe);
-    },
-    [],
-  );
-
-  const brandList = brands ?? [];
-  const brandOptions = brandList.map((b) => ({ value: b.slug, label: b.name }));
-  const [selectedBrand, setSelectedBrand] = useState("");
-
-  // Set default selection once brands load
-  useEffect(() => {
-    if (brandOptions.length > 0 && !selectedBrand) {
-      setSelectedBrand(brandOptions[0].value);
-    }
-  }, [brandOptions, selectedBrand]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user && user.role === "partner") {
-      navigate("/internal/partner", { replace: true });
+      navigate("/internal-tb/partner", { replace: true });
     }
   }, [user, navigate]);
 
-  const handleLogin = () => {
-    const brand = brandList.find((b) => b.slug === selectedBrand);
-    if (brand) {
-      loginAsPartner(brand.slug, brand.name);
+  const handleLogin = async () => {
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const authCode = await requestGoogleAuthorizationCode();
+      const tokenData = await requestInternalGoogleToken(authCode);
+
+      if (tokenData.role !== "partner") {
+        throw new Error(`Akun ini tidak memiliki akses partner (role: ${tokenData.role})`);
+      }
+
+      loginWithOAuth(tokenData);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Gagal login dengan Google");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -62,27 +55,13 @@ function LoginContent() {
           </div>
         </div>
 
-        {/* Brand Selection — fetched from real API */}
-        <div className="text-left">
-          {loading ? (
-            <p className="text-text-tertiary text-sm py-3">Memuat brand...</p>
-          ) : (
-            <Select
-              options={brandOptions}
-              value={selectedBrand}
-              onChange={(e) => setSelectedBrand(e.target.value)}
-              label="Pilih Brand"
-            />
-          )}
-        </div>
-
         {/* Google Sign In */}
         <Button
           variant="secondary"
           size="lg"
           fullWidth
           onClick={handleLogin}
-          disabled={loading || !selectedBrand}
+          disabled={isSubmitting}
           className="flex items-center justify-center gap-3"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
@@ -103,8 +82,12 @@ function LoginContent() {
               fill="#EA4335"
             />
           </svg>
-          Sign in with Google
+          {isSubmitting ? "Memproses..." : "Sign in with Google"}
         </Button>
+
+        {error && (
+          <p className="text-sm text-destructive">{error}</p>
+        )}
       </div>
     </div>
   );
