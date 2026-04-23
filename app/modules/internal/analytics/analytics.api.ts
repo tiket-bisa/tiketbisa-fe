@@ -6,6 +6,8 @@ export interface DashboardStats {
   totalTicketsSold: number;
   totalEvents: number;
   totalCheckedIn: number;
+  totalTransactions?: number;
+  totalBrands?: number;
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
