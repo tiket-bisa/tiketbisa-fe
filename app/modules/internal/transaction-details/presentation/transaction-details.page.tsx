@@ -18,7 +18,6 @@ const STATUS_MAP = {
 export default function TransactionDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-
   // Try to fetch from real API first
   const { data: apiTx, loading } = useApiQuery(
     async () => {

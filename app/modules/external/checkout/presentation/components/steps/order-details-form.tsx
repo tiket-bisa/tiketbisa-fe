@@ -1,4 +1,4 @@
-import { Card, Select, Input } from "~/core/design-system/components";
+import { Card } from "~/core/design-system/components";
 import type { BuyerInfo } from "../../../domain/checkout.types";
 import { CheckoutFormField } from "../shared/checkout-form-field";
 
@@ -8,12 +8,6 @@ export interface OrderDetailsFormProps {
   onChange: (field: keyof BuyerInfo, value: string) => void;
   className?: string;
 }
-
-const IDENTITY_OPTIONS = [
-  { label: "KTP", value: "KTP" },
-  { label: "SIM", value: "SIM" },
-  { label: "Paspor", value: "PASPOR" },
-];
 
 export function OrderDetailsForm({ data, errors = {}, onChange, className = "" }: OrderDetailsFormProps) {
   return (
@@ -49,12 +43,6 @@ export function OrderDetailsForm({ data, errors = {}, onChange, className = "" }
             error={errors.phoneNumber}
             onChange={(val) => onChange("phoneNumber", val)}
           />
-
-          <IdentityField 
-            data={data} 
-            error={errors.identityType || errors.identityNumber} 
-            onChange={onChange} 
-          />
         </div>
 
         <WarningInfo />
@@ -70,44 +58,6 @@ function FormHeader() {
       <p className="text-gray-500 font-medium">
         Data ini akan digunakan untuk pengiriman tiket ke email Anda.
       </p>
-    </div>
-  );
-}
-
-interface IdentityFieldProps {
-  data: BuyerInfo;
-  error?: string;
-  onChange: (field: keyof BuyerInfo, value: string) => void;
-}
-
-function IdentityField({ data, error, onChange }: IdentityFieldProps) {
-  const inputBaseStyles = "h-12 rounded-xl border-gray-200 !text-black font-bold focus:ring-4 focus:ring-brand-primary/10 transition-all duration-200 hover:!bg-gray-100 focus:!bg-gray-100 focus:border-brand-primary";
-  const getFieldBg = (value: string) => (value && value.length > 0 ? "!bg-gray-100" : "!bg-white");
-
-  return (
-    <div className="space-y-2">
-      <label className="text-sm font-bold text-gray-500 ml-1">Identitas</label>
-      <div className="grid grid-cols-12 gap-3 items-start">
-        <div className="col-span-4">
-          <Select
-            id="identityType"
-            options={IDENTITY_OPTIONS}
-            value={data.identityType}
-            onChange={(e) => onChange("identityType", e.target.value)}
-            className={`${inputBaseStyles} ${getFieldBg(data.identityType)} ${error ? "border-red-500" : ""} !text-black`}
-          />
-        </div>
-        <div className="col-span-8">
-          <Input
-            id="identityNumber"
-            placeholder="Nomor identitas"
-            value={data.identityNumber}
-            onChange={(e) => onChange("identityNumber", e.target.value)}
-            className={`${inputBaseStyles} ${getFieldBg(data.identityNumber)} ${error ? "border-red-500 !bg-red-50/30" : ""}`}
-          />
-        </div>
-      </div>
-      {error && <p className="text-xs font-bold text-red-500 ml-1 mt-1">{error}</p>}
     </div>
   );
 }

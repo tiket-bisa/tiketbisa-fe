@@ -2,32 +2,36 @@ import { useState, useCallback, useEffect } from "react";
 import type { BuyerInfo } from "../../domain/checkout.types";
 
 const STORAGE_KEY = "tiketbisa_buyer_info";
+const DEFAULT_BUYER_INFO: BuyerInfo = {
+  fullName: "",
+  email: "",
+  phoneNumber: "",
+  identityType: "KTP",
+  identityNumber: "-",
+};
 
 export function useCheckoutForm() {
-  const [buyerInfo, setBuyerInfo] = useState<BuyerInfo>(() => {
-    if (typeof window === "undefined") return {
-      fullName: "",
-      email: "",
-      phoneNumber: "",
-      identityType: "KTP",
-      identityNumber: "",
-    };
-    
-    const saved = sessionStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : {
-      fullName: "",
-      email: "",
-      phoneNumber: "",
-      identityType: "KTP",
-      identityNumber: "",
-    };
-  });
+  const [buyerInfo, setBuyerInfo] = useState<BuyerInfo>(DEFAULT_BUYER_INFO);
+  const [isStorageReady, setIsStorageReady] = useState(false);
 
   const [errors, setErrors] = useState<Partial<Record<keyof BuyerInfo, string>>>({});
 
   useEffect(() => {
+    const saved = sessionStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        setBuyerInfo(JSON.parse(saved));
+      } catch {
+        setBuyerInfo(DEFAULT_BUYER_INFO);
+      }
+    }
+    setIsStorageReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isStorageReady) return;
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(buyerInfo));
-  }, [buyerInfo]);
+  }, [buyerInfo, isStorageReady]);
 
   const validate = useCallback((): boolean => {
     const newErrors: Partial<Record<keyof BuyerInfo, string>> = {};
@@ -52,20 +56,6 @@ export function useCheckoutForm() {
       newErrors.phoneNumber = "Hanya boleh angka";
     } else if (buyerInfo.phoneNumber.length < 10 || buyerInfo.phoneNumber.length > 13) {
       newErrors.phoneNumber = "Harus 10-13 digit";
-    }
-
-    if (!buyerInfo.identityType) {
-      newErrors.identityType = "Tipe identitas wajib dipilih";
-    }
-
-    if (!buyerInfo.identityNumber.trim()) {
-      newErrors.identityNumber = "Nomor identitas wajib diisi";
-    } else if (buyerInfo.identityType === "KTP" || buyerInfo.identityType === "SIM") {
-      if (!phoneRegex.test(buyerInfo.identityNumber)) {
-        newErrors.identityNumber = "Hanya boleh angka";
-      } else if (buyerInfo.identityType === "KTP" && buyerInfo.identityNumber.length !== 16) {
-        newErrors.identityNumber = "KTP harus tepat 16 digit";
-      }
     }
 
     setErrors(newErrors);

@@ -8,9 +8,9 @@ export interface CheckoutNavbarProps {
 }
 
 const STEPS = [
-  { id: 1, label: "Detail Pesanan" },
+  { id: 1, label: "Data Pesanan" },
   { id: 2, label: "Metode Pembayaran" },
-  { id: 3, label: "Konfirmasi Pesanan" },
+  { id: 3, label: "Konfirmasi Pembayaran" },
   { id: 4, label: "Pembayaran" },
 ] as const;
 

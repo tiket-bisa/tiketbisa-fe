@@ -43,14 +43,23 @@ export default function EventDetailPage({ loaderData }: Route.ComponentProps) {
     setSearchParams(prev => {
       prev.set("tab", val);
       return prev;
-    }, { replace: true });
+    }, { replace: true, preventScrollReset: true });
   };
 
   const handleCheckout = () => {
+    sessionStorage.removeItem("tiketbisa_checkout_deadline");
+    sessionStorage.removeItem("tiketbisa_buyer_info");
+    sessionStorage.removeItem("tiketbisa_payment_selection");
+    sessionStorage.removeItem("tiketbisa_checkout_summary");
+
     const params = new URLSearchParams();
-    Object.entries(quantities).forEach(([id, qty]) => {
-      if (qty > 0) params.append(`t[${id}]`, qty.toString());
+    params.set("step", "1");
+    Object.entries(quantities).forEach(([ticketId, qty]) => {
+      if (qty > 0) {
+        params.set(`t[${ticketId}]`, String(qty));
+      }
     });
+
     navigate(`/checkout/${event.id}?${params.toString()}`);
   };
 

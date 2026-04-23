@@ -60,7 +60,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
     paymentSelection,
     selectedPaymentMethod,
     isStep2Valid,
-    setMethodId,
+    handlePaymentMethodSelect,
     setAgreedToTerms,
     setAgreedToPrivacy
   } = useCheckoutSteps(event, buyerInfo, summary, validate, paymentMethods);
@@ -68,6 +68,8 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [currentStep]);
+
+  const displayStep = currentStep >= 4 ? 4 : currentStep;
 
   // View switch for special steps
   if (currentStep === 5) {
@@ -108,7 +110,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
               <PaymentMethodSelection
                 methods={paymentMethods}
                 selectedMethodId={paymentSelection.methodId}
-                onSelect={setMethodId}
+                onSelect={handlePaymentMethodSelect}
               />
             </div>
           )}
@@ -128,6 +130,11 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
             <PaymentInstruction
               order={order}
               event={event}
+              fallbackTotalAmount={
+                completedOrder?.totalPrice && completedOrder.totalPrice > 0
+                  ? completedOrder.totalPrice
+                  : summary.totalPrice
+              }
               onAction={() => handleNext()}
               onBack={handleBack}
               onExpire={handleExpire}
@@ -181,7 +188,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
       {/* Shared Sticky Bar (Mobile Only) */}
       <CheckoutStickyBar
         summary={summary}
-        currentStep={currentStep}
+        currentStep={displayStep}
         onNext={() => handleNext()}
         onBack={handleBack}
         onExpire={handleExpire}

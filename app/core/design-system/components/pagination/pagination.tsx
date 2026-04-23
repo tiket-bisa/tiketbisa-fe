@@ -3,6 +3,69 @@ export interface PaginationProps {
   totalPages: number;
   onPageChange: (page: number) => void;
   className?: string;
+  siblingCount?: number;
+  boundaryCount?: number;
+}
+
+type PageItem = number | "...";
+
+const ELLIPSIS: PageItem = "...";
+
+interface PaginationOptions {
+  current: number;
+  total: number;
+  siblingCount: number;
+  boundaryCount: number;
+}
+
+function range(start: number, end: number): number[] {
+  if (end < start) return [];
+  return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+}
+
+function getVisiblePages({
+  current,
+  total,
+  siblingCount,
+  boundaryCount,
+}: PaginationOptions): PageItem[] {
+  const totalNumbers = siblingCount * 2 + 3 + boundaryCount * 2;
+
+  if (total <= totalNumbers) {
+    return range(1, total);
+  }
+
+  const startPages = range(1, boundaryCount);
+  const endPages = range(total - boundaryCount + 1, total);
+
+  const siblingsStart = Math.max(current - siblingCount, boundaryCount + 2);
+  const siblingsEnd = Math.min(
+    current + siblingCount,
+    total - boundaryCount - 1,
+  );
+
+  const showLeftEllipsis = siblingsStart > boundaryCount + 2;
+  const showRightEllipsis = siblingsEnd < total - boundaryCount - 1;
+
+  const pages: PageItem[] = [...startPages];
+
+  if (showLeftEllipsis) {
+    pages.push(ELLIPSIS);
+  } else {
+    pages.push(...range(boundaryCount + 1, siblingsStart - 1));
+  }
+
+  pages.push(...range(siblingsStart, siblingsEnd));
+
+  if (showRightEllipsis) {
+    pages.push(ELLIPSIS);
+  } else {
+    pages.push(...range(siblingsEnd + 1, total - boundaryCount));
+  }
+
+  pages.push(...endPages);
+
+  return pages;
 }
 
 export function Pagination({
@@ -10,10 +73,17 @@ export function Pagination({
   totalPages,
   onPageChange,
   className = "",
+  siblingCount = 1,
+  boundaryCount = 1,
 }: PaginationProps) {
   if (totalPages <= 1) return null;
 
-  const pages = getVisiblePages(currentPage, totalPages);
+  const pages = getVisiblePages({
+    current: currentPage,
+    total: totalPages,
+    siblingCount,
+    boundaryCount,
+  });
 
   return (
     <nav
@@ -58,7 +128,7 @@ export function Pagination({
           <button
             key={page}
             type="button"
-            onClick={() => onPageChange(page as number)}
+            onClick={() => onPageChange(page)}
             className={`inline-flex items-center justify-center h-9 w-9 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
               page === currentPage
                 ? "bg-brand-primary text-base-white"
@@ -97,52 +167,4 @@ export function Pagination({
       </button>
     </nav>
   );
-}
-
-/** Build a compact page-number array with ellipsis markers. */
-function getVisiblePages(current: number, total: number): (number | "...")[] {
-  // If total pages are 7 or less, just show all of them.
-  if (total <= 7) {
-    return Array.from({ length: total }, (_, i) => i + 1);
-  }
-
-  const pages: (number | "...")[] = [];
-  
-  // Always show first page
-  pages.push(1);
-
-  // Calculate start and end bounds around current page
-  let start = current - 1;
-  let end = current + 1;
-
-  // Adjust bounds if we are near the edges
-  if (current <= 3) {
-    start = 2;
-    end = 4;
-  } else if (current >= total - 2) {
-    start = total - 3;
-    end = total - 1;
-  }
-
-  // Insert start ellipsis
-  if (start > 2) {
-    pages.push("...");
-  }
-
-  // Insert middle pages
-  for (let i = start; i <= end; i++) {
-    if (i > 1 && i < total) {
-      pages.push(i);
-    }
-  }
-
-  // Insert end ellipsis
-  if (end < total - 1) {
-    pages.push("...");
-  }
-
-  // Always show last page
-  pages.push(total);
-
-  return pages;
 }

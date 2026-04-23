@@ -55,7 +55,7 @@ export function EventDetailTabs({
 
         {activeTab === "tiket" && (
           <section className="space-y-6 animate-in fade-in">
-            <h2 className="text-2xl font-bold text-white">Kategori Tiket</h2>
+            <h2 className="text-2xl font-bold text-black">Kategori Tiket</h2>
             <div className="grid gap-4">
               {event.tickets.map((ticket) => (
                 <TicketRow
@@ -71,14 +71,14 @@ export function EventDetailTabs({
 
         {activeTab === "syarat" && (
           <section className="bg-surface-alt p-8 rounded-2xl border border-border-default animate-in zoom-in-95">
-            <h2 className="text-2xl font-bold text-white mb-6">
+            <h2 className="text-2xl font-bold text-black mb-6">
               Syarat & Ketentuan
             </h2>
             <ul className="space-y-4">
               {event.terms?.map((term, idx) => (
                 <li
                   key={idx}
-                  className="flex gap-4 text-text-secondary text-lg"
+                  className="flex gap-4 text-black text-lg"
                 >
                   <span className="text-brand-primary font-bold">
                     {idx + 1}.
@@ -111,8 +111,10 @@ export function EventDetailTabs({
               to={`/brand/${event.brand.toLowerCase()}`}
               className="text-brand-primary hover:underline font-medium inline-flex items-center gap-1"
             >
-              Lihat Profil Brand 
-<span>&#8594;</span>
+              Lihat Profil Brand{" "}
+              <span className="material-symbols-outlined text-sm">
+                arrow_forward
+              </span>
             </Link>
           </div>
         </div>

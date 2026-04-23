@@ -185,7 +185,7 @@ export default function EventsPage() {
                 <Button 
                   variant="secondary" 
                   size="sm"
-                  onClick={() => navigate(`/internal/partner/events/${evt.id}/tickets/new`)}
+                  onClick={() => navigate(`/internal-tb/partner/events/${evt.id}/tickets/new`)}
                   className="flex items-center gap-1"
                 >
                   <span className="material-symbols-outlined text-sm">add</span>

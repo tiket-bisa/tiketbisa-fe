@@ -71,8 +71,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-
-
   const loginWithOAuth = useCallback((payload: InternalTokenResponseData) => {
     const profile = decodeJwtPayload(payload.idToken);
     const email = profile.email ?? "";
