@@ -1,17 +1,67 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Card, Badge, Button, Tabs } from "~/core/design-system/components";
+import { useState } from "react";
+import { Card, Tabs } from "~/core/design-system/components";
 import { useAuth } from "~/core/auth";
-import { mockTicketDashboard } from "../infrastructure/ticket.mock";
-import type { TicketScanResult } from "~/core/types";
+import { useApiQuery } from "~/core/api";
+import { eventApi } from "~/core/api/services/event.api";
+import { brandApi, mapBrandApiToFe } from "~/core/api/services/brand.api";
+import {
+  ticketCategoryApi,
+  aggregateTicketDashboard,
+} from "~/core/api/services/ticket-category.api";
+import type { TicketDashboardSummary } from "~/core/types";
+import { ScanSection, QrGeneratorSection } from "./components";
 
 const tabItems = [
   { value: "scan", label: "Scan Tiket" },
+  { value: "generate", label: "Generate QR" },
   { value: "dashboard", label: "Dashboard Tiket" },
 ];
 
 /** Partner — Ticket Scanning (filtered by partner's brand) */
 export default function TicketScanningPage() {
   const [tab, setTab] = useState("scan");
+  const { user } = useAuth(); // <-- Added this to fix the missing user reference
+
+  // Fetch ticket dashboard from API, filtered by partner's brand events
+  const { data: ticketDashboard, loading } = useApiQuery(
+    async () => {
+      // Resolve brand ID
+      const brandsRes = await brandApi.getList({ limit: 100, offset: 0 });
+      if (!brandsRes.success || !brandsRes.data) return [] as TicketDashboardSummary[];
+      let brandId: string | null = null;
+      let brandSlug: string | undefined;
+      for (const b of brandsRes.data.brands ?? []) {
+        const fe = mapBrandApiToFe(b);
+        if (fe.slug === user?.brand_slug) {
+          brandId = b.id;
+          brandSlug = fe.slug;
+          break;
+        }
+      }
+      if (!brandId) return [] as TicketDashboardSummary[];
+
+      // Fetch events for this brand
+      const eventsRes = await eventApi.getList({ limit: 100, offset: 0, brandId });
+      if (!eventsRes.success || !eventsRes.data) return [] as TicketDashboardSummary[];
+
+      const summaries: TicketDashboardSummary[] = [];
+      for (const evt of eventsRes.data.events ?? []) {
+        const catRes = await ticketCategoryApi.getByEvent(evt.id);
+        if (catRes.success && catRes.data) {
+          const categories = Array.isArray(catRes.data) ? catRes.data : [];
+          if (categories.length > 0) {
+            summaries.push(
+              aggregateTicketDashboard(evt.id, evt.name, categories, brandSlug),
+            );
+          }
+        }
+      }
+      return summaries;
+    },
+    [user?.brand_slug],
+  );
+
+  const dashboard = ticketDashboard ?? [];
 
   return (
     <div className="space-y-6">
@@ -19,222 +69,43 @@ export default function TicketScanningPage() {
 
       <Tabs items={tabItems} value={tab} onChange={setTab} />
 
-      {tab === "scan" ? <ScanSection /> : <DashboardSection />}
-    </div>
-  );
-}
-
-/** Camera-based ticket scanner */
-function ScanSection() {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [cameraActive, setCameraActive] = useState(false);
-  const [scanResult, setScanResult] = useState<TicketScanResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const startCamera = useCallback(async () => {
-    try {
-      setError(null);
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        setCameraActive(true);
-      }
-    } catch {
-      setError("Tidak dapat mengakses kamera. Pastikan izin kamera diberikan.");
-    }
-  }, []);
-
-  const stopCamera = useCallback(() => {
-    if (videoRef.current?.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach((track) => track.stop());
-      videoRef.current.srcObject = null;
-    }
-    setCameraActive(false);
-  }, []);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      stopCamera();
-    };
-  }, [stopCamera]);
-
-  const simulateScan = () => {
-    // TODO: Replace with real QR/barcode scanning logic
-    const mockResults: TicketScanResult[] = [
-      {
-        ticket_id: "TKT-001",
-        event_name: "Adhyaksa FC vs Persija Jakarta",
-        ticket_name: "Tribune Utara",
-        buyer_name: "Budi Santoso",
-        status: "valid",
-      },
-      {
-        ticket_id: "TKT-002",
-        event_name: "Adhyaksa FC vs Persija Jakarta",
-        ticket_name: "VIP",
-        buyer_name: "Siti Rahayu",
-        status: "already_checked_in",
-        checked_in_at: "2026-03-15T18:30:00Z",
-      },
-      {
-        ticket_id: "TKT-003",
-        event_name: "Adhyaksa FC vs Persib Bandung",
-        ticket_name: "Tribune Selatan",
-        buyer_name: "Unknown",
-        status: "invalid",
-      },
-    ];
-    const random = mockResults[Math.floor(Math.random() * mockResults.length)];
-    setScanResult(random);
-  };
-
-  const SCAN_STATUS_MAP = {
-    valid: { label: "Valid - Check In Berhasil", variant: "success" as const, icon: "check_circle" },
-    already_checked_in: { label: "Sudah Check In", variant: "warning" as const, icon: "warning" },
-    invalid: { label: "Tiket Tidak Valid", variant: "destructive" as const, icon: "cancel" },
-    expired: { label: "Tiket Kedaluwarsa", variant: "destructive" as const, icon: "schedule" },
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* Camera View */}
-      <Card padding="md">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative w-full max-w-md aspect-[4/3] bg-surface-alt rounded-lg overflow-hidden">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className={`w-full h-full object-cover ${cameraActive ? "" : "hidden"}`}
-            />
-            {!cameraActive && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-text-tertiary">
-                <span className="material-symbols-outlined text-5xl mb-2">
-                  photo_camera
-                </span>
-                <p className="text-sm">Kamera tidak aktif</p>
-              </div>
-            )}
-            {/* Scan overlay */}
-            {cameraActive && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-48 h-48 border-2 border-brand-primary rounded-xl opacity-70" />
-              </div>
-            )}
-          </div>
-
-          {error && (
-            <p className="text-destructive-text text-sm">{error}</p>
-          )}
-
-          <div className="flex gap-3">
-            {!cameraActive ? (
-              <Button variant="primary" onClick={startCamera}>
-                <span className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm">videocam</span>
-                  Aktifkan Kamera
-                </span>
-              </Button>
-            ) : (
-              <>
-                <Button variant="primary" onClick={simulateScan}>
-                  <span className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-sm">qr_code_scanner</span>
-                    Scan
-                  </span>
-                </Button>
-                <Button variant="ghost" onClick={stopCamera}>
-                  Matikan Kamera
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-      </Card>
-
-      {/* Scan Result */}
-      {scanResult && (
-        <Card padding="md">
-          <div className="flex items-start gap-4">
-            {(() => {
-              const info = SCAN_STATUS_MAP[scanResult.status];
-              return (
-                <>
-                  <span
-                    className={`material-symbols-outlined text-3xl ${
-                      scanResult.status === "valid"
-                        ? "text-success-default"
-                        : scanResult.status === "already_checked_in"
-                          ? "text-warning-default"
-                          : "text-destructive-default"
-                    }`}
-                  >
-                    {info.icon}
-                  </span>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge variant={info.variant}>{info.label}</Badge>
-                    </div>
-                    <dl className="space-y-2 text-sm">
-                      <div className="flex gap-2">
-                        <dt className="text-text-tertiary w-24 shrink-0">ID Tiket:</dt>
-                        <dd className="text-text-primary font-mono">{scanResult.ticket_id}</dd>
-                      </div>
-                      <div className="flex gap-2">
-                        <dt className="text-text-tertiary w-24 shrink-0">Event:</dt>
-                        <dd className="text-text-primary">{scanResult.event_name}</dd>
-                      </div>
-                      <div className="flex gap-2">
-                        <dt className="text-text-tertiary w-24 shrink-0">Tiket:</dt>
-                        <dd className="text-text-primary">{scanResult.ticket_name}</dd>
-                      </div>
-                      <div className="flex gap-2">
-                        <dt className="text-text-tertiary w-24 shrink-0">Pembeli:</dt>
-                        <dd className="text-text-primary">{scanResult.buyer_name}</dd>
-                      </div>
-                      {scanResult.checked_in_at && (
-                        <div className="flex gap-2">
-                          <dt className="text-text-tertiary w-24 shrink-0">Check-in:</dt>
-                          <dd className="text-text-primary">
-                            {new Date(scanResult.checked_in_at).toLocaleString("id-ID")}
-                          </dd>
-                        </div>
-                      )}
-                    </dl>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        </Card>
+      {tab === "scan" && <ScanSection />}
+      {tab === "generate" && <QrGeneratorSection />}
+      {tab === "dashboard" && (
+        <DashboardSection dashboard={dashboard} loading={loading} />
       )}
     </div>
   );
 }
 
 /** Ticket dashboard showing available vs checked-in (filtered by partner brand) */
-function DashboardSection() {
-  const { user } = useAuth();
-  const brandTickets = useMemo(
-    () => mockTicketDashboard.filter((t) => t.brand_slug === user?.brand_slug),
-    [user?.brand_slug],
-  );
+function DashboardSection({
+  dashboard,
+  loading,
+}: {
+  dashboard: TicketDashboardSummary[];
+  loading: boolean;
+}) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-text-tertiary">Memuat data tiket...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      {brandTickets.map((summary) => {
+      {dashboard.map((summary) => {
         const soldPercent =
           summary.total_tickets > 0
             ? Math.round((summary.sold_tickets / summary.total_tickets) * 100)
             : 0;
         const checkedInPercent =
           summary.sold_tickets > 0
-            ? Math.round((summary.checked_in_tickets / summary.sold_tickets) * 100)
+            ? Math.round(
+                (summary.checked_in_tickets / summary.sold_tickets) * 100,
+              )
             : 0;
 
         return (
@@ -308,6 +179,12 @@ function DashboardSection() {
           </Card>
         );
       })}
+
+      {dashboard.length === 0 && (
+        <div className="text-center py-12 text-text-tertiary">
+          <p>Belum ada data tiket untuk brand Anda</p>
+        </div>
+      )}
     </div>
   );
 }

@@ -160,3 +160,17 @@ body {
   --color-club-accent-subtle: var(--color-brand-primary-subtle);
   --color-club-accent-text: #ffffff;
 }
+
+/* html5-qrcode overrides */
+#qr-scanner-region video {
+  border-radius: 0.5rem;
+  object-fit: cover;
+}
+
+#qr-scanner-region img[alt="Info icon"] {
+  display: none;
+}
+
+#qr-scanner-region__dashboard_section {
+  display: none !important;
+}

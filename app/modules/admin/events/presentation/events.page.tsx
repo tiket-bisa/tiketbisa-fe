@@ -1,6 +1,10 @@
-import { useState, useMemo } from "react";
-import { Card, Badge, SearchInput, Pagination, Tabs, Select } from "~/core/design-system/components";
-import { allEvents } from "../infrastructure/event.mock";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router";
+import { Card, Badge, SearchInput, Pagination, Tabs, Select, Button } from "~/core/design-system/components";
+import { useApiQuery } from "~/core/api";
+import { eventApi, mapEventApiToFe } from "~/core/api/services/event.api";
+import { brandApi, mapBrandApiToFe } from "~/core/api/services/brand.api";
+import type { EventSummary } from "~/core/types";
 
 const STATUS_MAP = {
   draft: { label: "Draft", variant: "default" as const },
@@ -20,22 +24,54 @@ const ITEMS_PER_PAGE = 6;
 
 /** Admin — Events across all brands */
 export default function AdminEventsPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("all");
   const [brandFilter, setBrandFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Fetch brands for mapping brandId → brandName
+  const { data: brandsMap } = useApiQuery(
+    async () => {
+      const res = await brandApi.getList({ limit: 100, offset: 0 });
+      if (!res.success || !res.data) return new Map<string, { name: string; slug: string }>();
+      const map = new Map<string, { name: string; slug: string }>();
+      for (const b of res.data.brands ?? []) {
+        const fe = mapBrandApiToFe(b);
+        map.set(b.id, { name: fe.name, slug: fe.slug });
+      }
+      return map;
+    },
+    [],
+  );
+
+  // Fetch events from real API
+  const { data: allEvents, loading, error } = useApiQuery(
+    async () => {
+      const res = await eventApi.getList({ limit: 100, offset: 0 });
+      if (!res.success || !res.data) return [] as EventSummary[];
+      const bMap = brandsMap ?? new Map();
+      return (res.data.events ?? []).map((e) => {
+        const brand = bMap.get(e.brand_id) ?? { name: "Unknown", slug: "" };
+        return mapEventApiToFe(e, brand.name, brand.slug);
+      });
+    },
+    [brandsMap],
+  );
+
+  const events = allEvents ?? [];
+
   // Unique brand names from events
   const brandOptions = useMemo(() => {
-    const brands = [...new Set(allEvents.map((e) => e.brand))].sort();
+    const brands = [...new Set(events.map((e) => e.brand))].sort();
     return [
       { value: "all", label: "Semua Brand" },
       ...brands.map((b) => ({ value: b, label: b })),
     ];
-  }, []);
+  }, [events]);
 
   const filtered = useMemo(() => {
-    return allEvents.filter((evt) => {
+    return events.filter((evt) => {
       const matchesSearch =
         evt.name.toLowerCase().includes(search.toLowerCase()) ||
         evt.description.toLowerCase().includes(search.toLowerCase()) ||
@@ -44,13 +80,29 @@ export default function AdminEventsPage() {
       const matchesBrand = brandFilter === "all" || evt.brand === brandFilter;
       return matchesSearch && matchesTab && matchesBrand;
     });
-  }, [search, tab, brandFilter]);
+  }, [events, search, tab, brandFilter]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paged = filtered.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE,
   );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <p className="text-text-tertiary">Memuat data event...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <p className="text-destructive-text">Gagal memuat data event: {error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -60,8 +112,8 @@ export default function AdminEventsPage() {
         items={tabItems.map((t) => ({
           ...t,
           count: t.value === "all"
-            ? allEvents.length
-            : allEvents.filter((e) => e.status === t.value).length,
+            ? events.length
+            : events.filter((e) => e.status === t.value).length,
         }))}
         value={tab}
         onChange={(val) => { setTab(val); setCurrentPage(1); }}
@@ -119,6 +171,17 @@ export default function AdminEventsPage() {
                   </div>
                 </div>
                 <Badge variant={status.variant}>{status.label}</Badge>
+              </div>
+              <div className="mt-4 flex justify-end border-t border-border-subtle pt-3">
+                <Button 
+                  variant="secondary" 
+                  size="sm"
+                  onClick={() => navigate(`/internal/admin/events/${evt.id}/tickets/new`)}
+                  className="flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-sm">add</span>
+                  Tambah Tiket
+                </Button>
               </div>
             </Card>
           );

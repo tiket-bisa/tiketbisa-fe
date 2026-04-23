@@ -1,5 +1,6 @@
 import { Outlet, useNavigate } from "react-router";
-import { AuthProvider, AuthGuard, useAuth } from "~/core/auth";
+import { AuthProvider, useAuth } from "~/core/auth/auth.context";
+import { AuthGuard } from "~/core/auth/auth-guard";
 import { NavbarAdmin } from "~/shared/components";
 
 function AdminShell() {
@@ -8,7 +9,11 @@ function AdminShell() {
 
   const handleLogout = () => {
     logout();
-    navigate("/internal/admin/login");
+    navigate("/internal-tb/admin/login");
+  };
+
+  const handleScanTicket = () => {
+    navigate("/internal-tb/admin/scan");
   };
 
   return (
@@ -16,6 +21,7 @@ function AdminShell() {
       <NavbarAdmin
         userEmail={user?.email}
         onLogout={handleLogout}
+        onScanTicket={handleScanTicket}
       />
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
         <Outlet />

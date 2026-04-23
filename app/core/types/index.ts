@@ -2,8 +2,15 @@
  * Tiketbisa — Shared Domain Entities
  */
 
+export interface AuditableEntity {
+  created_at?: string;
+  updated_at?: string;
+  updated_by?: string;
+  deleted_at?: string;
+}
+
 /** Brand / Institution */
-export interface Brand {
+export interface Brand extends AuditableEntity {
   id: string;
   name: string;
   logo_url: string;
@@ -12,7 +19,7 @@ export interface Brand {
 }
 
 /** Event summary (list item) */
-export interface EventSummary {
+export interface EventSummary extends AuditableEntity {
   id: string;
   name: string;
   brand: string;
@@ -26,7 +33,7 @@ export interface EventSummary {
 }
 
 /** Ticket */
-export interface Ticket {
+export interface Ticket extends AuditableEntity {
   id: string;
   event_id: string;
   name: string;
@@ -38,7 +45,7 @@ export interface Ticket {
 }
 
 /** Transaction / Order */
-export interface Transaction {
+export interface Transaction extends AuditableEntity {
   id: string;
   event_id: string;
   event_name: string;
@@ -51,8 +58,6 @@ export interface Transaction {
   total_price: number;
   status: "pending" | "paid" | "cancelled" | "refunded";
   payment_method?: string;
-  created_at: string;
-  updated_at?: string;
 }
 
 /** Revenue Summary */
@@ -73,11 +78,12 @@ export interface RevenueDataPoint {
 /** Ticket Scan Result */
 export interface TicketScanResult {
   ticket_id: string;
-  event_name: string;
-  ticket_name: string;
-  buyer_name: string;
+  event_name?: string;
+  ticket_name?: string;
+  buyer_name?: string;
   status: "valid" | "already_checked_in" | "invalid" | "expired";
   checked_in_at?: string;
+  message?: string;
 }
 
 /** Ticket dashboard summary */

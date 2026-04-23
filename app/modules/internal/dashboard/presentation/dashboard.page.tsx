@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { Card, Badge, SearchInput, Pagination, Select } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
 import { useAuth } from "~/core/auth";
+// TODO: Replace with real API when GET /transaction list endpoint is available
 import { mockTransactions } from "../infrastructure/transaction.mock";
 
 const STATUS_MAP = {
@@ -29,6 +30,7 @@ export default function DashboardPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
+  // TODO: Replace with real API when GET /transaction list endpoint is available
   // Filter transactions to only this partner's brand
   const brandTransactions = useMemo(
     () => mockTransactions.filter((t) => t.brand_slug === user?.brand_slug),
@@ -97,7 +99,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Transaction List */}
+      {/* Transaction List — TODO: Replace with real API */}
       <div>
         <h2 className="text-text-primary text-lg font-semibold mb-4">
           List Transaksi
@@ -179,7 +181,7 @@ export default function DashboardPage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <Link
-                          to={`/internal/partner/transactions/${tx.id}`}
+                          to={`/internal-tb/partner/transactions/${tx.id}`}
                           className="text-brand-primary text-xs hover:underline"
                         >
                           Detail

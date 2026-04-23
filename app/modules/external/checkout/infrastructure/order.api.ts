@@ -275,20 +275,21 @@ export const orderApi = {
       expiryTime: expiryDate.toISOString(),
       paymentInstructions: "Silakan selesaikan pembayaran sebelum batas waktu yang ditentukan.",
     };
+
   },
 
   async getOrderById(orderId: string): Promise<OrderResponse | null> {
     try {
-      const response = await apiFetch<ApiResponse<any>>(`/transaction/${orderId}`);
+      const response = await apiFetch<ApiResponse<Record<string, unknown>>>(`/transaction/${orderId}`);
 
       if (!response.success || !response.data) {
         return null;
       }
 
       const data = response.data;
-      const paymentMethod = mapPaymentMethod(data.paymentMethod);
+      const paymentMethod = mapPaymentMethod(data.paymentMethod as string | undefined);
       let totalAmount = Number(
-        data.totalPrice || calculateTotalFromTickets(data.tickets),
+        data.totalPrice || calculateTotalFromTickets(data.tickets as TicketRequest[] | undefined),
       );
 
       if (!(totalAmount > 0)) {

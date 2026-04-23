@@ -32,62 +32,74 @@ export default [
   ]),
 
   // ─── Admin Login (Standalone) ───
-  route("internal/admin/login", "modules/admin/login/presentation/login.page.tsx"),
+  route("internal-tb/admin/login", "modules/admin/login/presentation/login.page.tsx"),
+  route("internal-tb/partner/login", "modules/internal/login/presentation/login.page.tsx"),
 
   // ─── Admin Layout (internal team — sees all brands) ───
   layout("layouts/admin.layout.tsx", [
     route(
-      "internal/admin",
+      "internal-tb/admin",
       "modules/admin/dashboard/presentation/dashboard.page.tsx",
       { index: true },
     ),
     route(
-      "internal/admin/brands",
+      "internal-tb/admin/brands",
       "modules/admin/brands/presentation/brands.page.tsx",
     ),
     route(
-      "internal/admin/events",
+      "internal-tb/admin/events",
       "modules/admin/events/presentation/events.page.tsx",
     ),
     route(
-      "internal/admin/analytics",
+      "internal-tb/admin/events/:eventId/tickets/new",
+      "modules/internal/events/presentation/create-ticket.page.tsx",
+      { id: "admin-create-ticket" } // <-- Added unique ID here
+    ),
+    route(
+      "internal-tb/admin/analytics",
       "modules/admin/analytics/presentation/analytics.page.tsx",
     ),
     route(
-      "internal/admin/transactions/:id",
+      "internal-tb/admin/scan",
+      "modules/admin/scan/presentation/scan.page.tsx",
+    ),
+    route(
+      "internal-tb/admin/transactions/:id",
       "modules/admin/transactions/presentation/transaction-details.page.tsx",
     ),
   ]),
 
-  // ─── Partner Login (Standalone) ───
-  route("internal/partner/login", "modules/internal/login/presentation/login.page.tsx"),
-
   // ─── Partner Layout (each partner — sees only own brand) ───
   layout("layouts/internal.layout.tsx", [
     route(
-      "internal/partner",
+      "internal-tb/partner",
       "modules/internal/dashboard/presentation/dashboard.page.tsx",
       { index: true },
     ),
     route(
-      "internal/partner/brands",
+      "internal-tb/partner/brands",
       "modules/internal/brand/presentation/brand.page.tsx",
     ),
     route(
-      "internal/partner/events",
+      "internal-tb/partner/events",
       "modules/internal/events/presentation/events.page.tsx",
     ),
     route(
-      "internal/partner/analytics",
+      "internal-tb/partner/events/:eventId/tickets/new",
+      "modules/internal/events/presentation/create-ticket.page.tsx",
+      { id: "partner-create-ticket" }
+    ),
+    route(
+      "internal-tb/partner/analytics",
       "modules/internal/revenue-analytics/presentation/revenue-analytics.page.tsx",
     ),
     route(
-      "internal/partner/scan",
-      "modules/internal/ticket-scanning/presentation/ticket-scanning.page.tsx",
+      "internal-tb/partner/transactions/:id",
+      "modules/internal/transaction-details/presentation/transaction-details.page.tsx",
     ),
     route(
-      "internal/partner/transactions/:id",
-      "modules/internal/transaction-details/presentation/transaction-details.page.tsx",
+      "internal-tb/partner/scan",
+      "modules/internal/ticket-scanning/presentation/ticket-scanning.page.tsx",
     ),
   ]),
 ] satisfies RouteConfig;

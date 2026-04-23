@@ -56,7 +56,7 @@ export const landingApi: LandingRepository = {
 
     return {
       banners: MOCK_BANNERS,
-      partners: brandRes.data.brand_list,
+      partners: brandRes.data.brand_list as Brand[],
       featuredEvents: featuredRes.data.event_list as Event[],
       upcomingEvents: upcomingRes.data.event_list as Event[],
       totalUpcoming: upcomingRes.data.count,

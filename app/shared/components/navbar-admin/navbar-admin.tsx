@@ -4,19 +4,21 @@ import { Button } from "~/core/design-system/components";
 export interface NavbarAdminProps {
   userEmail?: string;
   onLogout?: () => void;
+  onScanTicket?: () => void;
   className?: string;
 }
 
 const navLinks: readonly { to: string; label: string; exact?: boolean }[] = [
-  { to: "/internal/admin", label: "Beranda", exact: true },
-  { to: "/internal/admin/brands", label: "Brand" },
-  { to: "/internal/admin/events", label: "Event" },
-  { to: "/internal/admin/analytics", label: "Analitik" },
+  { to: "/internal-tb/admin", label: "Beranda", exact: true },
+  { to: "/internal-tb/admin/brands", label: "Brand" },
+  { to: "/internal-tb/admin/events", label: "Event" },
+  { to: "/internal-tb/admin/analytics", label: "Analitik" },
 ];
 
 export function NavbarAdmin({
   userEmail,
   onLogout,
+  onScanTicket,
   className = "",
 }: NavbarAdminProps) {
   const location = useLocation();
@@ -28,7 +30,7 @@ export function NavbarAdmin({
       <nav className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link
-          to="/internal/admin"
+          to="/internal-tb/admin"
           className="shrink-0"
           aria-label="Tiketbisa admin"
         >
@@ -70,6 +72,12 @@ export function NavbarAdmin({
 
         {/* Right section */}
         <div className="ml-auto flex items-center gap-3">
+          {onScanTicket && (
+            <Button variant="secondary" size="sm" onClick={onScanTicket}>
+              Scan Tiket
+            </Button>
+          )}
+
           {userEmail && (
             <span className="hidden sm:block text-xs text-text-tertiary truncate max-w-[180px]">
               {userEmail}

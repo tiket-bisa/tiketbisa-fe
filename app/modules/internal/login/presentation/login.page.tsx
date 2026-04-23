@@ -2,25 +2,38 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Button, Select } from "~/core/design-system/components";
 import { AuthProvider, useAuth } from "~/core/auth";
-import { mockBrands } from "../../brand-selection/infrastructure/brand.mock";
-
-const brandOptions = mockBrands.map((b) => ({ value: b.slug, label: b.name }));
+import { requestGoogleAuthorizationCode } from "~/core/auth/google-oauth.client";
+import { requestInternalGoogleToken } from "~/core/auth/internal-auth.api";
 
 function LoginContent() {
-  const { user, loginAsPartner } = useAuth();
+  const { user, loginWithOAuth } = useAuth();
   const navigate = useNavigate();
-  const [selectedBrand, setSelectedBrand] = useState(brandOptions[0].value);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user && user.role === "partner") {
-      navigate("/internal/partner", { replace: true });
+      navigate("/internal-tb/partner", { replace: true });
     }
   }, [user, navigate]);
 
-  const handleLogin = () => {
-    const brand = mockBrands.find((b) => b.slug === selectedBrand);
-    if (brand) {
-      loginAsPartner(brand.slug, brand.name);
+  const handleLogin = async () => {
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const authCode = await requestGoogleAuthorizationCode();
+      const tokenData = await requestInternalGoogleToken(authCode);
+
+      if (tokenData.role !== "partner") {
+        throw new Error(`Akun ini tidak memiliki akses partner (role: ${tokenData.role})`);
+      }
+
+      loginWithOAuth(tokenData);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Gagal login dengan Google");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -42,22 +55,13 @@ function LoginContent() {
           </div>
         </div>
 
-        {/* Brand Selection (mock — in production, determined by OAuth) */}
-        <div className="text-left">
-          <Select
-            options={brandOptions}
-            value={selectedBrand}
-            onChange={(e) => setSelectedBrand(e.target.value)}
-            label="Pilih Brand"
-          />
-        </div>
-
         {/* Google Sign In */}
         <Button
           variant="secondary"
           size="lg"
           fullWidth
           onClick={handleLogin}
+          disabled={isSubmitting}
           className="flex items-center justify-center gap-3"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
@@ -78,8 +82,12 @@ function LoginContent() {
               fill="#EA4335"
             />
           </svg>
-          Sign in with Google
+          {isSubmitting ? "Memproses..." : "Sign in with Google"}
         </Button>
+
+        {error && (
+          <p className="text-sm text-destructive">{error}</p>
+        )}
       </div>
     </div>
   );

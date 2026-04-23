@@ -1,59 +1,131 @@
-import { useCallback, type ReactNode } from "react";
-import { useAppDispatch, useAppSelector } from "../store/store";
-import {
-  loginAsAdmin as loginAsAdminAction,
-  loginAsPartner as loginAsPartnerAction,
-  logout as logoutAction,
-  type AuthUser,
-  type AuthRole,
-} from "../store/slices/auth.slice";
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import type { InternalTokenResponseData } from "./internal-auth.api";
+import { AUTH_STORAGE_KEY } from "./auth.constants";
 
-export type { AuthUser, AuthRole };
+export interface BaseAuthUser {
+  email: string;
+  name: string;
+  picture?: string;
+  internal_token?: string;
+}
+
+export interface AdminUser extends BaseAuthUser {
+  role: "admin";
+  brand_slug?: undefined;
+  brand_name?: undefined;
+}
+
+export interface PartnerUser extends BaseAuthUser {
+  role: "partner";
+  brand_slug: string;
+  brand_name: string;
+}
+
+export type AuthUser = AdminUser | PartnerUser;
+export type AuthRole = AuthUser["role"];
 
 interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
-  loginAsAdmin: () => void;
-  loginAsPartner: (brandSlug: string, brandName: string) => void;
+  loginWithOAuth: (payload: InternalTokenResponseData) => void;
   logout: () => void;
 }
 
-/**
- * Compatibility layer for components using AuthProvider
- */
-export function AuthProvider({ children }: { children: ReactNode }) {
-  // Redux Provider is already at the root, so we just pass through
-  return <>{children}</>;
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+interface GoogleIdTokenPayload {
+  email?: string;
+  name?: string;
+  picture?: string;
 }
 
-/**
- * useAuth hook that now uses Redux under the hood
- */
-export function useAuth(): AuthContextValue {
-  const dispatch = useAppDispatch();
-  const user = useAppSelector((state) => state.auth.user);
-  const isLoading = useAppSelector((state) => state.auth.isLoading);
+function decodeJwtPayload(token: string): GoogleIdTokenPayload {
+  const payloadPart = token.split(".")[1];
+  if (!payloadPart) return {};
 
-  const loginAsAdmin = useCallback(() => {
-    dispatch(loginAsAdminAction());
-  }, [dispatch]);
+  try {
+    const normalized = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+    const decoded = atob(padded);
+    return JSON.parse(decoded) as GoogleIdTokenPayload;
+  } catch {
+    return {};
+  }
+}
 
-  const loginAsPartner = useCallback(
-    (brandSlug: string, brandName: string) => {
-      dispatch(loginAsPartnerAction({ brandSlug, brandName }));
-    },
-    [dispatch],
-  );
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Restore session on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+      if (stored) {
+        setUser(JSON.parse(stored));
+      }
+    } catch {
+      // ignore parse errors
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const loginWithOAuth = useCallback((payload: InternalTokenResponseData) => {
+    const profile = decodeJwtPayload(payload.idToken);
+    const email = profile.email ?? "";
+    const name = profile.name ?? email ?? "Tiketbisa User";
+
+    if (!email) {
+      throw new Error("ID token does not contain email");
+    }
+
+    if (payload.role === "admin") {
+      const adminUser: AuthUser = {
+        email,
+        name,
+        picture: profile.picture,
+        role: "admin",
+        internal_token: payload.idToken,
+      };
+      setUser(adminUser);
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(adminUser));
+      return;
+    }
+
+    if (!payload.brandSlug || !payload.brandName) {
+      throw new Error("Partner account is missing brand details");
+    }
+
+    const partnerUser: AuthUser = {
+      email,
+      name: payload.brandName || name,
+      picture: profile.picture,
+      role: "partner",
+      brand_slug: payload.brandSlug,
+      brand_name: payload.brandName,
+      internal_token: payload.idToken,
+    };
+    setUser(partnerUser);
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(partnerUser));
+  }, []);
 
   const logout = useCallback(() => {
-    dispatch(logoutAction());
-  }, [dispatch]);
+    setUser(null);
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+  }, []);
 
-  return {
-    user,
-    isLoading,
-    loginAsAdmin,
-    loginAsPartner,
-    logout,
-  };
+  return (
+    <AuthContext.Provider value={{ user, isLoading, loginWithOAuth, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth(): AuthContextValue {
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return ctx;
 }

@@ -12,4 +12,6 @@ export type {
 export { DEFAULT_PAGINATION } from "./pagination.type";
 
 export { getPaginationFromSearchParams } from "./pagination-utils";
-export { apiFetch } from "./client";
+export { apiFetch } from "./api-fetch";
+export { httpClient, internalHttpClient } from "./http-client";
+export { useApiQuery } from "./use-api";

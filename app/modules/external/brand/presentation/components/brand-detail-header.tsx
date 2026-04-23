@@ -1,4 +1,4 @@
-import { Avatar, SocialLinks } from "~/core/design-system/components";
+import { Avatar, SocialLinks, type SocialLink } from "~/core/design-system/components";
 
 interface BrandDetailHeaderProps {
   brand: {
@@ -7,7 +7,7 @@ interface BrandDetailHeaderProps {
     bannerUrl?: string;
     joinedSince?: string;
     description?: string;
-    socialMedia?: any[];
+    socialMedia?: SocialLink[];
   };
 }
 
