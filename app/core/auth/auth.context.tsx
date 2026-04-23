@@ -27,8 +27,6 @@ export type AuthRole = AuthUser["role"];
 interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
-  loginAsAdmin: () => void;
-  loginAsPartner: (brandSlug: string, brandName: string) => void;
   loginWithOAuth: (payload: InternalTokenResponseData) => void;
   logout: () => void;
 }
@@ -73,27 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const loginAsAdmin = useCallback(() => {
-    const mockUser: AuthUser = {
-      email: "admin@tiketbisa.com",
-      name: "Admin Tiketbisa",
-      role: "admin",
-    };
-    setUser(mockUser);
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(mockUser));
-  }, []);
 
-  const loginAsPartner = useCallback((brandSlug: string, brandName: string) => {
-    const mockUser: AuthUser = {
-      email: `partner@${brandSlug}.com`,
-      name: brandName,
-      role: "partner",
-      brand_slug: brandSlug,
-      brand_name: brandName,
-    };
-    setUser(mockUser);
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(mockUser));
-  }, []);
 
   const loginWithOAuth = useCallback((payload: InternalTokenResponseData) => {
     const profile = decodeJwtPayload(payload.idToken);
@@ -140,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, loginAsAdmin, loginAsPartner, loginWithOAuth, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, loginWithOAuth, logout }}>
       {children}
     </AuthContext.Provider>
   );
