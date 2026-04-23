@@ -9,9 +9,11 @@ export function EventCard({ event, className = "" }: EventCardProps) {
     : "";
 
   const minPrice =
-    event.tickets.length > 0
-      ? Math.min(...event.tickets.map((t: { price: number }) => t.price))
-      : 0;
+    event.minPrice !== undefined
+      ? event.minPrice
+      : event.tickets.length > 0
+        ? Math.min(...event.tickets.map((t: { price: number }) => t.price))
+        : 0;
 
   const isLongTitle = event.title.length > 27;
 

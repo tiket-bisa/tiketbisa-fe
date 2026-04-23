@@ -38,7 +38,7 @@ export default function TransactionDetailsPage() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <Link to="/internal/partner" className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1">
+        <Link to="/internal-tb/partner" className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1">
           <span className="material-symbols-outlined text-sm">arrow_back</span>
           Kembali ke Beranda
         </Link>
@@ -52,7 +52,10 @@ export default function TransactionDetailsPage() {
   if (!tx) {
     return (
       <div className="space-y-4">
-        <Link to="/internal/partner" className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1">
+        <Link
+          to="/internal-tb/partner"
+          className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1"
+        >
           <span className="material-symbols-outlined text-sm">arrow_back</span>
           Kembali ke Beranda
         </Link>
@@ -83,7 +86,11 @@ export default function TransactionDetailsPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/internal/partner" className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1">
+      {/* Back link */}
+      <Link
+        to="/internal-tb/partner"
+        className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1"
+      >
         <span className="material-symbols-outlined text-sm">arrow_back</span>
         Kembali ke Beranda
       </Link>

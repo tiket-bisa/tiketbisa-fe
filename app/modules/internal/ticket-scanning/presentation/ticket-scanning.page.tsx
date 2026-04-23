@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Card, Tabs } from "~/core/design-system/components";
 import { useAuth } from "~/core/auth";
 import { useApiQuery } from "~/core/api";
@@ -20,7 +20,7 @@ const tabItems = [
 /** Partner — Ticket Scanning (filtered by partner's brand) */
 export default function TicketScanningPage() {
   const [tab, setTab] = useState("scan");
-  const { user } = useAuth();
+  const { user } = useAuth(); // <-- Added this to fix the missing user reference
 
   // Fetch ticket dashboard from API, filtered by partner's brand events
   const { data: ticketDashboard, loading } = useApiQuery(
@@ -104,8 +104,8 @@ function DashboardSection({
         const checkedInPercent =
           summary.sold_tickets > 0
             ? Math.round(
-              (summary.checked_in_tickets / summary.sold_tickets) * 100,
-            )
+                (summary.checked_in_tickets / summary.sold_tickets) * 100,
+              )
             : 0;
 
         return (

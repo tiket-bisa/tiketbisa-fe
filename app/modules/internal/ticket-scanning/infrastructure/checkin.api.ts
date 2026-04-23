@@ -1,4 +1,4 @@
-import { httpClient } from "~/core/api";
+import { internalHttpClient } from "~/core/api";
 
 export interface CheckInRequest {
   code_hash: string;
@@ -14,5 +14,5 @@ export interface CheckInResponse {
 
 export const checkinApi = {
   checkIn: (request: CheckInRequest) =>
-    httpClient.post<CheckInResponse>("/transaction/checkin", request),
+    internalHttpClient.post<CheckInResponse>("/transaction/checkin", request),
 };
