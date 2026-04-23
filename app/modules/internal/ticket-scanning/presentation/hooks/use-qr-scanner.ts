@@ -25,8 +25,8 @@ export function useQrScanner({ onScanSuccess }: UseQrScannerOptions) {
         { facingMode: "environment" },
         {
           fps: 10,
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 4 / 3,
+          qrbox: { width: 350, height: 150 },
+          aspectRatio: 16 / 9,
         },
         (decodedText) => {
           if (decodedText === lastScannedRef.current) return;

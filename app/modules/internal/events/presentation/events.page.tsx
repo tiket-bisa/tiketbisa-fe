@@ -1,7 +1,10 @@
 import { useState, useMemo } from "react";
 import { Card, Badge, SearchInput, Pagination, Tabs } from "~/core/design-system/components";
 import { useAuth } from "~/core/auth";
-import { mockEvents } from "../infrastructure/event.mock";
+import { useApiQuery } from "~/core/api";
+import { eventApi, mapEventApiToFe } from "~/core/api/services/event.api";
+import { brandApi, mapBrandApiToFe } from "~/core/api/services/brand.api";
+import type { EventSummary } from "~/core/types";
 
 const STATUS_MAP = {
   draft: { label: "Draft", variant: "default" as const },
@@ -26,44 +29,89 @@ export default function EventsPage() {
   const [tab, setTab] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Filter events to only this partner's brand
-  const brandEvents = useMemo(
-    () => mockEvents.filter((e) => e.brand_slug === user?.brand_slug),
+  // Resolve brand ID from user's brand_slug by fetching brand list
+  const { data: brandInfo } = useApiQuery(
+    async () => {
+      const res = await brandApi.getList({ limit: 100, offset: 0 });
+      if (!res.success || !res.data) return null;
+      for (const b of res.data.brands ?? []) {
+        const fe = mapBrandApiToFe(b);
+        if (fe.slug === user?.brand_slug) {
+          return { id: b.id, name: fe.name, slug: fe.slug };
+        }
+      }
+      return null;
+    },
     [user?.brand_slug],
   );
 
+  // Fetch events filtered by brandId
+  const { data: brandEvents, loading, error } = useApiQuery(
+    async () => {
+      if (!brandInfo) return [] as EventSummary[];
+      const res = await eventApi.getList({
+        limit: 100,
+        offset: 0,
+        brandId: brandInfo.id,
+      });
+      if (!res.success || !res.data) return [] as EventSummary[];
+      return (res.data.events ?? []).map((e) =>
+        mapEventApiToFe(e, brandInfo.name, brandInfo.slug),
+      );
+    },
+    [brandInfo],
+  );
+
+  const events = brandEvents ?? [];
+
   const tabCounts = useMemo(() => {
     const counts: Record<string, number> = {
-      all: brandEvents.length,
+      all: events.length,
       published: 0,
       draft: 0,
       completed: 0,
       cancelled: 0,
     };
 
-    for (const evt of brandEvents) {
+    for (const evt of events) {
       const status = evt.status ?? "draft";
       counts[status] = (counts[status] ?? 0) + 1;
     }
 
     return counts;
-  }, [brandEvents]);
+  }, [events]);
 
   const filtered = useMemo(() => {
-    return brandEvents.filter((evt) => {
+    return events.filter((evt) => {
       const matchesSearch =
         evt.name.toLowerCase().includes(search.toLowerCase()) ||
         evt.description.toLowerCase().includes(search.toLowerCase());
       const matchesTab = tab === "all" || evt.status === tab;
       return matchesSearch && matchesTab;
     });
-  }, [brandEvents, search, tab]);
+  }, [events, search, tab]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paged = filtered.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <p className="text-text-tertiary">Memuat data event...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <p className="text-destructive-text">Gagal memuat data event: {error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -64,8 +64,10 @@ async function request<T>(
 }
 
 export const httpClient = {
-  post: <T>(path: string, body: unknown) => request<T>("POST", path, body),
   get: <T>(path: string) => request<T>("GET", path),
+  post: <T>(path: string, body: unknown) => request<T>("POST", path, body),
+  put: <T>(path: string, body: unknown) => request<T>("PUT", path, body),
+  delete: <T>(path: string) => request<T>("DELETE", path),
 };
 
 function getInternalAuthHeaders(): Record<string, string> {
@@ -81,8 +83,12 @@ function getInternalAuthHeaders(): Record<string, string> {
 }
 
 export const internalHttpClient = {
-  post: <T>(path: string, body: unknown) =>
-    request<T>("POST", `${INTERNAL_API_PREFIX}${normalizePath(path)}`, body, getInternalAuthHeaders()),
   get: <T>(path: string) =>
     request<T>("GET", `${INTERNAL_API_PREFIX}${normalizePath(path)}`, undefined, getInternalAuthHeaders()),
+  post: <T>(path: string, body: unknown) =>
+    request<T>("POST", `${INTERNAL_API_PREFIX}${normalizePath(path)}`, body, getInternalAuthHeaders()),
+  put: <T>(path: string, body: unknown) =>
+    request<T>("PUT", `${INTERNAL_API_PREFIX}${normalizePath(path)}`, body, getInternalAuthHeaders()),
+  delete: <T>(path: string) =>
+    request<T>("DELETE", `${INTERNAL_API_PREFIX}${normalizePath(path)}`, undefined, getInternalAuthHeaders()),
 };

@@ -1,7 +1,14 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Card, Tabs } from "~/core/design-system/components";
 import { useAuth } from "~/core/auth";
-import { mockTicketDashboard } from "../infrastructure/ticket.mock";
+import { useApiQuery } from "~/core/api";
+import { eventApi } from "~/core/api/services/event.api";
+import { brandApi, mapBrandApiToFe } from "~/core/api/services/brand.api";
+import {
+  ticketCategoryApi,
+  aggregateTicketDashboard,
+} from "~/core/api/services/ticket-category.api";
+import type { TicketDashboardSummary } from "~/core/types";
 import { ScanSection, QrGeneratorSection } from "./components";
 
 const tabItems = [
@@ -13,6 +20,48 @@ const tabItems = [
 /** Partner — Ticket Scanning (filtered by partner's brand) */
 export default function TicketScanningPage() {
   const [tab, setTab] = useState("scan");
+  const { user } = useAuth(); // <-- Added this to fix the missing user reference
+
+  // Fetch ticket dashboard from API, filtered by partner's brand events
+  const { data: ticketDashboard, loading } = useApiQuery(
+    async () => {
+      // Resolve brand ID
+      const brandsRes = await brandApi.getList({ limit: 100, offset: 0 });
+      if (!brandsRes.success || !brandsRes.data) return [] as TicketDashboardSummary[];
+      let brandId: string | null = null;
+      let brandSlug: string | undefined;
+      for (const b of brandsRes.data.brands ?? []) {
+        const fe = mapBrandApiToFe(b);
+        if (fe.slug === user?.brand_slug) {
+          brandId = b.id;
+          brandSlug = fe.slug;
+          break;
+        }
+      }
+      if (!brandId) return [] as TicketDashboardSummary[];
+
+      // Fetch events for this brand
+      const eventsRes = await eventApi.getList({ limit: 100, offset: 0, brandId });
+      if (!eventsRes.success || !eventsRes.data) return [] as TicketDashboardSummary[];
+
+      const summaries: TicketDashboardSummary[] = [];
+      for (const evt of eventsRes.data.events ?? []) {
+        const catRes = await ticketCategoryApi.getByEvent(evt.id);
+        if (catRes.success && catRes.data) {
+          const categories = Array.isArray(catRes.data) ? catRes.data : [];
+          if (categories.length > 0) {
+            summaries.push(
+              aggregateTicketDashboard(evt.id, evt.name, categories, brandSlug),
+            );
+          }
+        }
+      }
+      return summaries;
+    },
+    [user?.brand_slug],
+  );
+
+  const dashboard = ticketDashboard ?? [];
 
   return (
     <div className="space-y-6">
@@ -22,29 +71,41 @@ export default function TicketScanningPage() {
 
       {tab === "scan" && <ScanSection />}
       {tab === "generate" && <QrGeneratorSection />}
-      {tab === "dashboard" && <DashboardSection />}
+      {tab === "dashboard" && (
+        <DashboardSection dashboard={dashboard} loading={loading} />
+      )}
     </div>
   );
 }
 
 /** Ticket dashboard showing available vs checked-in (filtered by partner brand) */
-function DashboardSection() {
-  const { user } = useAuth();
-  const brandTickets = useMemo(
-    () => mockTicketDashboard.filter((t) => t.brand_slug === user?.brand_slug),
-    [user?.brand_slug],
-  );
+function DashboardSection({
+  dashboard,
+  loading,
+}: {
+  dashboard: TicketDashboardSummary[];
+  loading: boolean;
+}) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-text-tertiary">Memuat data tiket...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      {brandTickets.map((summary) => {
+      {dashboard.map((summary) => {
         const soldPercent =
           summary.total_tickets > 0
             ? Math.round((summary.sold_tickets / summary.total_tickets) * 100)
             : 0;
         const checkedInPercent =
           summary.sold_tickets > 0
-            ? Math.round((summary.checked_in_tickets / summary.sold_tickets) * 100)
+            ? Math.round(
+                (summary.checked_in_tickets / summary.sold_tickets) * 100,
+              )
             : 0;
 
         return (
@@ -118,6 +179,12 @@ function DashboardSection() {
           </Card>
         );
       })}
+
+      {dashboard.length === 0 && (
+        <div className="text-center py-12 text-text-tertiary">
+          <p>Belum ada data tiket untuk brand Anda</p>
+        </div>
+      )}
     </div>
   );
 }

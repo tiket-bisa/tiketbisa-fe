@@ -16,6 +16,10 @@ function AdminShell() {
     navigate("/internal-tb/admin/scan");
   };
 
+  const handleScanTicket = () => {
+    navigate("/internal/admin/scan");
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-surface-primary" data-theme="light">
       <NavbarAdmin
