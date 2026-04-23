@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router";
-import { Card, Badge, SearchInput, Pagination, Tabs } from "~/core/design-system/components";
+import { Card, Badge, SearchInput, Pagination, Tabs, Button } from "~/core/design-system/components";
 import { useAuth } from "~/core/auth";
 import { useApiQuery } from "~/core/api";
 import { eventApi, mapEventApiToFe } from "~/core/api/services/event.api";
