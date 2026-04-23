@@ -1,5 +1,4 @@
-import { apiFetch } from "~/core/api";
-import type { ApiResponse } from "~/core/api";
+import { internalHttpClient } from "~/core/api/http-client";
 
 export interface DashboardStats {
   totalRevenue: number;
@@ -11,15 +10,10 @@ export interface DashboardStats {
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
-  const response = await apiFetch<ApiResponse<DashboardStats>>(
-    "/internal-tb/analytics/dashboard-stats",
-    {
-      method: "GET",
-    }
-  );
+  const response = await internalHttpClient.get<DashboardStats>("/analytics/dashboard-stats");
 
   if (!response.success || !response.data) {
-    throw new Error("Failed to fetch dashboard stats");
+    throw new Error(response.error ?? "Failed to fetch dashboard stats");
   }
 
   return response.data;
