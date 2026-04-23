@@ -34,8 +34,8 @@ const footerColumns = [
   {
     title: "Partner",
     links: [
-      { label: "Daftarkan Event", to: "/partner/login" },
-      { label: "Partner Login", to: "/partner/login" },
+      { label: "Daftarkan Event", to: "/internal/partner/login" },
+      { label: "Partner Login", to: "/internal/partner/login" },
     ],
   },
 ] as const;
@@ -47,13 +47,13 @@ export function Footer({ socialLinks = [], className = "" }: FooterProps) {
     >
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         {/* Top section */}
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-5">
+        <div className="grid grid-cols-2 gap-8 md:grid-cols-5 items-start">
           {/* Brand column */}
           <div className="col-span-2 md:col-span-1">
             <img
-              src="/logo/tiketbisa.svg"
+              src="/logo/tiketbisa-white.png"
               alt="Tiketbisa"
-              className="h-8 w-auto"
+              className="block h-auto w-36 lg:w-56 cursor-pointer -mt-1"
             />
             <p className="mt-2 text-sm text-text-tertiary">
               Platform tiket event terpercaya di Indonesia.

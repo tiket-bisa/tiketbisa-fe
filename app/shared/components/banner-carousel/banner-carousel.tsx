@@ -8,6 +8,15 @@ export interface BannerCarouselProps {
   className?: string;
 }
 
+function formatPrice(price: number): string {
+  if (price === 0) return "Gratis";
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(price);
+}
+
 export function BannerCarousel({
   slides,
   autoPlay = true,
@@ -62,7 +71,7 @@ export function BannerCarousel({
         )}
 
         {/* Text overlay */}
-        {(slide.title || slide.description || slide.priceRange) && (
+        {(slide.title || slide.description || slide.price !== undefined) && (
           <div className="absolute inset-0 bg-gradient-to-t from-base-inverse/80 via-base-inverse/30 to-transparent flex flex-col justify-end p-6 sm:p-8">
             {slide.title && (
               <h2 className="text-lg sm:text-2xl font-bold text-base-white">
@@ -74,10 +83,15 @@ export function BannerCarousel({
                 {slide.description}
               </p>
             )}
-            {slide.priceRange && (
-              <p className="mt-2 text-sm font-semibold text-brand-secondary">
-                {slide.priceRange}
-              </p>
+            {slide.price !== undefined && (
+              <div className="mt-2 flex flex-col">
+                <span className="text-[10px] uppercase tracking-wider text-base-white/60">
+                  Mulai dari
+                </span>
+                <p className="text-sm font-semibold text-brand-secondary">
+                  {formatPrice(slide.price)}
+                </p>
+              </div>
             )}
           </div>
         )}

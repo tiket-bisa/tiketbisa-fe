@@ -116,14 +116,14 @@ app/
 │   │   │   ├── infrastructure/        # API calls, mappers
 │   │   │   └── presentation/          # .page.tsx, hooks, components
 │   │   ├── event-search/              # (same 3-layer pattern)
-│   │   ├── brand-selection/
+│   │   ├── brand/
 │   │   ├── checkout/                  # Trust Mode enforced
 │   │   └── static/                    # Simple pages (tentang, hubungi)
 │   │
 │   └── internal/                      # PARTNER DASHBOARD
 │       ├── login/                     # Standalone (no layout)
 │       ├── dashboard/
-│       ├── brand-selection/
+│       ├── brand/
 │       ├── events/
 │       ├── revenue-analytics/
 │       ├── transaction-details/

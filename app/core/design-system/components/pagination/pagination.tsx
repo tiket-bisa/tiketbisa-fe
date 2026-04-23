@@ -101,23 +101,47 @@ export function Pagination({
 
 /** Build a compact page-number array with ellipsis markers. */
 function getVisiblePages(current: number, total: number): (number | "...")[] {
+  // If total pages are 7 or less, just show all of them.
   if (total <= 7) {
     return Array.from({ length: total }, (_, i) => i + 1);
   }
 
-  const pages: (number | "...")[] = [1];
+  const pages: (number | "...")[] = [];
+  
+  // Always show first page
+  pages.push(1);
 
-  if (current > 3) pages.push("...");
+  // Calculate start and end bounds around current page
+  let start = current - 1;
+  let end = current + 1;
 
-  const start = Math.max(2, current - 1);
-  const end = Math.min(total - 1, current + 1);
-
-  for (let i = start; i <= end; i++) {
-    pages.push(i);
+  // Adjust bounds if we are near the edges
+  if (current <= 3) {
+    start = 2;
+    end = 4;
+  } else if (current >= total - 2) {
+    start = total - 3;
+    end = total - 1;
   }
 
-  if (current < total - 2) pages.push("...");
+  // Insert start ellipsis
+  if (start > 2) {
+    pages.push("...");
+  }
 
+  // Insert middle pages
+  for (let i = start; i <= end; i++) {
+    if (i > 1 && i < total) {
+      pages.push(i);
+    }
+  }
+
+  // Insert end ellipsis
+  if (end < total - 1) {
+    pages.push("...");
+  }
+
+  // Always show last page
   pages.push(total);
 
   return pages;

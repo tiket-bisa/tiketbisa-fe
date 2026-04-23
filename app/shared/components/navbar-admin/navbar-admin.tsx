@@ -4,17 +4,21 @@ import { Button } from "~/core/design-system/components";
 export interface NavbarAdminProps {
   userEmail?: string;
   onLogout?: () => void;
+  onScanTicket?: () => void;
   className?: string;
 }
 
-const navLinks = [
-  { to: "/partner/brands", label: "Pilih Brand" },
-  { to: "/partner/access", label: "Konfigurasi Akses" },
-] as const;
+const navLinks: readonly { to: string; label: string; exact?: boolean }[] = [
+  { to: "/internal/admin", label: "Beranda", exact: true },
+  { to: "/internal/admin/brands", label: "Brand" },
+  { to: "/internal/admin/events", label: "Event" },
+  { to: "/internal/admin/analytics", label: "Analitik" },
+];
 
 export function NavbarAdmin({
   userEmail,
   onLogout,
+  onScanTicket,
   className = "",
 }: NavbarAdminProps) {
   const location = useLocation();
@@ -26,21 +30,28 @@ export function NavbarAdmin({
       <nav className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link
-          to="/partner/brands"
+          to="/internal/admin"
           className="shrink-0"
           aria-label="Tiketbisa admin"
         >
           <img
-            src="/logo/tiketbisa.svg"
+            src="/logo/tiketbisa-white.png"
             alt="Tiketbisa"
-            className="h-8 w-auto"
+            className="w-auto h-8 lg:h-10 cursor-pointer"
           />
         </Link>
+
+        {/* Admin badge */}
+        <span className="hidden sm:inline-flex items-center rounded-md bg-brand-primary-subtle px-2 py-0.5 text-xs font-medium text-brand-primary">
+          Admin
+        </span>
 
         {/* Nav links */}
         <ul className="hidden md:flex items-center gap-1">
           {navLinks.map((link) => {
-            const isActive = location.pathname.startsWith(link.to);
+            const isActive = link.exact
+              ? location.pathname === link.to
+              : location.pathname.startsWith(link.to);
             return (
               <li key={link.to}>
                 <Link
@@ -61,6 +72,12 @@ export function NavbarAdmin({
 
         {/* Right section */}
         <div className="ml-auto flex items-center gap-3">
+          {onScanTicket && (
+            <Button variant="secondary" size="sm" onClick={onScanTicket}>
+              Scan Tiket
+            </Button>
+          )}
+
           {userEmail && (
             <span className="hidden sm:block text-xs text-text-tertiary truncate max-w-[180px]">
               {userEmail}

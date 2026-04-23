@@ -5,5 +5,5 @@ export interface BannerSlide {
   href?: string;
   title?: string;
   description?: string;
-  priceRange?: string;
+  price?: number;
 }
