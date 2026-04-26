@@ -3,11 +3,8 @@ import { Card, SearchInput, Pagination, Select } from "~/core/design-system/comp
 import { formatIDR } from "~/core/utils";
 import { statusFilterOptions } from "~/core/constants/transaction";
 import { TransactionTable } from "./components/transaction-table";
-import { useApiQuery } from "~/core/api";
-import { brandApi } from "~/core/api/services/brand.api";
-import { eventApi } from "~/core/api/services/event.api";
+import { transactionApi, mapTransactionApiToFe } from "~/core/api/services/transaction.api";
 import { getDashboardStats } from "~/modules/internal/analytics/analytics.api";
-import { allTransactions } from "../infrastructure/transaction.mock";
 
 const ITEMS_PER_PAGE = 5;
 
@@ -25,23 +22,28 @@ export default function AdminDashboardPage() {
     [],
   );
 
-  // TODO: Replace with real API when GET /transaction list endpoint is available
-  const filtered = useMemo(() => {
-    return allTransactions.filter((t) => {
-      const matchesSearch =
-        t.buyer_name.toLowerCase().includes(search.toLowerCase()) ||
-        t.event_name.toLowerCase().includes(search.toLowerCase()) ||
-        t.id.toLowerCase().includes(search.toLowerCase());
-      const matchesStatus = statusFilter === "all" || t.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [search, statusFilter]);
-
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const paged = filtered.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE,
+  // Fetch real transaction list
+  const { data: transactionRes, loading: loadingTransactions } = useApiQuery(
+    async () => {
+      const res = await transactionApi.getList({
+        limit: ITEMS_PER_PAGE,
+        offset: (currentPage - 1) * ITEMS_PER_PAGE,
+        customerName: search || undefined,
+        status: statusFilter === "all" ? undefined : statusFilter.toUpperCase(),
+      });
+      if (res.success && res.data) {
+        return {
+          transactions: (res.data.transactions ?? []).map(mapTransactionApiToFe),
+          totalPages: res.data.total_pages ?? 1,
+        };
+      }
+      return { transactions: [], totalPages: 1 };
+    },
+    [currentPage, search, statusFilter],
   );
+
+  const transactions = transactionRes?.transactions ?? [];
+  const totalPages = transactionRes?.totalPages ?? 1;
 
   return (
     <div className="space-y-8">
@@ -67,7 +69,7 @@ export default function AdminDashboardPage() {
         </Card>
       </div>
 
-      {/* Transaction List — TODO: Replace with real API when GET /transaction list endpoint is available */}
+      {/* Transaction List */}
       <div>
         <h2 className="text-text-primary text-lg font-semibold mb-4">
           Semua Transaksi
@@ -92,7 +94,13 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        <TransactionTable transactions={paged} />
+        {loadingTransactions ? (
+          <Card padding="md">
+            <div className="text-center py-12 text-text-tertiary">Memuat transaksi...</div>
+          </Card>
+        ) : (
+          <TransactionTable transactions={transactions} />
+        )}
 
         {totalPages > 1 && (
           <div className="mt-4 flex justify-center">

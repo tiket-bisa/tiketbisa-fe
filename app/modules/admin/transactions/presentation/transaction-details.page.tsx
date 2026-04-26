@@ -2,7 +2,7 @@ import { useParams, Link } from "react-router";
 import { Card, Badge } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
 import { useApiQuery } from "~/core/api";
-import { transactionApi } from "~/core/api/services/transaction.api";
+import { transactionApi, mapTransactionDetailApiToFe } from "~/core/api/services/transaction.api";
 import { allTransactions } from "../../dashboard/infrastructure/transaction.mock";
 
 const STATUS_MAP = {
@@ -20,8 +20,8 @@ export default function AdminTransactionDetailsPage() {
   const { data: apiTx, loading, error } = useApiQuery(
     async () => {
       if (!id) return null;
-      const res = await transactionApi.getStatus(id);
-      if (res.success && res.data) return res.data;
+      const res = await transactionApi.getDetail(id);
+      if (res.success && res.data) return mapTransactionDetailApiToFe(res.data);
       return null;
     },
     [id],
