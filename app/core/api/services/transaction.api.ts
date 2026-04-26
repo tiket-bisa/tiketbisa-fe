@@ -87,7 +87,7 @@ export const transactionApi = {
 
     /** Get single transaction status */
     getStatus: (id: string) =>
-        httpClient.get<unknown>(`/transaction/status/${id}`),
+        httpClient.get<unknown>(`/transaction/${id}`),
 
     /** Check in ticket by scanning */
     checkIn: (request: CheckInRequest) =>
