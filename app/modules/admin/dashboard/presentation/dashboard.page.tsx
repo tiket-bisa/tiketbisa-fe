@@ -4,7 +4,7 @@ import { formatIDR } from "~/core/utils";
 import { statusFilterOptions } from "~/core/constants/transaction";
 import { TransactionTable } from "./components/transaction-table";
 import { transactionApi, mapTransactionApiToFe } from "~/core/api/services/transaction.api";
-import { getDashboardStats } from "~/modules/internal/analytics/analytics.api";
+import { analyticsApi } from "~/modules/internal/analytics/analytics.api";
 
 const ITEMS_PER_PAGE = 5;
 
@@ -17,7 +17,7 @@ export default function AdminDashboardPage() {
   // Fetch real dashboard stats
   const { data: stats } = useApiQuery(
     async () => {
-      return await getDashboardStats();
+      return await analyticsApi.getDashboardStats();
     },
     [],
   );

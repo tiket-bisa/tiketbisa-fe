@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { Card, Badge, SearchInput, Pagination, Select } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
 import { useAuth } from "~/core/auth";
-import { getDashboardStats, type DashboardStats } from "../../analytics/analytics.api";
+import { analyticsApi, type DashboardStats } from "../../analytics/analytics.api";
 import { transactionApi, mapTransactionApiToFe } from "~/core/api/services/transaction.api";
 import { useApiQuery } from "~/core/api";
 
@@ -34,7 +34,7 @@ export default function DashboardPage() {
   const [isStatsLoading, setIsStatsLoading] = useState(true);
 
   useEffect(() => {
-    getDashboardStats()
+    analyticsApi.getDashboardStats()
       .then(setStats)
       .catch((err) => console.error("Failed to load dashboard stats:", err))
       .finally(() => setIsStatsLoading(false));

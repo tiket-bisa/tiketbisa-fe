@@ -1,9 +1,8 @@
 import { Card } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
-import { allRevenueSummary } from "~/modules/admin/analytics/infrastructure/revenue.mock";
+import { type RevenueSummary } from "~/modules/internal/analytics/analytics.api";
 
-export function RevenueSummaryCards() {
-  const summary = allRevenueSummary;
+export function RevenueSummaryCards({ summary }: { summary: RevenueSummary }) {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
