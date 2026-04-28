@@ -1,10 +1,19 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
+function toAbsoluteUrl(path: string): string {
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+
+  const sanitizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${BASE_URL}${sanitizedPath}`;
+}
+
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = `${BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
+  const url = toAbsoluteUrl(path);
 
   const response = await fetch(url, {
     ...options,
