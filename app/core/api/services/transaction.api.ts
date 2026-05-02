@@ -24,6 +24,8 @@ export interface TransactionApiData {
     paymentMethod: string;
     paymentDate: string;
     created: string;
+    paymentProofPath?: string | null;
+    verifiedBy?: string | null;
 }
 
 export interface TransactionTicketDetail {
@@ -41,6 +43,12 @@ export interface TransactionTicketDetail {
 export interface TransactionDetailResponse {
     transaction: TransactionApiData;
     ticketDetails: TransactionTicketDetail[];
+}
+
+export interface PaymentProofResponse {
+    fileName: string;
+    mimeType: string;
+    base64Content: string;
 }
 
 export interface TransactionListResponse {
@@ -61,6 +69,10 @@ export interface TransactionListParams {
     eventId?: string;
     status?: string;
     customerName?: string;
+}
+
+export interface ManualTransferReviewRequest {
+    action: "APPROVE" | "REJECT";
 }
 
 function buildQuery(params?: TransactionListParams): string {
@@ -85,6 +97,14 @@ export const transactionApi = {
     getDetail: (id: string) =>
         internalHttpClient.get<TransactionDetailResponse>(`/transaction/detail/${id}`),
 
+    /** Get payment proof from manual transfer transaction */
+    getPaymentProof: (id: string) =>
+        internalHttpClient.get<PaymentProofResponse>(`/transaction/detail/${id}/payment-proof`),
+
+    /** Review manual transfer transaction */
+    reviewManualTransfer: (id: string, request: ManualTransferReviewRequest) =>
+        internalHttpClient.post<TransactionApiData>(`/transaction/detail/${id}/review`, request),
+
     /** Get single transaction status */
     getStatus: (id: string) =>
         httpClient.get<unknown>(`/transaction/${id}`),
@@ -98,13 +118,16 @@ export const transactionApi = {
 
 import type { Transaction } from "~/core/types";
 
+function mapBackendStatus(status: string | undefined): Transaction["status"] {
+    const normalizedStatus = (status ?? "").toUpperCase();
+    if (normalizedStatus === "PAID" || normalizedStatus === "COMPLETED") return "paid";
+    if (normalizedStatus === "WAITING_PAYMENT" || normalizedStatus === "WAITING_APPROVAL") return "pending";
+    if (normalizedStatus === "CANCELED" || normalizedStatus === "CANCELLED") return "cancelled";
+    if (normalizedStatus === "REFUNDED") return "refunded";
+    return "pending";
+}
+
 export function mapTransactionApiToFe(api: TransactionApiData): Transaction {
-    // Convert BE status to FE status
-    let feStatus: Transaction["status"] = "pending";
-    if (api.status === "PAID" || api.status === "COMPLETED") feStatus = "paid";
-    else if (api.status === "CANCELED" || api.status === "CANCELLED") feStatus = "cancelled";
-    else if (api.status === "REFUNDED") feStatus = "refunded";
-    
     return {
         id: api.id,
         event_id: "-", // Not returned in list API
@@ -116,7 +139,7 @@ export function mapTransactionApiToFe(api: TransactionApiData): Transaction {
         ticket_name: "-", // Not returned in list API
         quantity: 0, // Not returned in list API
         total_price: api.totalPrice ?? 0,
-        status: feStatus,
+        status: mapBackendStatus(api.status),
         payment_method: api.paymentMethod,
         created_at: api.paymentDate ?? api.created ?? new Date().toISOString(),
     };
@@ -140,11 +163,6 @@ export function mapTransactionDetailApiToFe(api: TransactionDetailResponse): Tra
         }
     }
 
-    let feStatus: Transaction["status"] = "pending";
-    if (tx.status === "PAID" || tx.status === "COMPLETED") feStatus = "paid";
-    else if (tx.status === "CANCELED" || tx.status === "CANCELLED") feStatus = "cancelled";
-    else if (tx.status === "REFUNDED") feStatus = "refunded";
-    
     return {
         id: tx.id,
         event_id: "-", // Not available directly
@@ -156,7 +174,7 @@ export function mapTransactionDetailApiToFe(api: TransactionDetailResponse): Tra
         ticket_name: ticketName,
         quantity: quantity,
         total_price: tx.totalPrice ?? 0,
-        status: feStatus,
+        status: mapBackendStatus(tx.status),
         payment_method: tx.paymentMethod,
         created_at: tx.paymentDate ?? tx.created ?? new Date().toISOString(),
     };

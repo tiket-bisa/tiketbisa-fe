@@ -4,9 +4,16 @@ import { formatIDR } from "~/core/utils";
 import { statusFilterOptions } from "~/core/constants/transaction";
 import { TransactionTable } from "./components/transaction-table";
 import { transactionApi, mapTransactionApiToFe } from "~/core/api/services/transaction.api";
+import { useApiQuery } from "~/core/api";
 import { analyticsApi } from "~/modules/internal/analytics/analytics.api";
 
 const ITEMS_PER_PAGE = 5;
+
+function mapStatusFilterToApi(statusFilter: string): string | undefined {
+  if (statusFilter === "all") return undefined;
+  if (statusFilter === "pending") return "WAITING_APPROVAL";
+  return statusFilter.toUpperCase();
+}
 
 /** Admin — Dashboard (overview across all brands) */
 export default function AdminDashboardPage() {
@@ -29,7 +36,7 @@ export default function AdminDashboardPage() {
         limit: ITEMS_PER_PAGE,
         offset: (currentPage - 1) * ITEMS_PER_PAGE,
         customerName: search || undefined,
-        status: statusFilter === "all" ? undefined : statusFilter.toUpperCase(),
+        status: mapStatusFilterToApi(statusFilter),
       });
       if (res.success && res.data) {
         return {

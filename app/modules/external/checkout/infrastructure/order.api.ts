@@ -23,6 +23,12 @@ interface StoreTempTransactionRq {
   isComplimentary: boolean;
 }
 
+interface CompleteTransactionPayload {
+  paymentProofBase64: string;
+  paymentProofMimeType: string;
+  paymentProofFileName: string;
+}
+
 export interface TicketIssued {
   ticketId: string;
   code: string;
@@ -45,6 +51,24 @@ export interface LockResponse {
   tickets: TicketRequest[];
   timestamp: number;
   expiresAt: number;
+}
+
+async function convertFileToBase64(file: File): Promise<string> {
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== "string") {
+        reject(new Error("Gagal membaca file bukti pembayaran"));
+        return;
+      }
+
+      const base64 = result.includes(",") ? result.split(",")[1] : result;
+      resolve(base64);
+    };
+    reader.onerror = () => reject(new Error("Gagal membaca file bukti pembayaran"));
+    reader.readAsDataURL(file);
+  });
 }
 
 interface TicketIssuedFromApi {
@@ -231,6 +255,24 @@ export const orderApi = {
       paymentDate: transactionSnapshot?.paymentDate || new Date().toISOString(),
       tickets: normalizedTickets,
     };
+  },
+
+  async submitManualTransferProof(lockId: string, file: File): Promise<void> {
+    const paymentProofBase64 = await convertFileToBase64(file);
+    const payload: CompleteTransactionPayload = {
+      paymentProofBase64,
+      paymentProofMimeType: file.type || "application/octet-stream",
+      paymentProofFileName: file.name,
+    };
+
+    const response = await apiFetch<ApiResponse<Record<string, TicketIssuedFromApi[]>>>(`/transaction/${lockId}/complete`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.success) {
+      throw new Error(getApiErrorMessage(response, "Gagal mengunggah bukti pembayaran"));
+    }
   },
 
   async getTransactionSnapshot(lockId: string): Promise<TransactionStatusFromApi | null> {

@@ -120,7 +120,7 @@ describe("orderApi", () => {
 
     const result = await orderApi.executeOrder("lock-001");
 
-    expect(mockApiFetch).toHaveBeenNthCalledWith(1, "/transaction/lock-001", undefined);
+    expect(mockApiFetch).toHaveBeenNthCalledWith(1, "/transaction/lock-001");
     expect(mockApiFetch).toHaveBeenNthCalledWith(
       2,
       "/transaction/lock-001/complete",

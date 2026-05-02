@@ -16,6 +16,12 @@ const STATUS_MAP = {
 
 const ITEMS_PER_PAGE = 5;
 
+function mapStatusFilterToApi(statusFilter: string): string | undefined {
+  if (statusFilter === "all") return undefined;
+  if (statusFilter === "pending") return "WAITING_APPROVAL";
+  return statusFilter.toUpperCase();
+}
+
 const statusFilterOptions = [
   { value: "all", label: "Semua Status" },
   { value: "paid", label: "Lunas" },
@@ -51,7 +57,7 @@ export default function DashboardPage() {
         offset: (currentPage - 1) * ITEMS_PER_PAGE,
         brandId: user.brand_id,
         customerName: search || undefined,
-        status: statusFilter === "all" ? undefined : statusFilter.toUpperCase(),
+        status: mapStatusFilterToApi(statusFilter),
       });
       if (res.success && res.data) {
         return {
