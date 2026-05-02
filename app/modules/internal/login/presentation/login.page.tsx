@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { Button, Select } from "~/core/design-system/components";
+import { Button } from "~/core/design-system/components";
 import { AuthProvider, useAuth } from "~/core/auth";
 import { requestGoogleAuthorizationCode } from "~/core/auth/google-oauth.client";
 import { requestInternalGoogleToken } from "~/core/auth/internal-auth.api";
@@ -43,7 +43,7 @@ function LoginContent() {
         {/* Logo */}
         <div className="flex flex-col items-center gap-4">
           <img
-            src="/logo/tiketbisa-white.png"
+            src="/logo/tiketbisa.png"
             alt="Tiketbisa"
             className="h-12 w-auto"
           />

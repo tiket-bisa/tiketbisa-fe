@@ -41,7 +41,7 @@ function AdminLoginContent() {
     <div className="flex min-h-screen items-center justify-center bg-surface-primary px-4" data-theme="light">
       <div className="w-full max-w-sm space-y-8 text-center">
         <div className="flex flex-col items-center gap-4">
-          <img src="/logo/tiketbisa-white.png" alt="Tiketbisa" className="h-12 w-auto" />
+          <img src="/logo/tiketbisa.png" alt="Tiketbisa" className="h-12 w-auto" />
           <div>
             <p className="text-text-primary text-lg font-semibold">Admin Dashboard</p>
             <p className="text-text-secondary text-sm mt-1">Login sebagai admin Tiketbisa</p>
