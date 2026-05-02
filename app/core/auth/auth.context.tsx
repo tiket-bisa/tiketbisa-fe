@@ -62,7 +62,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const stored = localStorage.getItem(AUTH_STORAGE_KEY);
       if (stored) {
-        setUser(JSON.parse(stored));
+        const parsed = JSON.parse(stored) as AuthUser;
+        // Invalidate legacy sessions that are missing the internal_token
+        if (!parsed.internal_token) {
+          localStorage.removeItem(AUTH_STORAGE_KEY);
+          setUser(null);
+        } else {
+          setUser(parsed);
+        }
       }
     } catch {
       // ignore parse errors

@@ -31,6 +31,8 @@ export default [
     ),
   ]),
 
+  route("internal-tb", "modules/internal/entry/presentation/entry.page.tsx"),
+
   // ─── Admin Login (Standalone) ───
   route("internal-tb/admin/login", "modules/admin/login/presentation/login.page.tsx"),
   route("internal-tb/partner/login", "modules/internal/login/presentation/login.page.tsx"),

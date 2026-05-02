@@ -5,7 +5,7 @@ import type { CompleteOrderResponse } from "../../infrastructure/order.api";
 import { useOrderConfirmation } from "./use-order-confirmation";
 import { usePaymentSelection } from "./use-payment-selection";
 
-import type { BuyerInfo, OrderSummary, PaymentMethod } from "../../domain/checkout.types";
+import type { BuyerInfo, OrderSummary, PaymentMethod, OrderResponse } from "../../domain/checkout.types";
 import type { EventSummary } from "~/core/types";
 
 export function useCheckoutSteps(
@@ -13,7 +13,8 @@ export function useCheckoutSteps(
   buyerInfo: BuyerInfo, 
   summary: OrderSummary, 
   validateForm: () => boolean,
-  paymentMethods: PaymentMethod[]
+  paymentMethods: PaymentMethod[],
+  existingOrder?: OrderResponse | null
 ) {
   const navigate = useNavigate();
   const params = useParams();
@@ -24,6 +25,8 @@ export function useCheckoutSteps(
   const [lockId, setLockId] = useState<string | null>(searchParams.get("lockId"));
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<CompleteOrderResponse | null>(null);
+  const [manualTransferProofFile, setManualTransferProofFile] = useState<File | null>(null);
+  const [isManualTransferPending, setIsManualTransferPending] = useState(searchParams.get("manualPending") === "1");
   
   const { confirmOrder, isLoading: isConfirming } = useOrderConfirmation();
   const { selection, setMethodId, setAgreedToTerms, setAgreedToPrivacy } = usePaymentSelection();
@@ -32,6 +35,9 @@ export function useCheckoutSteps(
     paymentMethods.find(m => m.id === selection.methodId),
     [paymentMethods, selection.methodId]
   );
+
+  const activePaymentMethod = selectedPaymentMethod ?? existingOrder?.paymentMethod ?? null;
+  const isManualTransferPayment = activePaymentMethod?.id === "manual" || activePaymentMethod?.id === "manual_transfer";
 
   const isStep2Valid = !!(selection.methodId && selection.agreedToTerms && selection.agreedToPrivacy);
 
@@ -146,17 +152,34 @@ export function useCheckoutSteps(
           // DDD Phase 3: Finalize Transaction
           const activeLockId = lockId || searchParams.get("lockId") || searchParams.get("orderId");
           if (activeLockId) {
-            const result = await orderApi.executeOrder(
-              activeLockId,
-              summary.totalPrice,
-            );
-            setCompletedOrder(result);
-            setSearchParams({
-              ...Object.fromEntries(searchParams),
-              step: "5",
-              lockId: activeLockId,
-              orderId: activeLockId,
-            });
+            if (isManualTransferPayment) {
+              if (!manualTransferProofFile) {
+                alert("Silakan unggah bukti transfer terlebih dahulu.");
+                return;
+              }
+
+              await orderApi.submitManualTransferProof(activeLockId, manualTransferProofFile);
+              setCompletedOrder(null);
+              setIsManualTransferPending(true);
+            } else {
+              const result = await orderApi.executeOrder(
+                activeLockId,
+                summary.totalPrice,
+              );
+              setCompletedOrder(result);
+              setIsManualTransferPending(false);
+            }
+
+            const nextParams = new URLSearchParams(searchParams);
+            nextParams.set("step", "5");
+            nextParams.set("lockId", activeLockId);
+            nextParams.set("orderId", activeLockId);
+            if (isManualTransferPayment) {
+              nextParams.set("manualPending", "1");
+            } else {
+              nextParams.delete("manualPending");
+            }
+            setSearchParams(nextParams);
           } else {
             alert("Sesi checkout tidak ditemukan. Silakan ulangi dari halaman event.");
             navigate(`/event/${params.eventId}`);
@@ -184,7 +207,7 @@ export function useCheckoutSteps(
         navigate("/event");
         break;
     }
-  }, [currentStep, event.id, buyerInfo, summary, validateForm, searchParams, setSearchParams, confirmOrder, navigate, selectedPaymentMethod, isStep2Valid, lockId]);
+  }, [currentStep, event.id, buyerInfo, summary, validateForm, searchParams, setSearchParams, confirmOrder, navigate, selectedPaymentMethod, isStep2Valid, lockId, isManualTransferPayment, manualTransferProofFile]);
 
   const handleBack = useCallback(() => {
     if (currentStep === 1) {
@@ -216,6 +239,9 @@ export function useCheckoutSteps(
     currentStep,
     isActionLoading: isActionLoading || isConfirming,
     completedOrder,
+    isManualTransferPending,
+    manualTransferProofFile,
+    setManualTransferProofFile,
     handleNext,
     handleBack,
     handleExpire,

@@ -1,8 +1,8 @@
 import { Badge, Card } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
-import { allRevenueByEvent } from "~/modules/admin/analytics/infrastructure/revenue.mock";
+import { type RevenueByEvent } from "~/modules/internal/analytics/analytics.api";
 
-export function RevenueByEventCard() {
+export function RevenueByEventCard({ data }: { data: RevenueByEvent[] }) {
   return (
     <Card padding="none">
       <div className="px-4 py-3 border-b border-border-default">
@@ -19,12 +19,12 @@ export function RevenueByEventCard() {
             </tr>
           </thead>
           <tbody>
-            {allRevenueByEvent.map((item) => (
-              <tr key={item.event_name} className="border-b border-border-subtle hover:bg-surface-hover transition-colors">
-                <td className="px-4 py-3 text-text-primary">{item.event_name}</td>
+            {data.map((item) => (
+              <tr key={item.eventName} className="border-b border-border-subtle hover:bg-surface-hover transition-colors">
+                <td className="px-4 py-3 text-text-primary">{item.eventName}</td>
                 <td className="px-4 py-3 text-text-tertiary text-sm">{item.brand}</td>
                 <td className="px-4 py-3 text-text-secondary text-right">
-                  <Badge variant="brand">{item.tickets_sold}</Badge>
+                  <Badge variant="brand">{item.ticketsSold}</Badge>
                 </td>
                 <td className="px-4 py-3 text-text-primary text-right font-medium">{formatIDR(item.revenue)}</td>
               </tr>
@@ -34,10 +34,10 @@ export function RevenueByEventCard() {
             <tr className="border-t border-border-default">
               <td colSpan={2} className="px-4 py-3 text-text-primary font-semibold">Total</td>
               <td className="px-4 py-3 text-text-primary text-right font-semibold">
-                {allRevenueByEvent.reduce((s, i) => s + i.tickets_sold, 0)}
+                {data.reduce((s, i) => s + i.ticketsSold, 0)}
               </td>
               <td className="px-4 py-3 text-text-primary text-right font-semibold">
-                {formatIDR(allRevenueByEvent.reduce((s, i) => s + i.revenue, 0))}
+                {formatIDR(data.reduce((s, i) => s + i.revenue, 0))}
               </td>
             </tr>
           </tfoot>

@@ -1,10 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router";
 import { Card, Badge, SearchInput, Pagination, Select } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
 import { useAuth } from "~/core/auth";
-// TODO: Replace with real API when GET /transaction list endpoint is available
-import { mockTransactions } from "../infrastructure/transaction.mock";
+import { analyticsApi, type DashboardStats } from "../../analytics/analytics.api";
+import { transactionApi, mapTransactionApiToFe } from "~/core/api/services/transaction.api";
+import { useApiQuery } from "~/core/api";
 
 const STATUS_MAP = {
   paid: { label: "Lunas", variant: "success" as const },
@@ -14,6 +15,12 @@ const STATUS_MAP = {
 };
 
 const ITEMS_PER_PAGE = 5;
+
+function mapStatusFilterToApi(statusFilter: string): string | undefined {
+  if (statusFilter === "all") return undefined;
+  if (statusFilter === "pending") return "WAITING_APPROVAL";
+  return statusFilter.toUpperCase();
+}
 
 const statusFilterOptions = [
   { value: "all", label: "Semua Status" },
@@ -29,38 +36,42 @@ export default function DashboardPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [isStatsLoading, setIsStatsLoading] = useState(true);
 
-  // TODO: Replace with real API when GET /transaction list endpoint is available
-  // Filter transactions to only this partner's brand
-  const brandTransactions = useMemo(
-    () => mockTransactions.filter((t) => t.brand_slug === user?.brand_slug),
-    [user?.brand_slug],
+  useEffect(() => {
+    analyticsApi.getDashboardStats()
+      .then(setStats)
+      .catch((err) => console.error("Failed to load dashboard stats:", err))
+      .finally(() => setIsStatsLoading(false));
+  }, []);
+
+  // Fetch real transaction list
+  const { data: transactionRes, loading: loadingTransactions } = useApiQuery(
+    async () => {
+      // Don't fetch if brand is not loaded yet
+      if (!user?.brand_slug) return { transactions: [], totalPages: 1 };
+      
+      const res = await transactionApi.getList({
+        limit: ITEMS_PER_PAGE,
+        offset: (currentPage - 1) * ITEMS_PER_PAGE,
+        brandId: user.brand_id,
+        customerName: search || undefined,
+        status: mapStatusFilterToApi(statusFilter),
+      });
+      if (res.success && res.data) {
+        return {
+          transactions: (res.data.transactions ?? []).map(mapTransactionApiToFe),
+          totalPages: res.data.total_pages ?? 1,
+        };
+      }
+      return { transactions: [], totalPages: 1 };
+    },
+    [currentPage, search, statusFilter, user?.brand_slug, user?.brand_id],
   );
 
-  const totalRevenue = brandTransactions
-    .filter((t) => t.status === "paid")
-    .reduce((sum, t) => sum + t.total_price, 0);
-  const totalTransactions = brandTransactions.length;
-  const totalTicketsSold = brandTransactions
-    .filter((t) => t.status === "paid")
-    .reduce((sum, t) => sum + t.quantity, 0);
-
-  const filtered = useMemo(() => {
-    return brandTransactions.filter((t) => {
-      const matchesSearch =
-        t.buyer_name.toLowerCase().includes(search.toLowerCase()) ||
-        t.event_name.toLowerCase().includes(search.toLowerCase()) ||
-        t.id.toLowerCase().includes(search.toLowerCase());
-      const matchesStatus = statusFilter === "all" || t.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [brandTransactions, search, statusFilter]);
-
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const paged = filtered.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
+  const paged = transactionRes?.transactions ?? [];
+  const totalPages = transactionRes?.totalPages ?? 1;
 
   return (
     <div className="space-y-8">
@@ -78,15 +89,7 @@ export default function DashboardPage() {
             Total Revenue
           </p>
           <p className="text-text-primary text-2xl font-bold mt-1">
-            {formatIDR(totalRevenue)}
-          </p>
-        </Card>
-        <Card padding="md">
-          <p className="text-text-tertiary text-xs uppercase tracking-wide">
-            Total Transaksi
-          </p>
-          <p className="text-text-primary text-2xl font-bold mt-1">
-            {totalTransactions}
+            {isStatsLoading ? "..." : formatIDR(stats?.totalRevenue ?? 0)}
           </p>
         </Card>
         <Card padding="md">
@@ -94,12 +97,20 @@ export default function DashboardPage() {
             Tiket Terjual
           </p>
           <p className="text-text-primary text-2xl font-bold mt-1">
-            {totalTicketsSold}
+            {isStatsLoading ? "..." : (stats?.totalTicketsSold ?? 0)}
+          </p>
+        </Card>
+        <Card padding="md">
+          <p className="text-text-tertiary text-xs uppercase tracking-wide">
+            Total Event
+          </p>
+          <p className="text-text-primary text-2xl font-bold mt-1">
+            {isStatsLoading ? "..." : (stats?.totalEvents ?? 0)}
           </p>
         </Card>
       </div>
 
-      {/* Transaction List — TODO: Replace with real API */}
+      {/* Transaction List */}
       <div>
         <h2 className="text-text-primary text-lg font-semibold mb-4">
           List Transaksi
@@ -135,16 +146,18 @@ export default function DashboardPage() {
         </div>
 
         {/* Table */}
-        <Card padding="none">
+        {loadingTransactions ? (
+          <Card padding="md">
+            <div className="text-center py-12 text-text-tertiary">Memuat transaksi...</div>
+          </Card>
+        ) : (
+          <Card padding="none">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border-default text-text-tertiary text-xs uppercase tracking-wide">
                   <th className="text-left px-4 py-3 font-medium">ID</th>
-                  <th className="text-left px-4 py-3 font-medium">Event</th>
                   <th className="text-left px-4 py-3 font-medium">Pembeli</th>
-                  <th className="text-left px-4 py-3 font-medium">Kategori</th>
-                  <th className="text-center px-4 py-3 font-medium">Qty</th>
                   <th className="text-right px-4 py-3 font-medium">Total</th>
                   <th className="text-center px-4 py-3 font-medium">Status</th>
                   <th className="text-center px-4 py-3 font-medium">Aksi</th>
@@ -162,16 +175,7 @@ export default function DashboardPage() {
                         {tx.id}
                       </td>
                       <td className="px-4 py-3 text-text-primary">
-                        {tx.event_name}
-                      </td>
-                      <td className="px-4 py-3 text-text-primary">
                         {tx.buyer_name}
-                      </td>
-                      <td className="px-4 py-3 text-text-secondary">
-                        {tx.ticket_name}
-                      </td>
-                      <td className="px-4 py-3 text-text-secondary text-center">
-                        {tx.quantity}
                       </td>
                       <td className="px-4 py-3 text-text-primary text-right font-medium">
                         {formatIDR(tx.total_price)}
@@ -193,7 +197,7 @@ export default function DashboardPage() {
                 {paged.length === 0 && (
                   <tr>
                     <td
-                      colSpan={8}
+                      colSpan={5}
                       className="px-4 py-12 text-center text-text-tertiary"
                     >
                       Tidak ada transaksi ditemukan
@@ -204,6 +208,7 @@ export default function DashboardPage() {
             </table>
           </div>
         </Card>
+        )}
 
         {/* Pagination */}
         {totalPages > 1 && (

@@ -12,6 +12,7 @@ export interface CheckoutStickyBarProps {
   isLoading?: boolean;
   canSubmit?: boolean;
   orderCategory?: string;
+  orderMethodId?: string;
 }
 
 export function CheckoutStickyBar({
@@ -23,11 +24,13 @@ export function CheckoutStickyBar({
   isLoading,
   canSubmit = true,
   orderCategory,
+  orderMethodId,
 }: CheckoutStickyBarProps) {
   const getButtonLabel = () => {
     if (currentStep === 3) return "Bayar Sekarang";
     if (currentStep === 4) {
-      return orderCategory === "BANK_TRANSFER" ? "Upload Bukti" : "Bayar Sekarang";
+      const isManualTransfer = orderMethodId === "manual" || orderMethodId === "manual_transfer";
+      return orderCategory === "BANK_TRANSFER" && isManualTransfer ? "Upload Bukti" : "Bayar Sekarang";
     }
     return "Lanjut";
   };
