@@ -27,6 +27,10 @@ function getStoredAuthSession(): StoredAuthSession | null {
 }
 
 function normalizePath(path: string): string {
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+
   return path.startsWith("/") ? path : `/${path}`;
 }
 
@@ -37,7 +41,10 @@ async function request<T>(
   headers: Record<string, string> = {},
 ): Promise<ApiResponse<T>> {
   try {
-    const response = await fetch(`${BASE_URL}${normalizePath(path)}`, {
+    const url = normalizePath(path).startsWith("http")
+      ? normalizePath(path)
+      : `${BASE_URL}${normalizePath(path)}`;
+    const response = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json", ...headers },
       body: body ? JSON.stringify(body) : undefined,

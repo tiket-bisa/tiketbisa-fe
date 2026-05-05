@@ -1,11 +1,9 @@
 import { useState, useEffect } from "react";
-import { analyticsApi, type RevenueSummary, type RevenueByEvent, type RevenueTimeline } from "../../analytics/analytics.api";
-import { transactionApi } from "~/core/api/services/transaction.api";
+import { analyticsApi, type RevenueSummary, type RevenueByBrand, type RevenueByEvent, type RevenueTimeline } from "~/modules/internal/analytics/analytics.api";
 
-export function useRevenueAnalyticsData(brandSlug?: string) {
-  const [totalRevenue, setTotalRevenue] = useState(0);
-  const [totalTicketsSold, setTotalTicketsSold] = useState(0);
-  const [totalTransactions, setTotalTransactions] = useState(0);
+export function useAdminAnalyticsData() {
+  const [summary, setSummary] = useState<RevenueSummary | null>(null);
+  const [revenueByBrand, setRevenueByBrand] = useState<RevenueByBrand[]>([]);
   const [revenueByEvent, setRevenueByEvent] = useState<RevenueByEvent[]>([]);
   const [revenueTimeline, setRevenueTimeline] = useState<RevenueTimeline[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -14,18 +12,16 @@ export function useRevenueAnalyticsData(brandSlug?: string) {
     async function loadData() {
       setIsLoading(true);
       try {
-        const [summary, events, timeline, txRes] = await Promise.all([
+        const [sum, brands, events, timeline] = await Promise.all([
           analyticsApi.getRevenueSummary(),
+          analyticsApi.getRevenueByBrand(),
           analyticsApi.getRevenueByEvent(),
           analyticsApi.getRevenueTimeline(),
-          transactionApi.getList({ limit: 1000 })
         ]);
+        setSummary(sum);
+        setRevenueByBrand(brands);
         
-        setTotalRevenue(summary.totalRevenue);
-        setTotalTicketsSold(summary.totalTicketsSold);
-        setTotalTransactions(summary.totalTransactions);
-        
-        // Convert to camelCase/snake_case as expected by UI
+        // Convert to expected UI format
         setRevenueByEvent(events.map(e => ({
           ...e,
           event_name: e.eventName,
@@ -34,21 +30,20 @@ export function useRevenueAnalyticsData(brandSlug?: string) {
         
         setRevenueTimeline(timeline);
       } catch (err) {
-        console.error("Failed to load revenue analytics:", err);
+        console.error("Failed to load admin analytics:", err);
       } finally {
         setIsLoading(false);
       }
     }
     loadData();
-  }, [brandSlug]);
+  }, []);
 
   const maxRevenue = Math.max(...revenueTimeline.map((d) => d.revenue), 1);
 
   return {
     isLoading,
-    totalTransactions,
-    totalRevenue,
-    totalTicketsSold,
+    summary,
+    revenueByBrand,
     revenueByEvent,
     revenueTimeline,
     maxRevenue,

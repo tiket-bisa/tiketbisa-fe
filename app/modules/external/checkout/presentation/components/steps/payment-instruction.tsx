@@ -9,6 +9,8 @@ export interface PaymentInstructionProps {
   event: Event;
   fallbackTotalAmount?: number;
   onAction: () => void;
+  proofFile?: File | null;
+  onProofFileChange?: (file: File | null) => void;
   onBack: () => void;
   onExpire: () => void;
   isLoading?: boolean;
@@ -19,11 +21,14 @@ export function PaymentInstruction({
   event,
   fallbackTotalAmount,
   onAction,
+  proofFile,
+  onProofFileChange,
   onBack,
   onExpire,
   isLoading,
 }: PaymentInstructionProps) {
   const isBank = order.paymentMethod.category === "BANK_TRANSFER";
+  const isManualTransfer = order.paymentMethod.id === "manual" || order.paymentMethod.id === "manual_transfer";
   const totalAmount =
     Number(order.totalAmount) > 0
       ? Number(order.totalAmount)
@@ -130,6 +135,12 @@ export function PaymentInstruction({
   }
 
   // --- 2. BANK TRANSFER LAYOUT (Traditional Style) ---
+  const manualTransferBankInfo = {
+    bankName: import.meta.env.VITE_MANUAL_TRANSFER_BANK_NAME ?? "BCA",
+    accountNumber: import.meta.env.VITE_MANUAL_TRANSFER_ACCOUNT_NUMBER ?? "1234567890",
+    accountHolder: import.meta.env.VITE_MANUAL_TRANSFER_ACCOUNT_HOLDER ?? "PT TIKET BISA INDONESIA",
+  };
+
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
       <Card className="overflow-hidden border-gray-100 rounded-3xl shadow-sm bg-white">
@@ -172,37 +183,87 @@ export function PaymentInstruction({
               <img src={order.paymentMethod.logo} alt={order.paymentMethod.name} className="h-8 w-auto object-contain" />
               <div className="space-y-1">
                 <p className="text-lg font-black text-gray-900">{order.paymentMethod.name}</p>
-                <p className="text-sm font-medium text-gray-500">Transfer ke Nomor Virtual Account berikut</p>
+                <p className="text-sm font-medium text-gray-500">
+                  {isManualTransfer ? "Transfer ke rekening berikut lalu unggah bukti transfer." : "Transfer ke Nomor Virtual Account berikut"}
+                </p>
               </div>
             </div>
           </section>
 
-          <section className="space-y-6">
-            <h3 className="text-lg md:text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
-              <span className="w-1.5 h-5 md:h-6 bg-brand-primary rounded-full" />
-              Nomor Virtual Account
-            </h3>
-            <div className="p-8 border-2 border-gray-100 rounded-3xl bg-white text-center space-y-4">
-              <span className="text-3xl md:text-4xl font-black text-gray-900 tracking-wider">
-                {order.virtualAccount}
-              </span>
-              <button className="block mx-auto px-6 py-2 bg-brand-primary/10 text-brand-primary rounded-full text-xs font-black uppercase tracking-widest hover:bg-brand-primary/20 transition-all">
-                Salin Nomor VA
-              </button>
-            </div>
-          </section>
+          {isManualTransfer ? (
+            <section className="space-y-6">
+              <h3 className="text-lg md:text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
+                <span className="w-1.5 h-5 md:h-6 bg-brand-primary rounded-full" />
+                Informasi Rekening Transfer
+              </h3>
+              <div className="p-8 border-2 border-gray-100 rounded-3xl bg-white space-y-6">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-gray-500 font-bold">Nama Bank</p>
+                  <p className="text-xl font-black text-gray-900 mt-1">{manualTransferBankInfo.bankName}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-gray-500 font-bold">Nomor Rekening</p>
+                  <p className="text-2xl font-black text-gray-900 mt-1">{manualTransferBankInfo.accountNumber}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-gray-500 font-bold">Nama Pemilik Rekening</p>
+                  <p className="text-xl font-black text-gray-900 mt-1">{manualTransferBankInfo.accountHolder}</p>
+                </div>
+              </div>
+            </section>
+          ) : (
+            <section className="space-y-6">
+              <h3 className="text-lg md:text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
+                <span className="w-1.5 h-5 md:h-6 bg-brand-primary rounded-full" />
+                Nomor Virtual Account
+              </h3>
+              <div className="p-8 border-2 border-gray-100 rounded-3xl bg-white text-center space-y-4">
+                <span className="text-3xl md:text-4xl font-black text-gray-900 tracking-wider">
+                  {order.virtualAccount}
+                </span>
+                <button className="block mx-auto px-6 py-2 bg-brand-primary/10 text-brand-primary rounded-full text-xs font-black uppercase tracking-widest hover:bg-brand-primary/20 transition-all">
+                  Salin Nomor VA
+                </button>
+              </div>
+            </section>
+          )}
+
+          {isManualTransfer && (
+            <section className="space-y-4">
+              <h3 className="text-lg md:text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
+                <span className="w-1.5 h-5 md:h-6 bg-brand-primary rounded-full" />
+                Upload Bukti Transfer
+              </h3>
+              <label className="block p-6 border-2 border-dashed border-gray-200 rounded-2xl bg-white cursor-pointer hover:border-brand-primary/40 transition-colors">
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/*,application/pdf"
+                  onChange={(event) => onProofFileChange?.(event.target.files?.[0] ?? null)}
+                />
+                <div className="text-center space-y-2">
+                  <p className="text-sm font-bold text-gray-700">
+                    {proofFile ? "File dipilih" : "Pilih file bukti transfer (JPG/PNG/PDF)"}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {proofFile ? proofFile.name : "Klik untuk unggah file"}
+                  </p>
+                </div>
+              </label>
+            </section>
+          )}
 
           <section className="bg-white border-2 border-gray-100 rounded-3xl p-8 space-y-4">
             <h4 className="text-sm font-black text-gray-900">Cara Melakukan Transfer:</h4>
             <ul className="space-y-3">
               {[
-                "Buka aplikasi mobile banking atau ATM.",
-                "Pilih menu Transfer Virtual Account.",
-                "Masukkan nomor Virtual Account di atas.",
-                "Pastikan nominal sesuai dengan tagihan Anda.",
-              ].map((step, i) => (
-                <li key={i} className="flex gap-3 text-sm font-medium text-gray-600">
-                  <span className="text-brand-primary font-black">{i + 1}.</span>
+                 "Buka aplikasi mobile banking atau ATM.",
+                 isManualTransfer ? "Transfer ke rekening tujuan sesuai informasi di atas." : "Pilih menu Transfer Virtual Account.",
+                 isManualTransfer ? "Pastikan nominal sesuai total tagihan." : "Masukkan nomor Virtual Account di atas.",
+                 isManualTransfer ? "Upload bukti transfer setelah pembayaran berhasil." : "Pastikan nominal sesuai dengan tagihan Anda.",
+               ].map((step, i) => (
+                 <li key={i} className="flex gap-3 text-sm font-medium text-gray-600">
+                   <span className="text-brand-primary font-black">{i + 1}.</span>
                   {step}
                 </li>
               ))}
@@ -215,8 +276,13 @@ export function PaymentInstruction({
         <button onClick={onBack} className="flex-1 py-5 md:py-6 px-8 border-2 border-gray-200 rounded-2xl text-gray-500 font-bold text-lg hover:bg-gray-50 transition-all">
           Kembali
         </button>
-        <Button onClick={onAction} isLoading={isLoading} className="flex-[2] py-5 md:py-6 px-8 rounded-2xl text-xl font-black shadow-xl shadow-brand-primary/20 hover:shadow-brand-primary/30 transition-all">
-          Upload Bukti Pembayaran
+        <Button
+          onClick={onAction}
+          isLoading={isLoading}
+          disabled={isManualTransfer && !proofFile}
+          className="flex-[2] py-5 md:py-6 px-8 rounded-2xl text-xl font-black shadow-xl shadow-brand-primary/20 hover:shadow-brand-primary/30 transition-all"
+        >
+          {isManualTransfer ? "Upload Bukti Pembayaran" : "Bayar Sekarang"}
         </Button>
       </div>
     </div>

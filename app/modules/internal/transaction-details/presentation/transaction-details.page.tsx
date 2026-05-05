@@ -3,7 +3,7 @@ import { Card, Badge } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
 import { useAuth } from "~/core/auth";
 import { useApiQuery } from "~/core/api";
-import { transactionApi } from "~/core/api/services/transaction.api";
+import { transactionApi, mapTransactionDetailApiToFe } from "~/core/api/services/transaction.api";
 // Fallback to mock for IDs not found in API
 import { mockTransactions } from "../../dashboard/infrastructure/transaction.mock";
 
@@ -22,8 +22,8 @@ export default function TransactionDetailsPage() {
   const { data: apiTx, loading } = useApiQuery(
     async () => {
       if (!id) return null;
-      const res = await transactionApi.getStatus(id);
-      if (res.success && res.data) return res.data;
+      const res = await transactionApi.getDetail(id);
+      if (res.success && res.data) return mapTransactionDetailApiToFe(res.data);
       return null;
     },
     [id],

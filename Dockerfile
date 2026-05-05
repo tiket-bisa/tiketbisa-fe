@@ -12,6 +12,12 @@ RUN pnpm install --frozen-lockfile --prod
 
 FROM node:20-alpine AS build-env
 RUN corepack enable && corepack prepare pnpm@latest --activate
+ARG VITE_API_BASE_URL
+ARG VITE_GOOGLE_AUTH_CLIENT_ID
+ARG VITE_INTERNAL_SUBDOMAIN
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_GOOGLE_AUTH_CLIENT_ID=$VITE_GOOGLE_AUTH_CLIENT_ID
+ENV VITE_INTERNAL_SUBDOMAIN=$VITE_INTERNAL_SUBDOMAIN
 COPY . /app/
 COPY --from=development-dependencies-env /app/node_modules /app/node_modules
 WORKDIR /app

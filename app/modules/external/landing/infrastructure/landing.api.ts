@@ -3,6 +3,7 @@ import { brandApi } from "../../brand/infrastructure/brand.api";
 import type { LandingRepository, LandingData, LandingParams } from "../domain/landing.repository";
 import type { Banner } from "../domain/banner.entity";
 import type { Event } from "../../event/domain/event.entity";
+import type { Brand } from "../../brand/domain/brand.entity";
 
 const MOCK_BANNERS: Banner[] = [
   {

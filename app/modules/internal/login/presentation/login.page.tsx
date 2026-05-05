@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { Button, Select } from "~/core/design-system/components";
+import { Button } from "~/core/design-system/components";
 import { AuthProvider, useAuth } from "~/core/auth";
 import { requestGoogleAuthorizationCode } from "~/core/auth/google-oauth.client";
 import { requestInternalGoogleToken } from "~/core/auth/internal-auth.api";
@@ -12,8 +12,12 @@ function LoginContent() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user && user.role === "partner") {
-      navigate("/internal-tb/partner", { replace: true });
+    if (user) {
+      if (user.role === "partner") {
+        navigate("/internal-tb/partner", { replace: true });
+      } else if (user.role === "admin") {
+        navigate("/internal-tb/admin", { replace: true });
+      }
     }
   }, [user, navigate]);
 
@@ -24,10 +28,6 @@ function LoginContent() {
     try {
       const authCode = await requestGoogleAuthorizationCode();
       const tokenData = await requestInternalGoogleToken(authCode);
-
-      if (tokenData.role !== "partner") {
-        throw new Error(`Akun ini tidak memiliki akses partner (role: ${tokenData.role})`);
-      }
 
       loginWithOAuth(tokenData);
     } catch (e) {
@@ -43,7 +43,7 @@ function LoginContent() {
         {/* Logo */}
         <div className="flex flex-col items-center gap-4">
           <img
-            src="/logo/tiketbisa-white.png"
+            src="/logo/tiketbisa.png"
             alt="Tiketbisa"
             className="h-12 w-auto"
           />

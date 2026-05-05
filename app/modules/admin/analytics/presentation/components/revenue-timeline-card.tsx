@@ -1,15 +1,14 @@
 import { Card } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
-import { allRevenueTimeline } from "~/modules/admin/analytics/infrastructure/revenue.mock";
+import { type RevenueTimeline } from "~/modules/internal/analytics/analytics.api";
 
-export function RevenueTimelineCard() {
-  const maxRevenue = Math.max(...allRevenueTimeline.map((d) => d.revenue), 1);
+export function RevenueTimelineCard({ data, maxRevenue }: { data: RevenueTimeline[], maxRevenue: number }) {
 
   return (
     <Card padding="md">
       <h2 className="text-text-primary text-lg font-semibold mb-4">Revenue Harian</h2>
       <div className="space-y-3">
-        {allRevenueTimeline.map((point) => (
+        {data.map((point) => (
           <div key={point.date} className="flex items-center gap-3">
             <span className="text-text-tertiary text-xs w-24 shrink-0 font-mono">{point.date.slice(5)}</span>
             <div className="flex-1 h-6 bg-surface-hover rounded-md overflow-hidden">

@@ -1,30 +1,39 @@
 import { useMemo } from "react";
-import { Card } from "~/core/design-system/components";
-import { mockTicketDashboard } from "../../infrastructure/ticket.mock";
+import { useApiQuery } from "~/core/api";
+import { analyticsApi } from "~/modules/internal/analytics/analytics.api";
 
 /** Ticket dashboard showing available vs checked-in */
 export function DashboardSection({ brandSlug }: { brandSlug?: string }) {
-  const tickets = useMemo(
-    () => mockTicketDashboard.filter((t) => t.brand_slug === brandSlug),
-    [brandSlug],
+  const { data: apiTickets, loading } = useApiQuery(
+    () => analyticsApi.getTicketScanningDashboard(),
+    []
   );
+
+  const tickets = useMemo(
+    () => (apiTickets || []).filter((t) => !brandSlug || t.brandSlug === brandSlug),
+    [apiTickets, brandSlug]
+  );
+
+  if (loading) {
+    return <div className="text-center py-8 text-text-tertiary">Memuat dashboard...</div>;
+  }
 
   return (
     <div className="space-y-4">
       {tickets.map((summary) => {
         const soldPercent =
-          summary.total_tickets > 0
-            ? Math.round((summary.sold_tickets / summary.total_tickets) * 100)
+          summary.totalTickets > 0
+            ? Math.round((summary.soldTickets / summary.totalTickets) * 100)
             : 0;
         const checkedInPercent =
-          summary.sold_tickets > 0
-            ? Math.round((summary.checked_in_tickets / summary.sold_tickets) * 100)
+          summary.soldTickets > 0
+            ? Math.round((summary.checkedInTickets / summary.soldTickets) * 100)
             : 0;
 
         return (
-          <Card key={summary.event_id} padding="md">
+          <Card key={summary.eventId} padding="md">
             <h3 className="text-text-primary font-semibold mb-4">
-              {summary.event_name}
+              {summary.eventName}
             </h3>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
@@ -33,7 +42,7 @@ export function DashboardSection({ brandSlug }: { brandSlug?: string }) {
                   Total
                 </p>
                 <p className="text-text-primary text-xl font-bold mt-1">
-                  {summary.total_tickets.toLocaleString()}
+                  {summary.totalTickets.toLocaleString()}
                 </p>
               </div>
               <div>
@@ -41,7 +50,7 @@ export function DashboardSection({ brandSlug }: { brandSlug?: string }) {
                   Tersedia
                 </p>
                 <p className="text-success-text text-xl font-bold mt-1">
-                  {summary.available_tickets.toLocaleString()}
+                  {summary.availableTickets.toLocaleString()}
                 </p>
               </div>
               <div>
@@ -49,7 +58,7 @@ export function DashboardSection({ brandSlug }: { brandSlug?: string }) {
                   Terjual
                 </p>
                 <p className="text-brand-primary text-xl font-bold mt-1">
-                  {summary.sold_tickets.toLocaleString()}
+                  {summary.soldTickets.toLocaleString()}
                 </p>
               </div>
               <div>
@@ -57,7 +66,7 @@ export function DashboardSection({ brandSlug }: { brandSlug?: string }) {
                   Check-in
                 </p>
                 <p className="text-warning-default text-xl font-bold mt-1">
-                  {summary.checked_in_tickets.toLocaleString()}
+                  {summary.checkedInTickets.toLocaleString()}
                 </p>
               </div>
             </div>

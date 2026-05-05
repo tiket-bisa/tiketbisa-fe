@@ -15,9 +15,10 @@ import {
   PaymentConsent,
   PaymentInstruction,
   ImportantGuides,
-  PaymentPartners,
-  OrderSuccess
-} from "./components";
+   PaymentPartners,
+   OrderSuccess,
+   ManualTransferPending
+ } from "./components";
 import { useOrderSummary } from "./hooks/use-order-summary";
 import { useCheckoutForm } from "./hooks/use-checkout-form";
 import { useCheckoutSteps } from "./hooks/use-checkout-steps";
@@ -59,11 +60,14 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
     handleExpire,
     paymentSelection,
     selectedPaymentMethod,
+    isManualTransferPending,
+    manualTransferProofFile,
+    setManualTransferProofFile,
     isStep2Valid,
     handlePaymentMethodSelect,
     setAgreedToTerms,
     setAgreedToPrivacy
-  } = useCheckoutSteps(event, buyerInfo, summary, validate, paymentMethods);
+  } = useCheckoutSteps(event, buyerInfo, summary, validate, paymentMethods, order);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -73,6 +77,9 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
 
   // View switch for special steps
   if (currentStep === 5) {
+    if (isManualTransferPending) {
+      return <ManualTransferPending event={event} orderId={searchParams.get("orderId")} onAction={() => handleNext()} />;
+    }
     return <OrderSuccess event={event} order={completedOrder} onAction={() => handleNext()} />;
   }
 
@@ -136,6 +143,8 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
                   : summary.totalPrice
               }
               onAction={() => handleNext()}
+              proofFile={manualTransferProofFile}
+              onProofFileChange={setManualTransferProofFile}
               onBack={handleBack}
               onExpire={handleExpire}
               isLoading={isActionLoading}
@@ -193,8 +202,15 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
         onBack={handleBack}
         onExpire={handleExpire}
         isLoading={isActionLoading}
-        canSubmit={currentStep === 2 ? isStep2Valid : true}
+        canSubmit={
+          currentStep === 2
+            ? isStep2Valid
+            : currentStep === 4 && (order?.paymentMethod.id === "manual" || order?.paymentMethod.id === "manual_transfer")
+              ? !!manualTransferProofFile
+              : true
+        }
         orderCategory={order?.paymentMethod.category}
+        orderMethodId={order?.paymentMethod.id}
       />
     </div>
   );
