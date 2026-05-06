@@ -55,7 +55,7 @@ export function EventDetailTabs({
 
         {activeTab === "tiket" && (
           <section className="space-y-6 animate-in fade-in">
-            <h2 className="text-2xl font-bold text-black">Kategori Tiket</h2>
+            <h2 className="text-2xl font-bold text-text-primary">Kategori Tiket</h2>
             <div className="grid gap-4">
               {event.tickets.map((ticket) => (
                 <TicketRow
@@ -71,14 +71,14 @@ export function EventDetailTabs({
 
         {activeTab === "syarat" && (
           <section className="bg-surface-alt p-8 rounded-2xl border border-border-default animate-in zoom-in-95">
-            <h2 className="text-2xl font-bold text-black mb-6">
+            <h2 className="text-2xl font-bold text-text-primary mb-6">
               Syarat & Ketentuan
             </h2>
             <ul className="space-y-4">
               {event.terms?.map((term, idx) => (
                 <li
                   key={idx}
-                  className="flex gap-4 text-black text-lg"
+                  className="flex gap-4 text-text-primary text-lg"
                 >
                   <span className="text-brand-primary font-bold">
                     {idx + 1}.
@@ -92,7 +92,7 @@ export function EventDetailTabs({
       </main>
 
       <footer className="mt-16 pt-8 border-t border-border-default">
-        <h2 className="text-xl font-bold mb-6 text-white">Penyelenggara</h2>
+        <h2 className="text-xl font-bold text-text-primary mb-6">Penyelenggara</h2>
         <div className="group flex items-center gap-6 p-6 rounded-2xl border border-border-default bg-surface-alt hover:bg-surface-hover transition-colors">
           <Avatar
             src=""
@@ -108,7 +108,7 @@ export function EventDetailTabs({
               Verified Partner Tiketbisa
             </p>
             <Link
-              to={`/brand/${event.brand.toLowerCase()}`}
+              to={`/brand/${event.brandId || event.brand.toLowerCase()}`}
               className="text-brand-primary hover:underline font-medium inline-flex items-center gap-1"
             >
               Lihat Profil Brand{" "}

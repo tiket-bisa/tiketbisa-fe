@@ -33,9 +33,13 @@ export default [
 
   route("internal-tb", "modules/internal/entry/presentation/entry.page.tsx"),
 
-  // ─── Admin Login (Standalone) ───
-  route("internal-tb/admin/login", "modules/admin/login/presentation/login.page.tsx"),
-  route("internal-tb/partner/login", "modules/internal/login/presentation/login.page.tsx"),
+  // ─── Internal Login Aliases (redirect to single entry point) ───
+  route("internal-tb/admin/login", "modules/internal/entry/presentation/login-redirect.page.tsx", {
+    id: "internal-login-admin-redirect",
+  }),
+  route("internal-tb/partner/login", "modules/internal/entry/presentation/login-redirect.page.tsx", {
+    id: "internal-login-partner-redirect",
+  }),
 
   // ─── Admin Layout (internal team — sees all brands) ───
   layout("layouts/admin.layout.tsx", [

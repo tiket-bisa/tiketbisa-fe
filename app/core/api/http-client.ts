@@ -1,7 +1,7 @@
 import type { ApiResponse } from "./api-response.type";
 import { AUTH_STORAGE_KEY } from "~/core/auth/auth.constants";
+import { toAbsoluteApiUrl } from "./api-url";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 const INTERNAL_API_PREFIX = "/internal-tb";
 
 interface StoredAuthSession {
@@ -41,9 +41,7 @@ async function request<T>(
   headers: Record<string, string> = {},
 ): Promise<ApiResponse<T>> {
   try {
-    const url = normalizePath(path).startsWith("http")
-      ? normalizePath(path)
-      : `${BASE_URL}${normalizePath(path)}`;
+    const url = toAbsoluteApiUrl(path);
     const response = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json", ...headers },

@@ -30,12 +30,14 @@ cp .env.example .env
 
 ### Local Development — Internal Dashboard
 
-The internal (partner) dashboard uses subdomain routing in production.
-For local dev, append `?mode=internal` to any URL:
+The internal dashboard uses a single `/internal-tb` entry point in production.
+For local dev, open:
 
 ```
-http://localhost:5173/partner?mode=internal
+http://localhost:5173/internal-tb
 ```
+
+The checkout flow stays on the public `/checkout/*` path.
 
 ## Deployment
 
@@ -88,7 +90,7 @@ The project is divided into two domains:
 | Domain       | URL (Production)      | Path Prefix  | Description                                 |
 | ------------ | --------------------- | ------------ | ------------------------------------------- |
 | **External** | `tiketbisa.com`       | `/`          | Public platform — landing, search, checkout |
-| **Internal** | `[tbd].tiketbisa.com` | `/partner/*` | Partner dashboard — analytics, scanning     |
+| **Internal** | `tiketbisa.com` | `/internal-tb/*` | Internal dashboard — role-based access, analytics, scanning |
 
 ### Directory Structure
 
@@ -106,7 +108,6 @@ app/
 │   ├── types/
 │   │   └── index.ts                   # Shared domain entities (TODO)
 │   └── utils/
-│       ├── subdomain.ts               # App mode detection
 │       └── index.ts
 │
 ├── modules/
@@ -120,8 +121,8 @@ app/
 │   │   ├── checkout/                  # Trust Mode enforced
 │   │   └── static/                    # Simple pages (tentang, hubungi)
 │   │
-│   └── internal/                      # PARTNER DASHBOARD
-│       ├── login/                     # Standalone (no layout)
+│   └── internal/                      # INTERNAL DASHBOARD
+│       ├── entry/                      # Single Google sign-in entry point
 │       ├── dashboard/
 │       ├── brand/
 │       ├── events/
@@ -136,7 +137,7 @@ app/
 │
 ├── layouts/
 │   ├── external.layout.tsx            # Header + nav + Footer + <Outlet/>
-│   ├── internal.layout.tsx            # Partner header + nav + <Outlet/>
+│   ├── internal.layout.tsx            # Internal header + nav + <Outlet/>
 │   └── checkout.layout.tsx            # Trust Mode — minimal, Brand Purple only
 │
 ├── app.css                            # Tailwind + design tokens

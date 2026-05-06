@@ -7,16 +7,19 @@ export interface BaseAuthUser {
   name: string;
   picture?: string;
   internal_token?: string;
+  brand_id?: string;
 }
 
 export interface AdminUser extends BaseAuthUser {
   role: "admin";
   brand_slug?: undefined;
   brand_name?: undefined;
+  brand_id?: undefined;
 }
 
 export interface PartnerUser extends BaseAuthUser {
   role: "partner";
+  brand_id: string;
   brand_slug: string;
   brand_name: string;
 }
@@ -64,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (stored) {
         const parsed = JSON.parse(stored) as AuthUser;
         // Invalidate legacy sessions that are missing the internal_token
-        if (!parsed.internal_token) {
+        if (!parsed.internal_token || (parsed.role === "partner" && !parsed.brand_id)) {
           localStorage.removeItem(AUTH_STORAGE_KEY);
           setUser(null);
         } else {
@@ -109,10 +112,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name: payload.brandName || name,
       picture: profile.picture,
       role: "partner",
+      brand_id: payload.brandId || "",
       brand_slug: payload.brandSlug,
       brand_name: payload.brandName,
       internal_token: payload.idToken,
     };
+
+    if (!partnerUser.brand_id) {
+      throw new Error("Partner account is missing brand id");
+    }
+
     setUser(partnerUser);
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(partnerUser));
   }, []);

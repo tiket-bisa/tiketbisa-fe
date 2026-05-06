@@ -6,6 +6,7 @@ export interface InternalTokenResponseData {
   role: "admin" | "partner";
   brandSlug?: string | null;
   brandName?: string | null;
+  brandId?: string | null;
 }
 
 interface RawInternalTokenResponseData {
@@ -16,6 +17,8 @@ interface RawInternalTokenResponseData {
   brand_slug?: string | null;
   brandName?: string | null;
   brand_name?: string | null;
+  brandId?: string | null;
+  brand_id?: string | null;
 }
 
 function getErrorMessage(error: unknown): string | null {
@@ -71,6 +74,7 @@ export async function requestInternalGoogleToken(
     role,
     brandSlug: response.data.brandSlug ?? response.data.brand_slug ?? null,
     brandName: response.data.brandName ?? response.data.brand_name ?? null,
+    brandId: response.data.brandId ?? response.data.brand_id ?? null,
   };
 }
 
@@ -99,5 +103,6 @@ export async function getMe(): Promise<Omit<InternalTokenResponseData, "idToken"
     role: role as "admin" | "partner",
     brandSlug: response.data.brandSlug ?? response.data.brand_slug ?? null,
     brandName: response.data.brandName ?? response.data.brand_name ?? null,
+    brandId: response.data.brandId ?? response.data.brand_id ?? null,
   };
 }

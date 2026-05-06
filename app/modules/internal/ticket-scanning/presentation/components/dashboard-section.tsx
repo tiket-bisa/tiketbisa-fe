@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useApiQuery } from "~/core/api";
+import { Card } from "~/core/design-system/components";
 import { analyticsApi } from "~/modules/internal/analytics/analytics.api";
 
 /** Ticket dashboard showing available vs checked-in */

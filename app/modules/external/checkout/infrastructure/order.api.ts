@@ -14,6 +14,7 @@ interface LockTicketRq {
 }
 
 interface StoreTempTransactionRq {
+  userId: string;
   eventId: string;
   customerName: string;
   customerEmail: string;
@@ -163,7 +164,7 @@ export const orderApi = {
       tickets
     };
 
-    const response = await apiFetch<ApiResponse<LockResponse>>("/transaction", {
+    const response = await apiFetch<ApiResponse<LockResponse>>("/transaction/lock", {
       method: "POST",
       body: JSON.stringify(payload)
     });
@@ -187,12 +188,16 @@ export const orderApi = {
   ): Promise<void> {
     let backendPaymentMethod = "MANUAL_TRANSFER";
     if (paymentMethod.category === "BANK_TRANSFER") {
-      backendPaymentMethod = paymentMethod.id === "manual" ? "MANUAL_TRANSFER" : "VA";
+      const paymentMethodId = paymentMethod.id.toLowerCase();
+      backendPaymentMethod = paymentMethodId === "manual" || paymentMethodId === "manual_transfer"
+        ? "MANUAL_TRANSFER"
+        : "VA";
     } else if (paymentMethod.category === "E_WALLET_QRIS") {
       backendPaymentMethod = "QRIS";
     }
 
     const payload: StoreTempTransactionRq = {
+      userId: lockId,
       eventId,
       customerName: buyerInfo.fullName,
       customerEmail: buyerInfo.email,
@@ -202,8 +207,11 @@ export const orderApi = {
       isComplimentary: false
     };
 
-    const response = await apiFetch<ApiResponse<string>>(`/transaction/temp/${lockId}`, {
+    const response = await apiFetch<ApiResponse<string>>("/transaction/temp", {
       method: "POST",
+      headers: {
+        "x-tb-identifier": lockId,
+      },
       body: JSON.stringify(payload)
     });
 

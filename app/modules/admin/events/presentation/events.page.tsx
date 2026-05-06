@@ -176,7 +176,7 @@ export default function AdminEventsPage() {
                 <Button 
                   variant="secondary" 
                   size="sm"
-                  onClick={() => navigate(`/internal/admin/events/${evt.id}/tickets/new`)}
+                  onClick={() => navigate(`/internal-tb/admin/events/${evt.id}/tickets/new`)}
                   className="flex items-center gap-1"
                 >
                   <span className="material-symbols-outlined text-sm">add</span>

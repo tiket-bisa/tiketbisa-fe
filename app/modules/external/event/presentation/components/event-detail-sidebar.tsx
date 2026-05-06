@@ -27,7 +27,7 @@ export function EventDetailSidebar({
   return (
     <aside className="lg:col-span-1">
       <div className="sticky top-24 rounded-2xl border border-border-default bg-surface-alt p-8 space-y-8">
-        <h2 className="text-2xl font-extrabold text-black leading-tight">
+        <h2 className="text-2xl font-extrabold text-text-primary leading-tight">
           {event.name}
         </h2>
 
@@ -94,7 +94,7 @@ function SidebarInfo({
         <p className="text-[10px] text-text-tertiary uppercase tracking-[0.2em] font-black">
           {label}
         </p>
-        <p className="text-black font-semibold leading-relaxed">
+        <p className="text-text-primary font-semibold leading-relaxed">
           {value}
         </p>
       </div>

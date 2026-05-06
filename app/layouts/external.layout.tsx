@@ -12,7 +12,7 @@ export default function ExternalLayout() {
   return (
     <div className="flex min-h-screen flex-col">
       <NavbarExternal />
-      <main className="flex-1 bg-white" data-theme="light">
+      <main className="flex-1 bg-white text-text-primary" data-theme="light">
         <Outlet />
       </main>
       <Footer />

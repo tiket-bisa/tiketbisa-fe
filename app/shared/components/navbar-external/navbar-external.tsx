@@ -30,7 +30,7 @@ export function NavbarExternal({ className = "" }: NavbarExternalProps) {
   }, [isMenuOpen]);
 
   return (
-    <header className={`sticky top-0 z-50 border-b border-border-default bg-[#1a1245] ${className}`}>
+    <header className={`sticky top-0 z-50 border-b border-border-default bg-[#1a1245] text-text-primary ${className}`}>
       <nav className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link to="/" className="shrink-0" aria-label="Tiketbisa home" onClick={() => setIsMenuOpen(false)}>
           <img
@@ -57,8 +57,8 @@ export function NavbarExternal({ className = "" }: NavbarExternalProps) {
                   to={link.to}
                   className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                     isActive
-                      ? "text-white bg-brand-primary/20"
-                      : "text-text-secondary hover:text-white hover:bg-white/10"
+                      ? "bg-brand-primary/20 text-text-primary"
+                      : "text-text-secondary hover:text-text-primary hover:bg-white/10"
                   }`}
                   aria-current={isActive ? "page" : undefined}
                 >
@@ -72,7 +72,7 @@ export function NavbarExternal({ className = "" }: NavbarExternalProps) {
         <button
           type="button"
           onClick={() => setIsMenuOpen(true)}
-          className="md:hidden inline-flex items-center justify-center h-10 w-10 rounded-xl text-white bg-white/5 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
+          className="md:hidden inline-flex items-center justify-center h-10 w-10 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
           aria-label="Open menu"
         >
           <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -91,7 +91,7 @@ export function NavbarExternal({ className = "" }: NavbarExternalProps) {
           <button
             type="button"
             onClick={() => setIsMenuOpen(false)}
-            className="inline-flex items-center justify-center h-10 w-10 rounded-xl text-white bg-white/5 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
+            className="inline-flex items-center justify-center h-10 w-10 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
             aria-label="Close menu"
           >
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -126,8 +126,8 @@ export function NavbarExternal({ className = "" }: NavbarExternalProps) {
                       onClick={() => setIsMenuOpen(false)}
                       className={`flex items-center justify-between rounded-2xl px-4 py-4 text-lg font-semibold transition-all ${
                         isActive
-                          ? "text-white bg-brand-primary shadow-[0_0_20px_rgba(109,92,255,0.3)]"
-                          : "text-text-secondary hover:text-white hover:bg-white/5"
+                          ? "bg-brand-primary text-base-white shadow-[0_0_20px_rgba(109,92,255,0.3)]"
+                          : "text-text-secondary hover:text-text-primary hover:bg-white/5"
                       }`}
                     >
                       <span>{link.label}</span>

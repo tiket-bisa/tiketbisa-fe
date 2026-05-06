@@ -48,9 +48,9 @@ export default function CreateTicketPage() {
         setTimeout(() => {
           // Navigating back
           if (user?.role === "admin") {
-            navigate("/internal/admin/events");
+            navigate("/internal-tb/admin/events");
           } else {
-            navigate("/internal/partner/events");
+            navigate("/internal-tb/partner/events");
           }
         }, 1500);
       } else {
@@ -80,19 +80,19 @@ export default function CreateTicketPage() {
       <Card padding="lg">
         <form onSubmit={handleSubmit} className="space-y-5">
           {errorMsg && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
+            <div className="bg-red-50 text-destructive-text p-3 rounded-md text-sm">
               {errorMsg}
             </div>
           )}
           {successMsg && (
-            <div className="bg-green-50 text-green-600 p-3 rounded-md text-sm">
+            <div className="bg-green-50 text-success-text p-3 rounded-md text-sm">
               {successMsg}
             </div>
           )}
 
           <div>
             <label className="block text-sm font-medium mb-1" htmlFor="name">
-              Nama Tiket <span className="text-red-500">*</span>
+              Nama Tiket <span className="text-destructive-text">*</span>
             </label>
             <input
               required
@@ -108,7 +108,7 @@ export default function CreateTicketPage() {
 
           <div>
             <label className="block text-sm font-medium mb-1" htmlFor="categoryCode">
-              Kode Kategori <span className="text-red-500">*</span>
+              Kode Kategori <span className="text-destructive-text">*</span>
             </label>
             <input
               required
@@ -120,7 +120,7 @@ export default function CreateTicketPage() {
               value={formData.categoryCode}
               onChange={handleChange}
             />
-            <p className="text-xs text-gray-500 mt-1">Kode unik maksimal 5 karakter. Contoh: VIP, REG1.</p>
+            <p className="text-xs text-text-secondary mt-1">Kode unik maksimal 5 karakter. Contoh: VIP, REG1.</p>
           </div>
 
           <div>
@@ -140,7 +140,7 @@ export default function CreateTicketPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1" htmlFor="price">
-                Harga (Rp) <span className="text-red-500">*</span>
+                Harga (Rp) <span className="text-destructive-text">*</span>
               </label>
               <input
                 required
@@ -156,7 +156,7 @@ export default function CreateTicketPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1" htmlFor="totalTicket">
-                Jumlah Tiket <span className="text-red-500">*</span>
+                Jumlah Tiket <span className="text-destructive-text">*</span>
               </label>
               <input
                 required

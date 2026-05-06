@@ -294,7 +294,7 @@ function ActiveChip({
       </span>
       <button
         onClick={onRemove}
-        className="p-0.5 rounded-full hover:bg-brand-primary hover:text-white transition-all text-brand-primary"
+        className="p-0.5 rounded-full hover:bg-brand-primary hover:  transition-all text-brand-primary"
       >
         <span className="material-symbols-outlined text-[14px]">close</span>
       </button>

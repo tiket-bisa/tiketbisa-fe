@@ -26,7 +26,10 @@ export default function CheckoutLayout() {
     >
       <CheckoutNavbar currentStep={displayStep} />
       
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+      <main
+        data-theme="light"
+        className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 text-text-primary sm:px-6 lg:px-8"
+      >
         <Outlet />
       </main>
 

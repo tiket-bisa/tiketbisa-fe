@@ -63,7 +63,7 @@ export function CheckoutSidebar({
             onClick={onBack}
             className="p-5 border-2 border-gray-100 rounded-2xl hover:bg-gray-50 transition-all active:scale-95"
           >
-            <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="h-6 w-6 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
             </svg>
           </button>

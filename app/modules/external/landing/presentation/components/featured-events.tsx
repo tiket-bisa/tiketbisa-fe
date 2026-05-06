@@ -27,16 +27,16 @@ export function FeaturedEvents({ events }: FeaturedEventsProps) {
   if (!events || events.length === 0) return null;
 
   return (
-    <section className="bg-brand-primary text-white py-16 overflow-hidden relative">
+    <section className="bg-brand-primary py-16 overflow-hidden relative text-base-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative group/featured">
         
         {/* Header Section — Featured Event White */}
         <div className="mb-10 text-center sm:text-left">
           <SectionHeader 
             title="Featured Event" 
-            className="mb-0 text-white font-bold" 
+            className="mb-0 text-base-white font-bold" 
           />
-          <p className="mt-2 text-base text-white font-medium max-w-2xl opacity-90">
+          <p className="mt-2 text-base text-base-white font-medium max-w-2xl opacity-90">
             Pilihan event terbaik minggu ini hanya untukmu
           </p>
         </div>
@@ -47,7 +47,7 @@ export function FeaturedEvents({ events }: FeaturedEventsProps) {
             <button
               onClick={prev}
               disabled={currentIndex === 0}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md text-white shadow-2xl pointer-events-auto transition-all hover:bg-white hover:text-brand-primary disabled:opacity-0 group/btn"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md text-base-white shadow-2xl pointer-events-auto transition-all hover:bg-white hover:text-brand-primary disabled:opacity-0 group/btn"
               aria-label="Previous events"
             >
               <span className="material-symbols-outlined text-[24px] transition-transform group-hover/btn:-translate-x-0.5">chevron_left</span>
@@ -55,7 +55,7 @@ export function FeaturedEvents({ events }: FeaturedEventsProps) {
             <button
               onClick={next}
               disabled={currentIndex >= maxIndex}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md text-white shadow-2xl pointer-events-auto transition-all hover:bg-white hover:text-brand-primary disabled:opacity-0 group/btn"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md text-base-white shadow-2xl pointer-events-auto transition-all hover:bg-white hover:text-brand-primary disabled:opacity-0 group/btn"
               aria-label="Next events"
             >
               <span className="material-symbols-outlined text-[24px] transition-transform group-hover/btn:translate-x-0.5">chevron_right</span>
@@ -97,7 +97,7 @@ export function FeaturedEvents({ events }: FeaturedEventsProps) {
                     hoverable
                     className="flex h-full flex-col items-center justify-center bg-white/5 border-2 border-dashed border-white/20 backdrop-blur-sm"
                   >
-                    <div className="flex flex-col items-center justify-center gap-4 p-6 text-white text-center">
+                    <div className="flex flex-col items-center justify-center gap-4 p-6 text-center">
                       <div className="rounded-full bg-white/10 p-4 transition-transform group-hover:scale-110 group-hover:bg-white group-hover:text-brand-primary">
                         <span className="material-symbols-outlined text-[36px]">
                           arrow_forward
@@ -107,7 +107,7 @@ export function FeaturedEvents({ events }: FeaturedEventsProps) {
                         <span className="text-lg font-bold block">
                           Lihat Semua Event
                         </span>
-                        <p className="text-xs text-slate-300/80 uppercase tracking-widest font-semibold">
+                        <p className="text-xs text-base-white/80 uppercase tracking-widest font-semibold">
                           Explore More
                         </p>
                       </div>

@@ -25,6 +25,42 @@ interface TicketCategoryDto {
   issuedTicket: number;
 }
 
+interface BrandListResponseData {
+  brands: BrandDto[];
+}
+
+interface BrandDto {
+  id: string;
+  name: string;
+}
+
+async function getBrandNameMap(): Promise<Map<string, string>> {
+  try {
+    const response = await apiFetch<ApiResponse<BrandListResponseData>>(
+      "/brand?limit=1000&offset=0",
+    );
+
+    return new Map(
+      (response.data?.brands || [])
+        .filter((brand) => brand.id && brand.name)
+        .map((brand) => [brand.id, brand.name]),
+    );
+  } catch {
+    return new Map();
+  }
+}
+
+async function getBrandNameById(brandId: string | undefined): Promise<string | undefined> {
+  if (!brandId) return undefined;
+
+  try {
+    const response = await apiFetch<ApiResponse<BrandDto>>(`/brand/${brandId}`);
+    return response.data?.name || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export const eventApi: EventRepository = {
   async getEvents(
     params: EventFilterParams,
@@ -36,13 +72,16 @@ export const eventApi: EventRepository = {
     queryParams.append("offset", params.offset.toString());
     queryParams.append("isPublished", "true");
 
-    const response = await apiFetch<ApiResponse<EventListResponseData>>(
-      `/event?${queryParams.toString()}`
-    );
+    const [response, brandNameMap] = await Promise.all([
+      apiFetch<ApiResponse<EventListResponseData>>(
+        `/event?${queryParams.toString()}`,
+      ),
+      getBrandNameMap(),
+    ]);
 
     const mappedEvents = await Promise.all(
       response.data.events.map(async (dto, idx) => {
-        const mapped = mapEventDtoToEntity(dto, idx);
+        const mapped = mapEventDtoToEntity(dto, idx, brandNameMap.get(dto.brandId));
 
         if (mapped.minPrice !== undefined && mapped.minPrice !== null) {
           return mapped;
@@ -87,7 +126,8 @@ export const eventApi: EventRepository = {
 
     if (!eventResponse.data) return null;
 
-    const baseEvent = mapEventDtoToEntity(eventResponse.data, 0);
+    const brandName = await getBrandNameById(eventResponse.data.brandId);
+    const baseEvent = mapEventDtoToEntity(eventResponse.data, 0, brandName);
 
     return {
       ...baseEvent,

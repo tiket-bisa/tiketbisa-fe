@@ -31,7 +31,7 @@ export default function TransactionDetailsPage() {
 
   // Fallback to mock data
   const tx = apiTx
-    ? (apiTx as Record<string, unknown>)
+    ? (apiTx as unknown as Record<string, unknown>)
     : mockTransactions.find((t) => t.id === id && t.brand_slug === user?.brand_slug);
 
   if (loading) {

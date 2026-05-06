@@ -64,20 +64,20 @@ export function CountdownTimer({ initialMinutes = 15, onExpire, className = "" }
     : "bg-orange-50 border-orange-200 shadow-orange-100";
   
   const textStyles = isUrgent 
-    ? "text-red-600 animate-pulse" 
-    : "text-orange-600";
+    ? "text-destructive-text animate-pulse" 
+    : "text-warning-text";
 
   const dividerStyles = isUrgent 
     ? "bg-red-200" 
     : "bg-orange-200";
 
   const labelStyles = isUrgent 
-    ? "text-red-400" 
-    : "text-orange-400";
+    ? "text-destructive-text" 
+    : "text-warning-text";
 
   const subLabelStyles = isUrgent 
-    ? "text-red-600" 
-    : "text-orange-600";
+    ? "text-destructive-text" 
+    : "text-warning-text";
 
   return (
     <div className={`flex items-center justify-center gap-6 py-4 px-8 border-2 rounded-3xl shadow-sm transition-colors duration-500 animate-in fade-in ${containerStyles} ${className}`}>

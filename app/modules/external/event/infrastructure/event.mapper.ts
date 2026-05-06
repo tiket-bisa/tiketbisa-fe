@@ -35,11 +35,16 @@ function formatEventDate(dateStr: string): string {
   }
 }
 
-export function mapEventDtoToEntity(dto: EventDto, index: number): Event {
+export function mapEventDtoToEntity(
+  dto: EventDto,
+  index: number,
+  brandName?: string,
+): Event {
   return {
     id: dto.id,
     name: dto.name,
-    brand: BRAND_NAME_MAP[dto.brandId] || dto.brandId || "Unknown Brand",
+    brandId: dto.brandId,
+    brand: brandName || BRAND_NAME_MAP[dto.brandId] || dto.brandId || "Unknown Brand",
     description: dto.description || "",
     imageUrl: dto.bannerPath || placeholderImages[index % placeholderImages.length],
     date: formatEventDate(dto.startDate),

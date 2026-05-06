@@ -20,6 +20,7 @@ export function EventCard({ event, className = "" }: EventCardProps) {
       <Card
         hoverable
         padding="none"
+        data-theme="light"
         className={`flex flex-col h-full ${className}`}
       >
         <div className="h-auto overflow-hidden aspect-[1062/427] w-full rounded-t-xl bg-slate-200">

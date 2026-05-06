@@ -32,10 +32,10 @@ const footerColumns = [
     ],
   },
   {
-    title: "Partner",
+    title: "Internal",
     links: [
-      { label: "Daftarkan Event", to: "/internal-tb/partner/login" },
-      { label: "Partner Login", to: "/internal-tb/partner/login" },
+      { label: "Daftarkan Event", to: "/internal-tb" },
+      { label: "Internal Login", to: "/internal-tb" },
     ],
   },
 ] as const;

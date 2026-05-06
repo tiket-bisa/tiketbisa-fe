@@ -10,7 +10,7 @@ export interface OrderSummaryCardProps {
 export function OrderSummaryCard({ summary, className = "" }: OrderSummaryCardProps) {
   return (
     <Card className={`p-6 md:p-8 bg-white border-gray-100 shadow-sm rounded-3xl ${className}`}>
-      <h2 className="text-xl font-black text-gray-900 mb-8 flex items-center gap-2">
+      <h2 className="text-xl font-black text-text-primary mb-8 flex items-center gap-2">
         <span className="w-1.5 h-6 bg-brand-primary rounded-full" />
         Rincian Pesanan
       </h2>
@@ -19,12 +19,12 @@ export function OrderSummaryCard({ summary, className = "" }: OrderSummaryCardPr
         {summary.items.map((item) => (
           <div key={item.ticketId} className="flex justify-between items-start gap-4">
             <div className="space-y-1">
-              <p className="text-sm font-bold text-gray-900 leading-tight">{item.ticketName}</p>
-              <p className="text-xs text-gray-500 font-medium">
+              <p className="text-sm font-bold text-text-primary leading-tight">{item.ticketName}</p>
+              <p className="text-xs text-text-secondary font-medium">
                 {item.quantity}x {formatIDR(item.price)}
               </p>
             </div>
-            <p className="text-sm font-extrabold text-gray-900 whitespace-nowrap">
+            <p className="text-sm font-extrabold text-text-primary whitespace-nowrap">
               {formatIDR(item.price * item.quantity)}
             </p>
           </div>
@@ -33,26 +33,26 @@ export function OrderSummaryCard({ summary, className = "" }: OrderSummaryCardPr
 
       <div className="pt-6 border-t border-gray-50 space-y-4">
         <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-gray-500">Subtotal</span>
-          <span className="text-sm font-bold text-gray-900">{formatIDR(summary.subtotal)}</span>
+          <span className="text-sm font-medium text-text-secondary">Subtotal</span>
+          <span className="text-sm font-bold text-text-primary">{formatIDR(summary.subtotal)}</span>
         </div>
         
         {summary.tax > 0 && (
           <div className="flex justify-between items-center">
-            <span className="text-sm font-medium text-gray-500">Pajak Daerah</span>
-            <span className="text-sm font-bold text-gray-900">{formatIDR(summary.tax)}</span>
+            <span className="text-sm font-medium text-text-secondary">Pajak Daerah</span>
+            <span className="text-sm font-bold text-text-primary">{formatIDR(summary.tax)}</span>
           </div>
         )}
 
         {summary.serviceFee > 0 && (
           <div className="flex justify-between items-center">
-            <span className="text-sm font-medium text-gray-500">Biaya Layanan</span>
-            <span className="text-sm font-bold text-gray-900">{formatIDR(summary.serviceFee)}</span>
+            <span className="text-sm font-medium text-text-secondary">Biaya Layanan</span>
+            <span className="text-sm font-bold text-text-primary">{formatIDR(summary.serviceFee)}</span>
           </div>
         )}
 
         <div className="flex justify-between items-center pt-5 border-t-2 border-dashed border-gray-100 mt-2">
-          <span className="text-sm font-bold text-gray-900">Total Bayar</span>
+          <span className="text-sm font-bold text-text-primary">Total Bayar</span>
           <span className="text-xl font-black text-brand-primary">
             {formatIDR(summary.totalPrice)}
           </span>

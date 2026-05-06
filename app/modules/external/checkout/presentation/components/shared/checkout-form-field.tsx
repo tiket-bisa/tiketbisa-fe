@@ -22,18 +22,18 @@ export function CheckoutFormField({
   onChange, 
   className = "" 
 }: CheckoutFormFieldProps) {
-  const inputBaseStyles = "h-12 rounded-xl border-gray-200 !text-black font-bold placeholder:text-gray-400 focus:ring-4 focus:ring-brand-primary/10 transition-all duration-200 hover:!bg-gray-100 focus:!bg-gray-100 focus:border-brand-primary";
+  const inputBaseStyles = "h-12 rounded-xl border-gray-200 text-text-primary font-bold placeholder:text-text-tertiary focus:ring-4 focus:ring-brand-primary/10 transition-all duration-200 hover:bg-surface-hover focus:bg-surface-hover focus:border-brand-primary";
   
   const bgClass = useMemo(() => 
-    (value && value.length > 0 ? "!bg-gray-100" : "!bg-white"), 
+    (value && value.length > 0 ? "bg-surface-hover" : "bg-surface-primary"), 
     [value]
   );
 
-  const errorClass = error ? "border-red-500 !bg-red-50/30" : "";
+  const errorClass = error ? "border-destructive bg-destructive-bg" : "";
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <label htmlFor={id} className="text-sm font-bold text-gray-500 ml-1">
+      <label htmlFor={id} className="text-sm font-bold text-text-secondary ml-1">
         {label}
       </label>
       <Input
@@ -45,7 +45,7 @@ export function CheckoutFormField({
         className={`${inputBaseStyles} ${bgClass} ${errorClass}`}
       />
       {error && (
-        <p className="text-xs font-bold text-red-500 ml-1 mt-1">
+        <p className="text-xs font-bold text-destructive-text ml-1 mt-1">
           {error}
         </p>
       )}

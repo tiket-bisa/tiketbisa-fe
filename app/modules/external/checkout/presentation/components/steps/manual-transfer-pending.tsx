@@ -13,19 +13,19 @@ export function ManualTransferPending({ event, orderId, onAction }: ManualTransf
       <Card className="p-8 sm:p-10 rounded-3xl border-gray-100 shadow-sm bg-white">
         <div className="text-center space-y-6">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-amber-100">
-            <svg className="w-10 h-10 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <svg className="w-10 h-10 text-warning-text" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-2xl sm:text-3xl font-black text-gray-900">Pembayaran sedang diverifikasi</h1>
-            <p className="text-sm sm:text-base text-gray-600 leading-7">
+            <h1 className="text-2xl sm:text-3xl font-black text-text-primary">Pembayaran sedang diverifikasi</h1>
+            <p className="text-sm sm:text-base text-text-secondary leading-7">
               Bukti transfer kamu sudah kami terima. Mohon tunggu, status pembayaran dan e-ticket akan kami kirim lewat email setelah proses verifikasi selesai.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 text-left text-sm text-gray-700 space-y-2">
+          <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 text-left text-sm text-text-secondary space-y-2">
             <p><span className="font-semibold">Event:</span> {event.name}</p>
             {orderId && <p><span className="font-semibold">Order ID:</span> {orderId}</p>}
             <p><span className="font-semibold">Status:</span> Menunggu approval manual transfer</p>

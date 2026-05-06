@@ -112,7 +112,7 @@ export function BannerCarousel({
             onClick={prev}
             disabled={isAnimating}
             aria-label="Previous slide"
-            className="bg-white/95 p-4 rounded-full shadow-2xl pointer-events-auto transform transition-all hover:scale-110 active:scale-90 disabled:opacity-50 border border-gray-100 text-gray-800 hover:bg-white flex items-center justify-center group/btn"
+            className="bg-white/95 p-4 rounded-full shadow-2xl pointer-events-auto transform transition-all hover:scale-110 active:scale-90 disabled:opacity-50 border border-gray-100 text-text-primary hover:bg-white flex items-center justify-center group/btn"
           >
             <svg className="w-6 h-6 transition-transform group-hover/btn:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
@@ -123,7 +123,7 @@ export function BannerCarousel({
             onClick={next}
             disabled={isAnimating}
             aria-label="Next slide"
-            className="bg-white/95 p-4 rounded-full shadow-2xl pointer-events-auto transform transition-all hover:scale-110 active:scale-90 disabled:opacity-50 border border-gray-100 text-gray-800 hover:bg-white flex items-center justify-center group/btn"
+            className="bg-white/95 p-4 rounded-full shadow-2xl pointer-events-auto transform transition-all hover:scale-110 active:scale-90 disabled:opacity-50 border border-gray-100 text-text-primary hover:bg-white flex items-center justify-center group/btn"
           >
             <svg className="w-6 h-6 transition-transform group-hover/btn:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />

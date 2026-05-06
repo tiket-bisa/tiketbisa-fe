@@ -53,7 +53,7 @@ describe("orderApi", () => {
     const result = await orderApi.acquireLock(mockEventId, mockSummary);
 
     expect(mockApiFetch).toHaveBeenCalledWith(
-      "/transaction",
+      "/transaction/lock",
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({
@@ -77,10 +77,14 @@ describe("orderApi", () => {
     );
 
     expect(mockApiFetch).toHaveBeenCalledWith(
-      "/transaction/temp/lock-001",
+      "/transaction/temp",
       expect.objectContaining({
         method: "POST",
+        headers: {
+          "x-tb-identifier": "lock-001",
+        },
         body: JSON.stringify({
+          userId: "lock-001",
           eventId: mockEventId,
           customerName: "John Doe",
           customerEmail: "john@example.com",

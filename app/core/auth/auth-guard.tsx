@@ -18,7 +18,7 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
   }
 
   if (!user) {
-    const loginPath = requiredRole === "admin" ? "/internal-tb/admin/login" : "/internal-tb/partner/login";
+    const loginPath = "/internal-tb";
     return <Navigate to={loginPath} replace />;
   }
 

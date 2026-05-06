@@ -36,7 +36,7 @@ export function CheckoutStickyBar({
       <div className="bg-white border-t border-gray-100 shadow-[0_-10px_40px_rgba(0,0,0,0.08)] px-5 py-4 pb-8 flex items-center justify-between gap-4">
         {/* Left: Total Price */}
         <div className="flex flex-col">
-          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">
+          <span className="text-[10px] font-black text-text-tertiary uppercase tracking-widest leading-none">
             Total Bayar
           </span>
           <span className="text-xl font-black text-brand-primary mt-1">
@@ -50,7 +50,7 @@ export function CheckoutStickyBar({
             onClick={onBack}
             className="p-4 border-2 border-gray-100 rounded-2xl bg-gray-50/50 hover:bg-gray-100 transition-all active:scale-95"
           >
-            <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="h-5 w-5 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
             </svg>
           </button>

@@ -108,14 +108,14 @@ export default function RevenueAnalyticsPage() {
             <tbody>
               {revenueByEvent.map((item) => (
                 <tr
-                  key={item.event_name}
+                  key={item.eventName}
                   className="border-b border-border-subtle hover:bg-surface-hover transition-colors"
                 >
                   <td className="px-4 py-3 text-text-primary">
-                    {item.event_name}
+                    {item.eventName}
                   </td>
                   <td className="px-4 py-3 text-text-secondary text-right">
-                    <Badge variant="brand">{item.tickets_sold}</Badge>
+                    <Badge variant="brand">{item.ticketsSold}</Badge>
                   </td>
                   <td className="px-4 py-3 text-text-primary text-right font-medium">
                     {formatIDR(item.revenue)}
@@ -129,7 +129,7 @@ export default function RevenueAnalyticsPage() {
                   Total
                 </td>
                 <td className="px-4 py-3 text-text-primary text-right font-semibold">
-                  {revenueByEvent.reduce((s, i) => s + i.tickets_sold, 0)}
+                  {revenueByEvent.reduce((s, i) => s + i.ticketsSold, 0)}
                 </td>
                 <td className="px-4 py-3 text-text-primary text-right font-semibold">
                   {formatIDR(

@@ -1,4 +1,4 @@
-import { useNavigate, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 import { StickyPriceBar } from "~/shared/components";
 import { useTicketSelection } from "~/shared/hooks/use-ticket-selection";
 import { eventApi } from "../infrastructure/event.api";
@@ -32,7 +32,6 @@ export function HydrateFallback() {
 
 export default function EventDetailPage({ loaderData }: Route.ComponentProps) {
   const { event } = loaderData;
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   
   // Logic & State Hooks
@@ -60,7 +59,7 @@ export default function EventDetailPage({ loaderData }: Route.ComponentProps) {
       }
     });
 
-    navigate(`/checkout/${event.id}?${params.toString()}`);
+    window.location.assign(`/checkout/${event.id}?${params.toString()}`);
   };
 
   return (

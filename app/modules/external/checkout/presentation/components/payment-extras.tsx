@@ -33,7 +33,7 @@ export function PaymentConsent({
   return (
     <div className="mb-10 space-y-4">
       {!isMethodSelected && (
-        <p className="text-[10px] font-bold text-gray-400 text-center uppercase tracking-widest mb-4">
+        <p className="text-[10px] font-bold text-text-tertiary text-center uppercase tracking-widest mb-4">
           Silakan pilih metode pembayaran terlebih dahulu
         </p>
       )}
@@ -46,11 +46,11 @@ export function PaymentConsent({
             onChange={(e) => onToggleTerms?.(e.target.checked)}
             className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border-2 border-gray-200 checked:border-brand-primary checked:bg-brand-primary transition-all"
           />
-          <svg className="absolute h-3.5 w-3.5 text-white opacity-0 peer-checked:opacity-100 left-0.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
+          <svg className="absolute h-3.5 w-3.5 opacity-0 peer-checked:opacity-100 left-0.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <span className="text-xs font-bold text-gray-600 leading-tight select-none">
+        <span className="text-xs font-bold text-text-secondary leading-tight select-none">
           Saya menyetujui <Link to="/terms" className="text-brand-primary hover:underline">Syarat & Ketentuan</Link> yang berlaku di Artatix
         </span>
       </label>
@@ -63,11 +63,11 @@ export function PaymentConsent({
             onChange={(e) => onTogglePrivacy?.(e.target.checked)}
             className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border-2 border-gray-200 checked:border-brand-primary checked:bg-brand-primary transition-all"
           />
-          <svg className="absolute h-3.5 w-3.5 text-white opacity-0 peer-checked:opacity-100 left-0.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
+          <svg className="absolute h-3.5 w-3.5 opacity-0 peer-checked:opacity-100 left-0.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <span className="text-xs font-bold text-gray-600 leading-tight select-none">
+        <span className="text-xs font-bold text-text-secondary leading-tight select-none">
           Saya menyetujui <Link to="/privacy" className="text-brand-primary hover:underline">Kebijakan Privasi & Pemrosesan Data</Link> yang berlaku di Artatix
         </span>
       </label>
