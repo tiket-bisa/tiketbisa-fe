@@ -99,19 +99,44 @@ export default function AdminTransactionDetailsPage() {
       }
 
       const file = response.data;
+
+      if (file.signedUrl) {
+        if (download) {
+          const anchor = document.createElement("a");
+          anchor.href = file.signedUrl;
+          anchor.download = file.fileName || `payment-proof-${id}`;
+          anchor.target = "_blank";
+          document.body.appendChild(anchor);
+          anchor.click();
+          anchor.remove();
+        } else {
+          const anchor = document.createElement("a");
+          anchor.href = file.signedUrl;
+          anchor.target = "_blank";
+          document.body.appendChild(anchor);
+          anchor.click();
+          anchor.remove();
+        }
+        return;
+      }
+
+      if (!file.base64Content) {
+        throw new Error("Bukti transfer tidak tersedia");
+      }
+
       const blob = base64ToBlob(file.base64Content, file.mimeType || "application/octet-stream");
       const url = URL.createObjectURL(blob);
 
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
       if (download) {
-        const anchor = document.createElement("a");
-        anchor.href = url;
         anchor.download = file.fileName || `payment-proof-${id}`;
-        document.body.appendChild(anchor);
-        anchor.click();
-        anchor.remove();
-      } else {
-        window.open(url, "_blank", "noopener,noreferrer");
       }
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
 
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (error) {
