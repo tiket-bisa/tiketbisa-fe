@@ -49,6 +49,7 @@ export interface PaymentProofResponse {
     fileName: string;
     mimeType: string;
     base64Content: string;
+    signedUrl?: string;
 }
 
 export interface TransactionListResponse {
