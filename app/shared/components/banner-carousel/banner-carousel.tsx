@@ -1,4 +1,5 @@
 import { useCarousel } from "./hooks/use-carousel";
+import { useState, useEffect } from "react";
 import type { BannerSlide } from "./types";
 
 export interface BannerCarouselProps {
@@ -14,6 +15,15 @@ export function BannerCarousel({
   interval = 5000,
   className = "",
 }: BannerCarouselProps) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   const {
     currentNode,
     window: displaySlides,
@@ -47,8 +57,10 @@ export function BannerCarousel({
     gapOffset = -1;
   }
 
-  // Use translate3d for GPU acceleration
-  const transform = `translate3d(calc(${currentOffset}% + ${gapOffset}rem), 0, 0)`;
+  const mobileActiveIndex = isTransitioning
+    ? (direction === "next" ? 3 : 1)
+    : 2;
+  const transform = isMobile ? undefined : `translate3d(calc(${currentOffset}% + ${gapOffset}rem), 0, 0)`;
 
   return (
     <section
@@ -59,8 +71,7 @@ export function BannerCarousel({
       aria-label="Promotional Banners"
     >
       <div 
-        className="relative w-full overflow-visible" 
-        style={{ paddingLeft: "12rem", paddingRight: "12rem" }}
+        className="relative w-full overflow-visible px-4 md:px-12 lg:px-24" 
       >
         {/* Main Slider Track */}
         <ul 
@@ -73,18 +84,19 @@ export function BannerCarousel({
           }}
           onTransitionEnd={handleTransitionEnd}
         >
-          {displaySlides.map((node, i) => {
+{displaySlides.map((node, i) => {
             const slide = node.value;
-            // Highlight the slide that IS or WILL BE in the center
-            const isActive = (direction === "next" && i === 3) || 
+            const isActive = (direction === "next" && i === 3) ||
                            (direction === "prev" && i === 1) ||
                            (!direction && i === 2);
 
             return (
-              <li 
+              <li
                 key={`${slide.id}-${node.index}-${i}`}
-                className={`flex-none w-full mr-4 rounded-2xl overflow-hidden aspect-[531/160] transition-all duration-500 ease-out ${
-                  isActive ? "opacity-100 scale-100 shadow-xl" : "opacity-40 scale-[0.92] blur-[1px]"
+                className={`flex-none rounded-2xl overflow-hidden transition-all duration-500 ease-out ${
+                  isMobile
+                    ? `w-full ${isActive ? "opacity-100" : "opacity-0 absolute pointer-events-none"}`
+                    : `w-full mr-4 ${isActive ? "opacity-100 scale-100 shadow-xl" : "opacity-40 scale-[0.92] blur-[1px]"}`
                 }`}
                 role="group"
                 aria-roledescription="slide"
@@ -93,11 +105,10 @@ export function BannerCarousel({
                   <img
                     src={slide.imageUrl}
                     alt={slide.alt || "Banner"}
-                    className="w-full h-full object-cover rounded-2xl select-none transition-transform duration-700 group-hover/slide:scale-105"
+                    className="w-full h-auto object-cover rounded-2xl select-none transition-transform duration-700 group-hover/slide:scale-105"
                     draggable={false}
                   />
-                  
-                  {/* Decorative Gradient Overlay */}
+
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-60" />
                 </div>
               </li>
@@ -106,7 +117,7 @@ export function BannerCarousel({
         </ul>
 
         {/* Global Navigation Buttons — Visible only on Hover */}
-        <div className="absolute inset-y-0 left-[8.5rem] right-[8.5rem] flex items-center justify-between pointer-events-none z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <div className="absolute inset-y-0 left-2 right-2 md:left-[8.5rem] md:right-[8.5rem] flex items-center justify-between pointer-events-none z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <button
             type="button"
             onClick={prev}
@@ -134,19 +145,29 @@ export function BannerCarousel({
 
       {slides.length > 1 && (
         <nav className="flex items-center justify-center gap-3 mt-8" aria-label="Carousel Pagination">
-          {slides.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => goTo(i)}
-              disabled={isAnimating}
-              aria-label={`Go to slide ${i + 1}`}
-              aria-current={currentNode?.index === i ? "true" : "false"}
-              className={`transition-all duration-500 h-2.5 rounded-full cursor-pointer disabled:cursor-not-allowed ${
-                currentNode?.index === i ? "w-12 bg-brand-primary" : "w-2.5 bg-gray-300 hover:bg-brand-primary/40"
-              }`}
-            />
-          ))}
+          {slides.map((_, i) => {
+            let activeDotIndex = currentNode?.index ?? 0;
+            if (isTransitioning) {
+              activeDotIndex = direction === "next" ? activeDotIndex + 1 : direction === "prev" ? activeDotIndex - 1 : activeDotIndex;
+              if (activeDotIndex < 0) activeDotIndex = slides.length - 1;
+              if (activeDotIndex >= slides.length) activeDotIndex = 0;
+            }
+            const isActiveDot = activeDotIndex === i;
+
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => goTo(i)}
+                disabled={isAnimating}
+                aria-label={`Go to slide ${i + 1}`}
+                aria-current={isActiveDot ? "true" : "false"}
+                className={`h-2.5 rounded-full cursor-pointer disabled:cursor-not-allowed ${
+                  isMobile ? "transition-none" : "transition-all duration-500"
+                } ${isActiveDot ? "w-12 bg-brand-primary" : "w-2.5 bg-gray-300 hover:bg-brand-primary/40"}`}
+              />
+            );
+          })}
         </nav>
       )}
     </section>
