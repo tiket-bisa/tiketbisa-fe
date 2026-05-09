@@ -48,7 +48,7 @@ export interface TicketScanningSummary {
 
 export const analyticsApi = {
   getDashboardStats: async (): Promise<DashboardStats> => {
-    const res = await internalHttpClient.get<DashboardStats>("/analytics/dashboard-stats");
+    const res = await internalHttpClient.get<DashboardStats>("/analytics/dashboard/stats");
     if (!res.success || !res.data) throw new Error(res.error ?? "Failed to fetch dashboard stats");
     return res.data;
   },
