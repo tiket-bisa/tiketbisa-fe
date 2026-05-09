@@ -102,13 +102,16 @@ export default function AdminTransactionDetailsPage() {
 
       if (file.signedUrl) {
         if (download) {
-          // For signed URLs, remove target="_blank" so download attribute works
+          const res = await fetch(file.signedUrl);
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
           const anchor = document.createElement("a");
-          anchor.href = file.signedUrl;
+          anchor.href = url;
           anchor.download = file.fileName || `payment-proof-${id}`;
           document.body.appendChild(anchor);
           anchor.click();
           anchor.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 60_000);
         } else {
           const anchor = document.createElement("a");
           anchor.href = file.signedUrl;
