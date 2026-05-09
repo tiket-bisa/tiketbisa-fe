@@ -102,7 +102,20 @@ export default function AdminTransactionDetailsPage() {
 
       if (file.signedUrl) {
         if (download) {
-          window.location.href = `/internal-tb/transaction/detail/${id}/payment-proof/download`;
+          const response = await transactionApi.downloadPaymentProof(id);
+          if (!response.success || !response.data) {
+            throw new Error(response.error ?? "Gagal download bukti transfer");
+          }
+          
+          const blob = new Blob([response.data], { type: response.data.mimeType || "application/octet-stream" });
+          const url = URL.createObjectURL(blob);
+          const anchor = document.createElement("a");
+          anchor.href = url;
+          anchor.download = response.data.fileName || `payment-proof-${id}`;
+          document.body.appendChild(anchor);
+          anchor.click();
+          anchor.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 60_000);
         } else {
           const anchor = document.createElement("a");
           anchor.href = file.signedUrl;
