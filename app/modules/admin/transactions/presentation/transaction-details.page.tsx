@@ -102,7 +102,7 @@ export default function AdminTransactionDetailsPage() {
 
       if (file.signedUrl) {
         if (download) {
-          window.location.href = `/api/internal-tb/transaction/detail/${id}/payment-proof/download`;
+          window.location.href = `/internal-tb/transaction/detail/${id}/payment-proof/download`;
         } else {
           const anchor = document.createElement("a");
           anchor.href = file.signedUrl;
