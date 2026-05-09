@@ -102,10 +102,10 @@ export default function AdminTransactionDetailsPage() {
 
       if (file.signedUrl) {
         if (download) {
+          // For signed URLs, remove target="_blank" so download attribute works
           const anchor = document.createElement("a");
           anchor.href = file.signedUrl;
           anchor.download = file.fileName || `payment-proof-${id}`;
-          anchor.target = "_blank";
           document.body.appendChild(anchor);
           anchor.click();
           anchor.remove();
