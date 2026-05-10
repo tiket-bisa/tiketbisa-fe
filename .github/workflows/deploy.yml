@@ -73,11 +73,28 @@ jobs:
             log "Using deploy directory: $deploy_dir"
             cd "$deploy_dir"
 
+            compose_service=""
+            if docker compose config --services >/tmp/deploy-services.txt 2>/dev/null; then
+              if grep -qx 'tiketbisa-fe' /tmp/deploy-services.txt; then
+                compose_service="tiketbisa-fe"
+              elif grep -qx 'app' /tmp/deploy-services.txt; then
+                compose_service="app"
+              else
+                compose_service="$(head -n 1 /tmp/deploy-services.txt)"
+              fi
+            else
+              fail "Unable to read compose services from $deploy_dir/docker-compose.yml"
+            fi
+
+            [ -n "$compose_service" ] || fail "No compose service names were found"
+
+            log "Using compose service: $compose_service"
+
             log "Pulling latest app image"
-            docker compose pull app
+            docker compose pull "$compose_service"
 
             log "Starting app container"
-            docker compose up -d app
+            docker compose up -d "$compose_service"
 
             log "Pruning unused Docker images"
             docker system prune -f # Clean up old images to save disk space
