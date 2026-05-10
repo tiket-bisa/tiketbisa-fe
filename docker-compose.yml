@@ -1,5 +1,6 @@
 services:
   tiketbisa-fe:
+    image: ${TIKETBISA_FE_IMAGE:-ghcr.io/uciii/tiketbisa-fe/frontend:latest}
     build:
       context: .
       dockerfile: Dockerfile

@@ -11,9 +11,20 @@ permissions:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.image.outputs.image-tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Prepare Docker image tag
+        id: image
+        run: |
+          OWNER_LOWER="$(printf '%s' "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
+          REPO_LOWER="$(printf '%s' "${GITHUB_REPOSITORY#*/}" | tr '[:upper:]' '[:lower:]')"
+          IMAGE_TAG="ghcr.io/${OWNER_LOWER}/${REPO_LOWER}/frontend:latest"
+
+          printf 'image-tag=%s\n' "$IMAGE_TAG" >> "$GITHUB_OUTPUT"
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -24,17 +35,13 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
-          # Use lowercase for the owner and repo
-          OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          REPO_LOWER=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
-          IMAGE_TAG="ghcr.io/${OWNER_LOWER}/${REPO_LOWER}/frontend:latest"
-          
           docker build \
             --build-arg VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }} \
+            --build-arg VITE_API_INTERNAL_BASE_URL=${{ secrets.VITE_API_INTERNAL_BASE_URL }} \
             --build-arg VITE_GOOGLE_AUTH_CLIENT_ID=${{ secrets.VITE_GOOGLE_AUTH_CLIENT_ID }} \
-            -t $IMAGE_TAG \
+            -t ${{ steps.image.outputs.image-tag }} \
             -f Dockerfile .
-          docker push $IMAGE_TAG
+          docker push ${{ steps.image.outputs.image-tag }}
           
   deploy:
     needs: build-and-push # Wait for the build to finish first
@@ -42,10 +49,15 @@ jobs:
     steps:
       - name: Executing remote ssh commands using password
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USERNAME: ${{ github.actor }}
+          IMAGE_TAG: ${{ needs.build-and-push.outputs.image-tag }}
         with:
           host: ${{ secrets.VM_IP }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }} # The private key we generated earlier
+          envs: GHCR_TOKEN,GHCR_USERNAME,IMAGE_TAG
           script: |
             set -Eeuo pipefail
 
@@ -87,14 +99,28 @@ jobs:
             fi
 
             [ -n "$compose_service" ] || fail "No compose service names were found"
+            [ -n "${IMAGE_TAG:-}" ] || fail "IMAGE_TAG was not provided"
+            [ -n "${GHCR_USERNAME:-}" ] || fail "GHCR_USERNAME was not provided"
+            [ -n "${GHCR_TOKEN:-}" ] || fail "GHCR_TOKEN was not provided"
 
             log "Using compose service: $compose_service"
+            log "Using image: $IMAGE_TAG"
+
+            override_file="/tmp/tiketbisa-fe-deploy-compose.yml"
+            {
+              printf 'services:\n'
+              printf '  %s:\n' "$compose_service"
+              printf '    image: %s\n' "$IMAGE_TAG"
+            } > "$override_file"
+
+            log "Logging in to GitHub Container Registry"
+            printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null
 
             log "Pulling latest app image"
-            docker compose pull "$compose_service"
+            docker compose -f docker-compose.yml -f "$override_file" pull "$compose_service"
 
             log "Starting app container"
-            docker compose up -d "$compose_service"
+            docker compose -f docker-compose.yml -f "$override_file" up -d --no-build "$compose_service"
 
             log "Pruning unused Docker images"
             docker system prune -f # Clean up old images to save disk space
