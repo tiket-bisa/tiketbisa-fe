@@ -1,189 +1,151 @@
-import type { PaginatedApiResponse } from "~/core/api";
+import { apiFetch } from "~/core/api";
+import type { PaginatedApiResponse, ApiResponse } from "~/core/api";
 import type { Event } from "../domain/event.entity";
 import type { EventRepository } from "../domain/event.repository";
 import type { EventFilterParams } from "./event-filter.params";
 import type { EventDto } from "./event.dto";
 import { mapEventDtoToEntity } from "./event.mapper";
 
-/* ─── Dummy Event DTOs ─── */
-const DUMMY_EVENTS: EventDto[] = [
-  {
-    id: "evt-001",
-    name: "Persija vs Persib — Liga 1 2026",
-    brand: "Adhyaksa FC",
-    description: "Pertandingan seru Liga 1 antara Persija dan Persib",
-  },
-  {
-    id: "evt-002",
-    name: "Konser Tulus — Manusia World Tour",
-    brand: "Musicverse",
-    description: "Konser Tulus dalam rangka tur dunianya",
-  },
-  {
-    id: "evt-003",
-    name: "Jakarta Marathon 2026",
-    brand: "RunID",
-    description: "Lomba lari marathon tahunan di Jakarta",
-  },
-  {
-    id: "evt-004",
-    name: "Arema FC vs Persebaya — Derby Jatim",
-    brand: "Adhyaksa FC",
-    description: "Derby Jawa Timur yang selalu ditunggu",
-  },
-  {
-    id: "evt-005",
-    name: "Festival Jazz Gunung Bromo",
-    brand: "Musicverse",
-    description: "Festival jazz di lereng Gunung Bromo",
-  },
-  {
-    id: "evt-006",
-    name: "Bali Ultra Trail Run 50K",
-    brand: "RunID",
-    description: "Ultra trail run melewati persawahan dan hutan Bali",
-  },
-  {
-    id: "evt-007",
-    name: "PSM Makassar vs Bali United",
-    brand: "Adhyaksa FC",
-    description: "Pertandingan Liga 1 seri kedua",
-  },
-  {
-    id: "evt-008",
-    name: "Konser Isyana Sarasvati — Lexicon",
-    brand: "Musicverse",
-    description: "Konser album terbaru Isyana Sarasvati",
-  },
-  {
-    id: "evt-009",
-    name: "Surabaya Night Run 10K",
-    brand: "RunID",
-    description: "Lomba lari malam di pusat kota Surabaya",
-  },
-  {
-    id: "evt-010",
-    name: "PSIS Semarang vs Persija",
-    brand: "Adhyaksa FC",
-    description: "Pertandingan Liga 1 pekan ke-12",
-  },
-  {
-    id: "evt-011",
-    name: "Yogyakarta Gamelan Festival",
-    brand: "Musicverse",
-    description: "Festival musik gamelan kontemporer di Yogyakarta",
-  },
-  {
-    id: "evt-012",
-    name: "Bandung Heritage Run 5K",
-    brand: "RunID",
-    description: "Fun run melewati bangunan bersejarah Bandung",
-  },
-];
-
-/* ─── Helper: apply client-side filters to dummy data ─── */
-function applyFilters(events: Event[], params: EventFilterParams): Event[] {
-  let filtered = [...events];
-
-  if (params.search) {
-    const q = params.search.toLowerCase();
-    filtered = filtered.filter(
-      (e) =>
-        e.name.toLowerCase().includes(q) ||
-        e.brand.toLowerCase().includes(q) ||
-        e.description.toLowerCase().includes(q),
-    );
-  }
-
-  if (params.brand_name) {
-    filtered = filtered.filter(
-      (e) => e.brand.toLowerCase() === params.brand_name!.toLowerCase(),
-    );
-  }
-
-  if (params.brand_slug) {
-    filtered = filtered.filter((e) => {
-      const generatedSlug = e.brand.toLowerCase().replace(/\s+/g, "-");
-      return generatedSlug === params.brand_slug;
-    });
-  }
-
-  if (params.city) {
-    filtered = filtered.filter(
-      (e) => e.location.toLowerCase() === params.city!.toLowerCase(),
-    );
-  }
-
-  // Sort
-  if (params.order_by) {
-    switch (params.order_by) {
-      case "name_asc":
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
-        break;
-      case "name_desc":
-        filtered.sort((a, b) => b.name.localeCompare(a.name));
-        break;
-      case "date_asc":
-        // Already in order by date index
-        break;
-      case "date_desc":
-        filtered.reverse();
-        break;
-    }
-  }
-
-  return filtered;
+interface EventListResponseData {
+  limit: number;
+  offset: number;
+  totalCount: number;
+  events: EventDto[];
 }
 
-/* ─── Dummy API Implementation ─── */
+interface TicketCategoryListItem {
+  price: number | string;
+}
+
+interface TicketCategoryDto {
+  id: string;
+  name: string;
+  price: number | string;
+  totalTicket: number;
+  issuedTicket: number;
+}
+
+interface BrandListResponseData {
+  brands: BrandDto[];
+}
+
+interface BrandDto {
+  id: string;
+  name: string;
+}
+
+async function getBrandNameMap(): Promise<Map<string, string>> {
+  try {
+    const response = await apiFetch<ApiResponse<BrandListResponseData>>(
+      "/brand?limit=1000&offset=0",
+    );
+
+    return new Map(
+      (response.data?.brands || [])
+        .filter((brand) => brand.id && brand.name)
+        .map((brand) => [brand.id, brand.name]),
+    );
+  } catch {
+    return new Map();
+  }
+}
+
+async function getBrandNameById(brandId: string | undefined): Promise<string | undefined> {
+  if (!brandId) return undefined;
+
+  try {
+    const response = await apiFetch<ApiResponse<BrandDto>>(`/brand/${brandId}`);
+    return response.data?.name || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export const eventApi: EventRepository = {
   async getEvents(
     params: EventFilterParams,
   ): Promise<PaginatedApiResponse<Event>> {
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    const queryParams = new URLSearchParams();
+    if (params.search) queryParams.append("name", params.search);
+    if (params.city) queryParams.append("city", params.city);
+    queryParams.append("limit", params.limit.toString());
+    queryParams.append("offset", params.offset.toString());
+    queryParams.append("isPublished", "true");
 
-    // Map DTOs → entities
-    const allEvents = DUMMY_EVENTS.map(mapEventDtoToEntity);
+    const [response, brandNameMap] = await Promise.all([
+      apiFetch<ApiResponse<EventListResponseData>>(
+        `/event?${queryParams.toString()}`,
+      ),
+      getBrandNameMap(),
+    ]);
 
-    // Apply client-side filters (will be replaced by server-side)
-    const filtered = applyFilters(allEvents, params);
+    const mappedEvents = await Promise.all(
+      response.data.events.map(async (dto, idx) => {
+        const mapped = mapEventDtoToEntity(dto, idx, brandNameMap.get(dto.brandId));
 
-    // Paginate
-    const start = params.offset;
-    const end = start + params.limit;
-    const page = filtered.slice(start, end);
+        if (mapped.minPrice !== undefined && mapped.minPrice !== null) {
+          return mapped;
+        }
+
+        try {
+          const ticketResponse = await apiFetch<ApiResponse<TicketCategoryListItem[]>>(
+            `/ticket-category/event/${dto.id}`,
+          );
+
+          const prices = (ticketResponse.data || [])
+            .map((ticket) => Number(ticket.price))
+            .filter((price) => Number.isFinite(price) && price >= 0);
+
+          if (prices.length > 0) {
+            mapped.minPrice = Math.min(...prices);
+          }
+        } catch {
+          // Keep fallback behavior when ticket category fetch fails.
+        }
+
+        return mapped;
+      }),
+    );
 
     return {
-      success: true,
-      error: null,
-      reason: null,
-      status_code: 200,
+      ...response,
       data: {
-        limit: params.limit,
-        offset: params.offset,
-        count: filtered.length,
-        event_list: page,
+        limit: response.data.limit,
+        offset: response.data.offset,
+        count: response.data.totalCount,
+        event_list: mappedEvents,
       },
     };
   },
 
   async getEventById(id: string): Promise<Event | null> {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    const dtoIndex = DUMMY_EVENTS.findIndex((e) => e.id === id);
-    if (dtoIndex === -1) return null;
+    const [eventResponse, ticketsResponse] = await Promise.all([
+      apiFetch<ApiResponse<EventDto>>(`/event/${id}`),
+      apiFetch<ApiResponse<TicketCategoryDto[]>>(`/ticket-category/event/${id}`),
+    ]);
 
-    const baseEvent = mapEventDtoToEntity(DUMMY_EVENTS[dtoIndex], dtoIndex);
+    if (!eventResponse.data) return null;
+
+    const brandName = await getBrandNameById(eventResponse.data.brandId);
+    const baseEvent = mapEventDtoToEntity(eventResponse.data, 0, brandName);
 
     return {
       ...baseEvent,
       time: "19:00 - Selesai",
-      terms: [
-        "Tiket yang sudah dibeli tidak dapat dikembalikan.",
-        "Pengunjung wajib membawa kartu identitas asli.",
-        "Dilarang membawa makanan dan minuman dari luar.",
-        "Penyelenggara berhak menolak pengunjung yang melanggar aturan.",
-      ],
+      terms: eventResponse.data.termAndCondition
+        ? eventResponse.data.termAndCondition.split("\n")
+        : [
+            "Tiket yang sudah dibeli tidak dapat dikembalikan.",
+            "Pengunjung wajib membawa kartu identitas asli.",
+            "Dilarang membawa makanan dan minuman dari luar.",
+            "Penyelenggara berhak menolak pengunjung yang melanggar aturan.",
+          ],
+      tickets: (ticketsResponse.data || []).map((t) => ({
+        id: t.id,
+        name: t.name,
+        price: Number(t.price),
+        available: t.totalTicket > t.issuedTicket,
+      })),
     };
   },
 };

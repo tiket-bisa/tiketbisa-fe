@@ -8,9 +8,9 @@ export interface CheckoutNavbarProps {
 }
 
 const STEPS = [
-  { id: 1, label: "Detail Pesanan" },
+  { id: 1, label: "Data Pesanan" },
   { id: 2, label: "Metode Pembayaran" },
-  { id: 3, label: "Konfirmasi Pesanan" },
+  { id: 3, label: "Konfirmasi Pembayaran" },
   { id: 4, label: "Pembayaran" },
 ] as const;
 
@@ -20,7 +20,7 @@ const STEPS = [
  */
 export function CheckoutNavbar({ currentStep, className = "" }: CheckoutNavbarProps) {
   return (
-    <header className={`sticky top-0 z-50 border-b border-white/5 bg-surface-primary ${className}`}>
+    <header className={`sticky top-0 z-50 border-b border-white/5 bg-surface-primary text-text-primary ${className}`}>
       <nav className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo Section */}
         <div className="flex shrink-0 items-center">
@@ -46,7 +46,7 @@ export function CheckoutNavbar({ currentStep, className = "" }: CheckoutNavbarPr
                     <span
                       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold transition-all duration-300 ${
                         isActive
-                          ? "border-brand-primary bg-brand-primary text-white shadow-[0_0_15px_rgba(109,92,255,0.4)] scale-110"
+                          ? "border-brand-primary bg-brand-primary text-base-white shadow-[0_0_15px_rgba(109,92,255,0.4)] scale-110"
                           : isCompleted
                           ? "border-brand-primary/50 bg-brand-primary/20 text-brand-primary"
                           : "border-white/10 text-text-tertiary bg-white/5"
@@ -62,7 +62,7 @@ export function CheckoutNavbar({ currentStep, className = "" }: CheckoutNavbarPr
                     </span>
                     <span
                       className={`text-sm font-bold whitespace-nowrap transition-colors ${
-                        isActive ? "text-white" : "text-text-tertiary"
+                        isActive ? "text-text-primary" : "text-text-tertiary"
                       }`}
                     >
                       {step.label}
@@ -86,7 +86,7 @@ export function CheckoutNavbar({ currentStep, className = "" }: CheckoutNavbarPr
           <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest">
             Langkah {currentStep} / 4
           </span>
-          <span className="text-sm font-extrabold text-white">
+          <span className="text-sm font-extrabold text-text-primary">
             {STEPS.find((s) => s.id === currentStep)?.label}
           </span>
         </div>

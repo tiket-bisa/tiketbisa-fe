@@ -3,7 +3,7 @@ import type { OrderSummary, OrderItem } from "../../domain/checkout.types";
 import type { Event } from "../../../event/domain/event.entity";
 
 export function useOrderSummary(event: Event, searchParams: URLSearchParams) {
-  return useMemo<OrderSummary>(() => {
+  const summary = useMemo<OrderSummary>(() => {
     const items: OrderItem[] = [];
     let subtotal = 0;
 
@@ -39,4 +39,10 @@ export function useOrderSummary(event: Event, searchParams: URLSearchParams) {
       items,
     };
   }, [event.tickets, searchParams]);
+
+  if (typeof window !== "undefined") {
+    sessionStorage.setItem("tiketbisa_checkout_summary", JSON.stringify(summary));
+  }
+
+  return summary;
 }

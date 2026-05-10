@@ -13,18 +13,23 @@ import { CheckoutNavbar, Footer, type CheckoutStep } from "~/shared/components";
 export default function CheckoutLayout() {
   const [searchParams] = useSearchParams();
   
-  // Determine current step from URL, default to 1 (Detail Pesanan)
-  const stepParam = parseInt(searchParams.get("step") || "1", 10);
-  const currentStep = (stepParam >= 1 && stepParam <= 4 ? stepParam : 1) as CheckoutStep;
+  // Determine current step from URL, default to 1 (Data Pesanan)
+  const stepParam = Number(searchParams.get("step") || "1");
+  const displayStep = (
+    stepParam >= 4 ? 4 : stepParam >= 1 && stepParam <= 3 ? stepParam : 1
+  ) as CheckoutStep;
 
   return (
     <div
       data-trust-mode="true"
       className="flex min-h-screen flex-col bg-white"
     >
-      <CheckoutNavbar currentStep={currentStep} />
+      <CheckoutNavbar currentStep={displayStep} />
       
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+      <main
+        data-theme="light"
+        className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 text-text-primary sm:px-6 lg:px-8"
+      >
         <Outlet />
       </main>
 

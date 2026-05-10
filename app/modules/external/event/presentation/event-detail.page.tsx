@@ -1,4 +1,4 @@
-import { useNavigate, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 import { StickyPriceBar } from "~/shared/components";
 import { useTicketSelection } from "~/shared/hooks/use-ticket-selection";
 import { eventApi } from "../infrastructure/event.api";
@@ -32,7 +32,6 @@ export function HydrateFallback() {
 
 export default function EventDetailPage({ loaderData }: Route.ComponentProps) {
   const { event } = loaderData;
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   
   // Logic & State Hooks
@@ -43,15 +42,24 @@ export default function EventDetailPage({ loaderData }: Route.ComponentProps) {
     setSearchParams(prev => {
       prev.set("tab", val);
       return prev;
-    }, { replace: true });
+    }, { replace: true, preventScrollReset: true });
   };
 
   const handleCheckout = () => {
+    sessionStorage.removeItem("tiketbisa_checkout_deadline");
+    sessionStorage.removeItem("tiketbisa_buyer_info");
+    sessionStorage.removeItem("tiketbisa_payment_selection");
+    sessionStorage.removeItem("tiketbisa_checkout_summary");
+
     const params = new URLSearchParams();
-    Object.entries(quantities).forEach(([id, qty]) => {
-      if (qty > 0) params.append(`t[${id}]`, qty.toString());
+    params.set("step", "1");
+    Object.entries(quantities).forEach(([ticketId, qty]) => {
+      if (qty > 0) {
+        params.set(`t[${ticketId}]`, String(qty));
+      }
     });
-    navigate(`/checkout/${event.id}?${params.toString()}`);
+
+    window.location.assign(`/checkout/${event.id}?${params.toString()}`);
   };
 
   return (

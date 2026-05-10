@@ -15,9 +15,10 @@ import {
   PaymentConsent,
   PaymentInstruction,
   ImportantGuides,
-  PaymentPartners,
-  OrderSuccess
-} from "./components";
+   PaymentPartners,
+   OrderSuccess,
+   ManualTransferPending
+ } from "./components";
 import { useOrderSummary } from "./hooks/use-order-summary";
 import { useCheckoutForm } from "./hooks/use-checkout-form";
 import { useCheckoutSteps } from "./hooks/use-checkout-steps";
@@ -59,18 +60,26 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
     handleExpire,
     paymentSelection,
     selectedPaymentMethod,
+    isManualTransferPending,
+    manualTransferProofFile,
+    setManualTransferProofFile,
     isStep2Valid,
-    setMethodId,
+    handlePaymentMethodSelect,
     setAgreedToTerms,
     setAgreedToPrivacy
-  } = useCheckoutSteps(event, buyerInfo, summary, validate, paymentMethods);
+  } = useCheckoutSteps(event, buyerInfo, summary, validate, paymentMethods, order);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [currentStep]);
 
+  const displayStep = currentStep >= 4 ? 4 : currentStep;
+
   // View switch for special steps
   if (currentStep === 5) {
+    if (isManualTransferPending) {
+      return <ManualTransferPending event={event} orderId={searchParams.get("orderId")} onAction={() => handleNext()} />;
+    }
     return <OrderSuccess event={event} order={completedOrder} onAction={() => handleNext()} />;
   }
 
@@ -108,7 +117,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
               <PaymentMethodSelection
                 methods={paymentMethods}
                 selectedMethodId={paymentSelection.methodId}
-                onSelect={setMethodId}
+                onSelect={handlePaymentMethodSelect}
               />
             </div>
           )}
@@ -128,7 +137,14 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
             <PaymentInstruction
               order={order}
               event={event}
+              fallbackTotalAmount={
+                completedOrder?.totalPrice && completedOrder.totalPrice > 0
+                  ? completedOrder.totalPrice
+                  : summary.totalPrice
+              }
               onAction={() => handleNext()}
+              proofFile={manualTransferProofFile}
+              onProofFileChange={setManualTransferProofFile}
               onBack={handleBack}
               onExpire={handleExpire}
               isLoading={isActionLoading}
@@ -181,13 +197,20 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
       {/* Shared Sticky Bar (Mobile Only) */}
       <CheckoutStickyBar
         summary={summary}
-        currentStep={currentStep}
+        currentStep={displayStep}
         onNext={() => handleNext()}
         onBack={handleBack}
         onExpire={handleExpire}
         isLoading={isActionLoading}
-        canSubmit={currentStep === 2 ? isStep2Valid : true}
+        canSubmit={
+          currentStep === 2
+            ? isStep2Valid
+            : currentStep === 4 && (order?.paymentMethod.id === "manual" || order?.paymentMethod.id === "manual_transfer")
+              ? !!manualTransferProofFile
+              : true
+        }
         orderCategory={order?.paymentMethod.category}
+        orderMethodId={order?.paymentMethod.id}
       />
     </div>
   );

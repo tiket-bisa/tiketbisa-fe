@@ -1,16 +1,50 @@
 import type { ApiResponse } from "./api-response.type";
+import { AUTH_STORAGE_KEY } from "~/core/auth/auth.constants";
+import { toAbsoluteApiUrl } from "./api-url";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
+const INTERNAL_API_PREFIX = "/internal-tb";
+
+interface StoredAuthSession {
+  email?: string;
+  internal_token?: string;
+}
+
+function getStoredAuthSession(): StoredAuthSession | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+  if (!stored) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(stored) as StoredAuthSession;
+  } catch {
+    return null;
+  }
+}
+
+function normalizePath(path: string): string {
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+
+  return path.startsWith("/") ? path : `/${path}`;
+}
 
 async function request<T>(
   method: string,
   path: string,
   body?: unknown,
+  headers: Record<string, string> = {},
 ): Promise<ApiResponse<T>> {
   try {
-    const response = await fetch(`${BASE_URL}${path}`, {
+    const url = toAbsoluteApiUrl(path);
+    const response = await fetch(url, {
       method,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...headers },
       body: body ? JSON.stringify(body) : undefined,
     });
 
@@ -39,4 +73,27 @@ export const httpClient = {
   post: <T>(path: string, body: unknown) => request<T>("POST", path, body),
   put: <T>(path: string, body: unknown) => request<T>("PUT", path, body),
   delete: <T>(path: string) => request<T>("DELETE", path),
+};
+
+function getInternalAuthHeaders(): Record<string, string> {
+  const session = getStoredAuthSession();
+  if (!session?.email || !session.internal_token) {
+    return {};
+  }
+
+  return {
+    "x-tb-identifier": session.email,
+    "x-tb-internal-token": session.internal_token,
+  };
+}
+
+export const internalHttpClient = {
+  get: <T>(path: string) =>
+    request<T>("GET", `${INTERNAL_API_PREFIX}${normalizePath(path)}`, undefined, getInternalAuthHeaders()),
+  post: <T>(path: string, body: unknown) =>
+    request<T>("POST", `${INTERNAL_API_PREFIX}${normalizePath(path)}`, body, getInternalAuthHeaders()),
+  put: <T>(path: string, body: unknown) =>
+    request<T>("PUT", `${INTERNAL_API_PREFIX}${normalizePath(path)}`, body, getInternalAuthHeaders()),
+  delete: <T>(path: string) =>
+    request<T>("DELETE", `${INTERNAL_API_PREFIX}${normalizePath(path)}`, undefined, getInternalAuthHeaders()),
 };

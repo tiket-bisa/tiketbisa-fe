@@ -72,11 +72,9 @@
   --color-divider: #1c1735;
 
   /* Tambahkan animasi custom di sini */
-  @keyframes scroll-left {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
-  }
-  --animate-scroll-left-text: scroll-left 10s linear infinite;
+  --animate-scroll-left-text: scroll-left-text 10s linear infinite;
+  --animate-fade-in-left: fadeInLeft 0.5s ease-in-out;
+  --animate-fade-in-right: fadeInRight 0.5s ease-in-out;
 }
 
 /* 10. Brand Gradient */
@@ -93,6 +91,15 @@ body {
 }
 
 /* Scrolling text animation for long titles */
+@keyframes fadeInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
 @keyframes scroll-left-text {
   0%,
   10% {

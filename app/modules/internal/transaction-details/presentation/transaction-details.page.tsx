@@ -3,7 +3,7 @@ import { Card, Badge } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
 import { useAuth } from "~/core/auth";
 import { useApiQuery } from "~/core/api";
-import { transactionApi } from "~/core/api/services/transaction.api";
+import { transactionApi, mapTransactionDetailApiToFe } from "~/core/api/services/transaction.api";
 // Fallback to mock for IDs not found in API
 import { mockTransactions } from "../../dashboard/infrastructure/transaction.mock";
 
@@ -18,13 +18,12 @@ const STATUS_MAP = {
 export default function TransactionDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-
   // Try to fetch from real API first
   const { data: apiTx, loading } = useApiQuery(
     async () => {
       if (!id) return null;
-      const res = await transactionApi.getStatus(id);
-      if (res.success && res.data) return res.data;
+      const res = await transactionApi.getDetail(id);
+      if (res.success && res.data) return mapTransactionDetailApiToFe(res.data);
       return null;
     },
     [id],
@@ -32,13 +31,13 @@ export default function TransactionDetailsPage() {
 
   // Fallback to mock data
   const tx = apiTx
-    ? (apiTx as Record<string, unknown>)
+    ? (apiTx as unknown as Record<string, unknown>)
     : mockTransactions.find((t) => t.id === id && t.brand_slug === user?.brand_slug);
 
   if (loading) {
     return (
       <div className="space-y-4">
-        <Link to="/internal/partner" className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1">
+        <Link to="/internal-tb/partner" className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1">
           <span className="material-symbols-outlined text-sm">arrow_back</span>
           Kembali ke Beranda
         </Link>
@@ -52,7 +51,10 @@ export default function TransactionDetailsPage() {
   if (!tx) {
     return (
       <div className="space-y-4">
-        <Link to="/internal/partner" className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1">
+        <Link
+          to="/internal-tb/partner"
+          className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1"
+        >
           <span className="material-symbols-outlined text-sm">arrow_back</span>
           Kembali ke Beranda
         </Link>
@@ -83,7 +85,11 @@ export default function TransactionDetailsPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/internal/partner" className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1">
+      {/* Back link */}
+      <Link
+        to="/internal-tb/partner"
+        className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1"
+      >
         <span className="material-symbols-outlined text-sm">arrow_back</span>
         Kembali ke Beranda
       </Link>

@@ -15,9 +15,7 @@ interface BrandListResponseData {
 export const brandApi = {
   getBrands: async (params: BrandFilterParams): Promise<PaginatedApiResponse<Brand>> => {
     const queryParams = new URLSearchParams();
-    
-    // We map category and location to 'name' search for now 
-    // since the backend GET /brand only supports name filtering.
+
     if (params.category) queryParams.append("name", params.category);
     else if (params.location) queryParams.append("name", params.location);
 
@@ -26,7 +24,7 @@ export const brandApi = {
     if (params.order_by) queryParams.append("orderBy", params.order_by);
 
     const response = await apiFetch<ApiResponse<BrandListResponseData>>(
-      `/brand?${queryParams.toString()}`
+      `/brand?${queryParams.toString()}`,
     );
 
     return {
@@ -41,7 +39,6 @@ export const brandApi = {
   },
 
   getBrandBySlug: async (slug: string): Promise<Brand | null> => {
-    // The slug is treated as the ID since that's what our mapper output
     try {
       const response = await apiFetch<ApiResponse<BrandDto>>(`/brand/${slug}`);
       if (!response.data) return null;
@@ -50,5 +47,5 @@ export const brandApi = {
       console.error("Failed to fetch brand by slug/id", e);
       return null;
     }
-  }
+  },
 };

@@ -26,7 +26,7 @@ export function OrderConfirmation({
         <div className="p-5 md:p-10 space-y-8 md:space-y-12">
           {/* Section 1: Informasi Pembeli */}
           <section className="space-y-6">
-            <h3 className="text-lg md:text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
+            <h3 className="text-lg md:text-xl font-black text-text-primary flex items-center gap-3 tracking-tight">
               <span className="w-1.5 h-5 md:h-6 bg-brand-primary rounded-full" />
               Informasi Pembeli
             </h3>
@@ -40,7 +40,7 @@ export function OrderConfirmation({
 
           {/* Section 2: Detail Tiket & Ringkasan Biaya (Combined) */}
           <section className="space-y-6">
-            <h3 className="text-lg md:text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
+            <h3 className="text-lg md:text-xl font-black text-text-primary flex items-center gap-3 tracking-tight">
               <span className="w-1.5 h-5 md:h-6 bg-brand-primary rounded-full" />
               Detail Tiket & Ringkasan Biaya
             </h3>
@@ -49,10 +49,10 @@ export function OrderConfirmation({
                 {summary.items.map((item) => (
                   <div key={item.ticketId} className="flex justify-between items-center">
                     <div className="space-y-1">
-                      <p className="text-base md:text-lg font-black text-gray-900">{item.ticketName}</p>
-                      <p className="text-xs md:text-sm text-gray-500 font-bold">{item.quantity}x {formatIDR(item.price)}</p>
+                      <p className="text-base md:text-lg font-black text-text-primary">{item.ticketName}</p>
+                      <p className="text-xs md:text-sm text-text-secondary font-bold">{item.quantity}x {formatIDR(item.price)}</p>
                     </div>
-                    <p className="text-base md:text-lg font-black text-gray-900">{formatIDR(item.price * item.quantity)}</p>
+                    <p className="text-base md:text-lg font-black text-text-primary">{formatIDR(item.price * item.quantity)}</p>
                   </div>
                 ))}
               </div>
@@ -63,7 +63,7 @@ export function OrderConfirmation({
                 {summary.serviceFee > 0 && <SummaryRow label="Biaya Layanan" value={formatIDR(summary.serviceFee)} />}
                 {summary.adminFee > 0 && <SummaryRow label="Biaya Admin" value={formatIDR(summary.adminFee)} />}
                 <div className="pt-6 border-t-2 border-dashed border-gray-200 mt-2 flex justify-between items-center">
-                  <span className="font-black text-gray-900 text-lg md:text-xl">Total Bayar</span>
+                  <span className="font-black text-text-primary text-lg md:text-xl">Total Bayar</span>
                   <span className="font-black text-brand-primary text-2xl md:text-3xl">{formatIDR(summary.totalPrice)}</span>
                 </div>
               </div>
@@ -72,7 +72,7 @@ export function OrderConfirmation({
 
           {/* Section 3: Metode Pembayaran */}
           <section className="space-y-6">
-            <h3 className="text-lg md:text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
+            <h3 className="text-lg md:text-xl font-black text-text-primary flex items-center gap-3 tracking-tight">
               <span className="w-1.5 h-5 md:h-6 bg-brand-primary rounded-full" />
               Metode Pembayaran
             </h3>
@@ -84,8 +84,8 @@ export function OrderConfirmation({
                   </div>
                 )}
                 <div className="space-y-1">
-                  <p className="text-base md:text-lg font-black text-gray-900">{paymentMethod?.name || "Belum dipilih"}</p>
-                  <p className="text-xs md:text-sm font-bold text-gray-500">Metode pembayaran pilihan Anda</p>
+                  <p className="text-base md:text-lg font-black text-text-primary">{paymentMethod?.name || "Belum dipilih"}</p>
+                  <p className="text-xs md:text-sm font-bold text-text-secondary">Metode pembayaran pilihan Anda</p>
                 </div>
               </div>
               <button 
@@ -103,7 +103,7 @@ export function OrderConfirmation({
       <div className="hidden lg:flex flex-col sm:flex-row gap-4 md:gap-6">
         <button
           onClick={onBack}
-          className="flex-1 py-5 md:py-6 px-8 border-2 border-gray-200 rounded-2xl text-gray-500 font-bold text-lg md:text-xl hover:bg-gray-50 transition-all"
+          className="flex-1 py-5 md:py-6 px-8 border-2 border-gray-200 rounded-2xl text-text-secondary font-bold text-lg md:text-xl hover:bg-gray-50 transition-all"
         >
           Kembali
         </button>
@@ -122,8 +122,8 @@ export function OrderConfirmation({
 function InfoItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="space-y-1">
-      <p className="text-sm font-medium text-gray-500">{label}</p>
-      <p className="text-base font-bold text-gray-900 break-words">{value}</p>
+      <p className="text-sm font-medium text-text-secondary">{label}</p>
+      <p className="text-base font-bold text-text-primary break-words">{value}</p>
     </div>
   );
 }
@@ -131,8 +131,8 @@ function InfoItem({ label, value }: { label: string; value: string }) {
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between items-center">
-      <span className="text-sm font-medium text-gray-500">{label}</span>
-      <span className="text-base font-bold text-gray-900">{value}</span>
+      <span className="text-sm font-medium text-text-secondary">{label}</span>
+      <span className="text-base font-bold text-text-primary">{value}</span>
     </div>
   );
 }

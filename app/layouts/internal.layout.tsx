@@ -4,7 +4,7 @@ import { AuthGuard } from "~/core/auth/auth-guard";
 import { NavbarInternal } from "~/shared/components";
 
 /**
- * Internal Layout — Partner Dashboard ([subdomain].tiketbisa.com)
+ * Internal Layout — Internal Dashboard (/internal-tb)
  *
  * Structure: AuthProvider → AuthGuard → Header → <Outlet /> → Footer
  * Nav items: Beranda, Event, Analitik
@@ -17,15 +17,15 @@ function InternalShell() {
 
   const handleLogout = () => {
     logout();
-    navigate("/internal/partner/login");
+    navigate("/internal-tb");
   };
 
   const handleScanTicket = () => {
-    navigate("/internal/partner/scan");
+    navigate("/internal-tb/partner/scan");
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-surface-primary" data-theme="light">
+    <div className="flex min-h-screen flex-col bg-surface-primary text-text-primary" data-theme="light">
       <NavbarInternal
         userEmail={user?.email}
         brandName={user?.brand_name}

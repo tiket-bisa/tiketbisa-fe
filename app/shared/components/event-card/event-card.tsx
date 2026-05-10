@@ -11,7 +11,7 @@ export function EventCard({ event, className = "" }: EventCardProps) {
   const minPrice =
     event.tickets.length > 0
       ? Math.min(...event.tickets.map((t: { price: number }) => t.price))
-      : 0;
+      : event.minPrice;
 
   const isLongTitle = event.title.length > 27;
 
@@ -20,6 +20,7 @@ export function EventCard({ event, className = "" }: EventCardProps) {
       <Card
         hoverable
         padding="none"
+        data-theme="light"
         className={`flex flex-col h-full ${className}`}
       >
         <div className="h-auto overflow-hidden aspect-[1062/427] w-full rounded-t-xl bg-slate-200">
@@ -64,7 +65,7 @@ export function EventCard({ event, className = "" }: EventCardProps) {
               Mulai dari
             </span>
             <p className="text-lg font-bold text-text-primary">
-              {formatIDR(minPrice)}
+              {minPrice === undefined ? "Segera diumumkan" : formatIDR(minPrice)}
             </p>
           </div>
 

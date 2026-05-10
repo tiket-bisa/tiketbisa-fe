@@ -8,11 +8,11 @@ export interface EventInfoHeaderProps {
 export function EventInfoHeader({ event, className = "" }: EventInfoHeaderProps) {
   return (
     <div className={`space-y-2 animate-in fade-in slide-in-from-bottom-6 duration-700 ${className}`}>
-      <h1 className="text-3xl font-black text-gray-900 tracking-tight leading-tight">
+      <h1 className="text-3xl font-black text-text-primary tracking-tight leading-tight">
         {event.name}
       </h1>
       <div className="flex flex-col gap-1">
-        <p className="text-sm font-bold text-gray-500 flex items-center gap-2">
+        <p className="text-sm font-bold text-text-secondary flex items-center gap-2">
           <span>{event.date}</span>
           {event.time && (
             <>
@@ -21,7 +21,7 @@ export function EventInfoHeader({ event, className = "" }: EventInfoHeaderProps)
             </>
           )}
         </p>
-        <p className="text-sm font-bold text-gray-500">
+        <p className="text-sm font-bold text-text-secondary">
           {event.location}
         </p>
       </div>

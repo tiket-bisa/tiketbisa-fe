@@ -71,6 +71,7 @@ export function BrandDetailEvents({
                   date: event.date,
                   location: event.location,
                   tickets: event.tickets,
+                  minPrice: event.minPrice,
                   brandName: event.brand,
                 }}
               />

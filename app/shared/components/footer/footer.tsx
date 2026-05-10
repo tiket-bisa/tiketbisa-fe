@@ -19,7 +19,7 @@ const footerColumns = [
   {
     title: "Bantuan",
     links: [
-      { label: "FAQ", to: "#" },
+      { label: "FAQ", to: "/faq" },
       { label: "Hubungi Kami", to: "/hubungi" },
       { label: "Syarat & Ketentuan", to: "#" },
     ],
@@ -32,10 +32,10 @@ const footerColumns = [
     ],
   },
   {
-    title: "Partner",
+    title: "Internal",
     links: [
-      { label: "Daftarkan Event", to: "/internal/partner/login" },
-      { label: "Partner Login", to: "/internal/partner/login" },
+      { label: "Daftarkan Event", to: "/internal-tb" },
+      { label: "Internal Login", to: "/internal-tb" },
     ],
   },
 ] as const;

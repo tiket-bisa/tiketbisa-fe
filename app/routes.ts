@@ -9,6 +9,9 @@ export default [
   // ─── External Layout (tiketbisa.com) ───
   layout("layouts/external.layout.tsx", [
     index("modules/external/landing/presentation/landing.page.tsx"),
+    route("tentang", "modules/external/static/tentang.page.tsx"),
+    route("hubungi", "modules/external/static/hubungi.page.tsx"),
+    route("faq", "modules/external/static/faq.page.tsx"),
     route("event", "modules/external/event/presentation/event.page.tsx"),
     route("event/:eventId", "modules/external/event/presentation/event-detail.page.tsx"),
     route("brand", "modules/external/brand/presentation/brand.page.tsx", {
@@ -19,8 +22,6 @@ export default [
       "modules/external/brand/presentation/brand-detail.page.tsx",
       { id: "brand-detail" },
     ),
-    route("tentang", "modules/external/static/tentang.page.tsx"),
-    route("hubungi", "modules/external/static/hubungi.page.tsx"),
   ]),
 
   layout("layouts/checkout.layout.tsx", [
@@ -30,35 +31,46 @@ export default [
     ),
   ]),
 
-  // ─── Admin Login (Standalone) ───
-  route("internal/admin/login", "modules/admin/login/presentation/login.page.tsx"),
-  route("internal/partner/login", "modules/internal/login/presentation/login.page.tsx"),
+  route("internal-tb", "modules/internal/entry/presentation/entry.page.tsx"),
+
+  // ─── Internal Login Aliases (redirect to single entry point) ───
+  route("internal-tb/admin/login", "modules/internal/entry/presentation/login-redirect.page.tsx", {
+    id: "internal-login-admin-redirect",
+  }),
+  route("internal-tb/partner/login", "modules/internal/entry/presentation/login-redirect.page.tsx", {
+    id: "internal-login-partner-redirect",
+  }),
 
   // ─── Admin Layout (internal team — sees all brands) ───
   layout("layouts/admin.layout.tsx", [
     route(
-      "internal/admin",
+      "internal-tb/admin",
       "modules/admin/dashboard/presentation/dashboard.page.tsx",
       { index: true },
     ),
     route(
-      "internal/admin/brands",
+      "internal-tb/admin/brands",
       "modules/admin/brands/presentation/brands.page.tsx",
     ),
     route(
-      "internal/admin/events",
+      "internal-tb/admin/events",
       "modules/admin/events/presentation/events.page.tsx",
     ),
     route(
-      "internal/admin/analytics",
+      "internal-tb/admin/events/:eventId/tickets/new",
+      "modules/internal/events/presentation/create-ticket.page.tsx",
+      { id: "admin-create-ticket" } // <-- Added unique ID here
+    ),
+    route(
+      "internal-tb/admin/analytics",
       "modules/admin/analytics/presentation/analytics.page.tsx",
     ),
     route(
-      "internal/admin/scan",
+      "internal-tb/admin/scan",
       "modules/admin/scan/presentation/scan.page.tsx",
     ),
     route(
-      "internal/admin/transactions/:id",
+      "internal-tb/admin/transactions/:id",
       "modules/admin/transactions/presentation/transaction-details.page.tsx",
     ),
   ]),
@@ -66,28 +78,33 @@ export default [
   // ─── Partner Layout (each partner — sees only own brand) ───
   layout("layouts/internal.layout.tsx", [
     route(
-      "internal/partner",
+      "internal-tb/partner",
       "modules/internal/dashboard/presentation/dashboard.page.tsx",
       { index: true },
     ),
     route(
-      "internal/partner/brands",
+      "internal-tb/partner/brands",
       "modules/internal/brand/presentation/brand.page.tsx",
     ),
     route(
-      "internal/partner/events",
+      "internal-tb/partner/events",
       "modules/internal/events/presentation/events.page.tsx",
     ),
     route(
-      "internal/partner/analytics",
+      "internal-tb/partner/events/:eventId/tickets/new",
+      "modules/internal/events/presentation/create-ticket.page.tsx",
+      { id: "partner-create-ticket" }
+    ),
+    route(
+      "internal-tb/partner/analytics",
       "modules/internal/revenue-analytics/presentation/revenue-analytics.page.tsx",
     ),
     route(
-      "internal/partner/transactions/:id",
+      "internal-tb/partner/transactions/:id",
       "modules/internal/transaction-details/presentation/transaction-details.page.tsx",
     ),
     route(
-      "internal/partner/scan",
+      "internal-tb/partner/scan",
       "modules/internal/ticket-scanning/presentation/ticket-scanning.page.tsx",
     ),
   ]),

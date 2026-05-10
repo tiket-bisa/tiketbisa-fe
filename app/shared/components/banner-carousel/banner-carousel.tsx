@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect } from "react";
+import { useCarousel } from "./hooks/use-carousel";
+import { useState, useEffect } from "react";
 import type { BannerSlide } from "./types";
 
 export interface BannerCarouselProps {
@@ -8,163 +9,167 @@ export interface BannerCarouselProps {
   className?: string;
 }
 
-function formatPrice(price: number): string {
-  if (price === 0) return "Gratis";
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(price);
-}
-
 export function BannerCarousel({
   slides,
   autoPlay = true,
   interval = 5000,
   className = "",
 }: BannerCarouselProps) {
-  const [current, setCurrent] = useState(0);
-
-  const goTo = useCallback(
-    (index: number) =>
-      setCurrent(((index % slides.length) + slides.length) % slides.length),
-    [slides.length],
-  );
-
-  const next = useCallback(() => goTo(current + 1), [current, goTo]);
-  const prev = useCallback(() => goTo(current - 1), [current, goTo]);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    if (!autoPlay || slides.length <= 1) return;
-    const timer = setInterval(next, interval);
-    return () => clearInterval(timer);
-  }, [autoPlay, interval, next, slides.length]);
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
-  if (slides.length === 0) return null;
+  const {
+    currentNode,
+    window: displaySlides,
+    isTransitioning,
+    isAnimating,
+    direction,
+    next,
+    prev,
+    goTo,
+    handleTransitionEnd,
+    setIsPaused,
+  } = useCarousel(slides, { autoPlay, interval });
 
-  const slide = slides[current];
+  if (!slides || slides.length === 0) return null;
+
+  /**
+   * Layout Logic for Infinite Effect:
+   * We render a window of 5 items. The center (index 2) is always the 'Current'.
+   * When animating next, we move towards index 3.
+   * On transition end, we shift the window and reset the transform to index 2 instantly.
+   */
+  
+  let currentOffset = -200;
+  let gapOffset = -2;
+
+  if (direction === "next" && isTransitioning) {
+    currentOffset = -300;
+    gapOffset = -3;
+  } else if (direction === "prev" && isTransitioning) {
+    currentOffset = -100;
+    gapOffset = -1;
+  }
+
+  const mobileActiveIndex = isTransitioning
+    ? (direction === "next" ? 3 : 1)
+    : 2;
+  const transform = isMobile ? undefined : `translate3d(calc(${currentOffset}% + ${gapOffset}rem), 0, 0)`;
 
   return (
-    <div
-      className={`relative overflow-hidden rounded-2xl ${className}`}
+    <section
+      className={`group relative w-full overflow-hidden py-4 ${className}`}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
       aria-roledescription="carousel"
-      aria-label="Banner carousel"
+      aria-label="Promotional Banners"
     >
-      {/* Slide */}
-      <div className="relative aspect-[21/9] w-full bg-surface-alt">
-        {slide.href ? (
-          <a href={slide.href} className="block h-full w-full">
-            <img
-              src={slide.imageUrl}
-              alt={slide.alt}
-              className="h-full w-full object-cover"
-              loading="lazy"
-            />
-          </a>
-        ) : (
-          <img
-            src={slide.imageUrl}
-            alt={slide.alt}
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
-        )}
+      <div 
+        className="relative w-full overflow-visible px-4 md:px-12 lg:px-24" 
+      >
+        {/* Main Slider Track */}
+        <ul 
+          className="flex list-none p-0 m-0"
+          style={{ 
+            transition: isTransitioning ? "transform 600ms cubic-bezier(0.25, 1, 0.5, 1)" : "none",
+            transform,
+            willChange: "transform",
+            backfaceVisibility: "hidden",
+          }}
+          onTransitionEnd={handleTransitionEnd}
+        >
+{displaySlides.map((node, i) => {
+            const slide = node.value;
+            const isActive = (direction === "next" && i === 3) ||
+                           (direction === "prev" && i === 1) ||
+                           (!direction && i === 2);
 
-        {/* Text overlay */}
-        {(slide.title || slide.description || slide.price !== undefined) && (
-          <div className="absolute inset-0 bg-gradient-to-t from-base-inverse/80 via-base-inverse/30 to-transparent flex flex-col justify-end p-6 sm:p-8">
-            {slide.title && (
-              <h2 className="text-lg sm:text-2xl font-bold text-base-white">
-                {slide.title}
-              </h2>
-            )}
-            {slide.description && (
-              <p className="mt-1 text-sm text-base-white/80 line-clamp-2 max-w-lg">
-                {slide.description}
-              </p>
-            )}
-            {slide.price !== undefined && (
-              <div className="mt-2 flex flex-col">
-                <span className="text-[10px] uppercase tracking-wider text-base-white/60">
-                  Mulai dari
-                </span>
-                <p className="text-sm font-semibold text-brand-secondary">
-                  {formatPrice(slide.price)}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+            return (
+              <li
+                key={`${slide.id}-${node.index}-${i}`}
+                className={`flex-none rounded-2xl overflow-hidden transition-all duration-500 ease-out ${
+                  isMobile
+                    ? `w-full ${isActive ? "opacity-100" : "opacity-0 absolute pointer-events-none"}`
+                    : `w-full mr-4 ${isActive ? "opacity-100 scale-100 shadow-xl" : "opacity-40 scale-[0.92] blur-[1px]"}`
+                }`}
+                role="group"
+                aria-roledescription="slide"
+              >
+                <div className="w-full h-full relative group/slide">
+                  <img
+                    src={slide.imageUrl}
+                    alt={slide.alt || "Banner"}
+                    className="w-full h-auto object-cover rounded-2xl select-none transition-transform duration-700 group-hover/slide:scale-105"
+                    draggable={false}
+                  />
 
-      {/* Nav arrows */}
-      {slides.length > 1 && (
-        <>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-60" />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+
+        {/* Global Navigation Buttons — Visible only on Hover */}
+        <div className="absolute inset-y-0 left-2 right-2 md:left-[8.5rem] md:right-[8.5rem] flex items-center justify-between pointer-events-none z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <button
             type="button"
             onClick={prev}
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-base-inverse/50 text-base-white flex items-center justify-center hover:bg-base-inverse/70 transition-colors cursor-pointer"
+            disabled={isAnimating}
             aria-label="Previous slide"
+            className="bg-white/95 p-4 rounded-full shadow-2xl pointer-events-auto transform transition-all hover:scale-110 active:scale-90 disabled:opacity-50 border border-gray-100 text-text-primary hover:bg-white flex items-center justify-center group/btn"
           >
-            <svg
-              className="h-4 w-4"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15.75 19.5 8.25 12l7.5-7.5"
-              />
+            <svg className="w-6 h-6 transition-transform group-hover/btn:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
           <button
             type="button"
             onClick={next}
-            className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-base-inverse/50 text-base-white flex items-center justify-center hover:bg-base-inverse/70 transition-colors cursor-pointer"
+            disabled={isAnimating}
             aria-label="Next slide"
+            className="bg-white/95 p-4 rounded-full shadow-2xl pointer-events-auto transform transition-all hover:scale-110 active:scale-90 disabled:opacity-50 border border-gray-100 text-text-primary hover:bg-white flex items-center justify-center group/btn"
           >
-            <svg
-              className="h-4 w-4"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="m8.25 4.5 7.5 7.5-7.5 7.5"
-              />
+            <svg className="w-6 h-6 transition-transform group-hover/btn:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
             </svg>
           </button>
-        </>
-      )}
-
-      {/* Dots */}
-      {slides.length > 1 && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
-          {slides.map((s, i) => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => goTo(i)}
-              className={`h-2 rounded-full transition-all cursor-pointer ${
-                i === current
-                  ? "w-6 bg-brand-primary"
-                  : "w-2 bg-base-white/50 hover:bg-base-white/70"
-              }`}
-              aria-label={`Go to slide ${i + 1}`}
-            />
-          ))}
         </div>
+      </div>
+
+      {slides.length > 1 && (
+        <nav className="flex items-center justify-center gap-3 mt-8" aria-label="Carousel Pagination">
+          {slides.map((_, i) => {
+            let activeDotIndex = currentNode?.index ?? 0;
+            if (isTransitioning) {
+              activeDotIndex = direction === "next" ? activeDotIndex + 1 : direction === "prev" ? activeDotIndex - 1 : activeDotIndex;
+              if (activeDotIndex < 0) activeDotIndex = slides.length - 1;
+              if (activeDotIndex >= slides.length) activeDotIndex = 0;
+            }
+            const isActiveDot = activeDotIndex === i;
+
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => goTo(i)}
+                disabled={isAnimating}
+                aria-label={`Go to slide ${i + 1}`}
+                aria-current={isActiveDot ? "true" : "false"}
+                className={`h-2.5 rounded-full cursor-pointer disabled:cursor-not-allowed ${
+                  isMobile ? "transition-none" : "transition-all duration-500"
+                } ${isActiveDot ? "w-12 bg-brand-primary" : "w-2.5 bg-gray-300 hover:bg-brand-primary/40"}`}
+              />
+            );
+          })}
+        </nav>
       )}
-    </div>
+    </section>
   );
 }

@@ -9,15 +9,15 @@ function AdminShell() {
 
   const handleLogout = () => {
     logout();
-    navigate("/internal/admin/login");
+    navigate("/internal-tb");
   };
 
   const handleScanTicket = () => {
-    navigate("/internal/admin/scan");
+    navigate("/internal-tb/admin/scan");
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-surface-primary" data-theme="light">
+    <div className="flex min-h-screen flex-col bg-surface-primary text-text-primary" data-theme="light">
       <NavbarAdmin
         userEmail={user?.email}
         onLogout={handleLogout}

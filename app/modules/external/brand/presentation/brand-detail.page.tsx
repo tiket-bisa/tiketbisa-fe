@@ -1,5 +1,5 @@
-import { useSearchParams } from "react-router";
 import { getPaginationFromSearchParams } from "~/core/api";
+import { useBrand } from "~/shared/hooks/use-brand";
 import { brandApi } from "../infrastructure/brand.api";
 import { eventApi } from "../../event/infrastructure/event.api";
 import type { Event as DomainEvent } from "../../event/domain/event.entity";
@@ -27,7 +27,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
       limit,
       offset,
       order_by: sort,
-      brand_slug: slug,
+      brand_id: slug,
     }),
   ]);
 
@@ -47,27 +47,9 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 export default function BrandDetailPage({ loaderData }: Route.ComponentProps) {
   const { brand, events, count, limit, currentPage, activeTab, sortValue } =
     loaderData;
-  const [searchParams, setSearchParams] = useSearchParams();
+  const { updateParam } = useBrand();
 
   const totalPages = Math.ceil(count / limit);
-
-  function updateParam(key: string, value: string) {
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        if (value) {
-          next.set(key, value);
-        } else {
-          next.delete(key);
-        }
-        if (key !== "page") {
-          next.delete("page");
-        }
-        return next;
-      },
-      { preventScrollReset: true },
-    );
-  }
 
   return (
     <div className="min-h-screen bg-surface-primary pb-24" data-theme="dark">
@@ -76,14 +58,25 @@ export default function BrandDetailPage({ loaderData }: Route.ComponentProps) {
       <BrandDetailEvents
         events={events}
         activeTab={activeTab}
-        onTabChange={(val) => updateParam("tab", val)}
+        onTabChange={(val) =>
+          updateParam("tab", val, { preventScrollReset: true })
+        }
         sortValue={sortValue}
-        onSortChange={(val) => updateParam("sort", val)}
+        onSortChange={(val) =>
+          updateParam("sort", val, { preventScrollReset: true })
+        }
         currentPage={currentPage}
         totalPages={totalPages}
         limit={limit}
-        onPageChange={(page) => updateParam("page", String(page))}
-        onLimitChange={(limit) => updateParam("limit", limit)}
+        onPageChange={(page) =>
+          updateParam("page", String(page), {
+            resetPage: false,
+            preventScrollReset: true,
+          })
+        }
+        onLimitChange={(limitValue) =>
+          updateParam("limit", limitValue, { preventScrollReset: true })
+        }
       />
     </div>
   );

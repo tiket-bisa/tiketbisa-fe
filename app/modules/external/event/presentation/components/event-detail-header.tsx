@@ -19,10 +19,10 @@ export function EventDetailHeader({ event }: EventDetailHeaderProps) {
         <Badge variant="brand" className="w-fit mb-4">
           Upcoming Event
         </Badge>
-        <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 tracking-tight">
+        <h1 className="text-4xl md:text-6xl font-bold text-base-black mb-4 tracking-tight">
           {event.name}
         </h1>
-        <div className="flex flex-wrap gap-4 md:gap-8 text-sm md:text-lg text-white">
+        <div className="flex flex-wrap gap-4 md:gap-8 text-sm md:text-lg text-base-black">
           <InfoItem icon="location_on" text={event.location} />
           <InfoItem icon="calendar_month" text={event.date} />
           {event.time && <InfoItem icon="schedule" text={event.time} />}
@@ -38,7 +38,7 @@ function InfoItem({ icon, text }: { icon: string; text: string }) {
       <span className="material-symbols-outlined text-brand-primary text-[20px]">
         {icon}
       </span>
-      <span>{text}</span>
+      <span className="text-base-black">{text}</span>
     </div>
   );
 }

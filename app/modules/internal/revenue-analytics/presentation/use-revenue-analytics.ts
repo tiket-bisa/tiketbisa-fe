@@ -1,84 +1,55 @@
-import { useMemo } from "react";
-import { mockTransactions } from "../../dashboard/infrastructure/transaction.mock";
-import { mockEvents } from "../../events/infrastructure/event.mock";
+import { useState, useEffect } from "react";
+import { analyticsApi, type RevenueSummary, type RevenueByEvent, type RevenueTimeline } from "../../analytics/analytics.api";
+import { transactionApi } from "~/core/api/services/transaction.api";
 
 export function useRevenueAnalyticsData(brandSlug?: string) {
-  const brandTransactions = useMemo(
-    () => mockTransactions.filter((t) => t.brand_slug === brandSlug),
-    [brandSlug],
-  );
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [totalTicketsSold, setTotalTicketsSold] = useState(0);
+  const [totalTransactions, setTotalTransactions] = useState(0);
+  const [revenueByEvent, setRevenueByEvent] = useState<RevenueByEvent[]>([]);
+  const [revenueTimeline, setRevenueTimeline] = useState<RevenueTimeline[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const brandEvents = useMemo(
-    () => mockEvents.filter((e) => e.brand_slug === brandSlug),
-    [brandSlug],
-  );
-
-  const paidTransactions = useMemo(
-    () => brandTransactions.filter((t) => t.status === "paid"),
-    [brandTransactions],
-  );
-
-  const totalRevenue = useMemo(
-    () => paidTransactions.reduce((s, t) => s + t.total_price, 0),
-    [paidTransactions],
-  );
-
-  const totalTicketsSold = useMemo(
-    () => paidTransactions.reduce((s, t) => s + t.quantity, 0),
-    [paidTransactions],
-  );
-
-  const revenueByEvent = useMemo(() => {
-    const map: Record<string, { event_name: string; revenue: number; tickets_sold: number }> = {};
-    for (const tx of paidTransactions) {
-      if (!map[tx.event_id]) {
-        map[tx.event_id] = { event_name: tx.event_name, revenue: 0, tickets_sold: 0 };
+  useEffect(() => {
+    async function loadData() {
+      setIsLoading(true);
+      try {
+        const [summary, events, timeline, txRes] = await Promise.all([
+          analyticsApi.getRevenueSummary(),
+          analyticsApi.getRevenueByEvent(),
+          analyticsApi.getRevenueTimeline(),
+          transactionApi.getList({ limit: 1000 })
+        ]);
+        
+        setTotalRevenue(summary.totalRevenue);
+        setTotalTicketsSold(summary.totalTicketsSold);
+        setTotalTransactions(summary.totalTransactions);
+        
+        // Convert to camelCase/snake_case as expected by UI
+        setRevenueByEvent(events.map(e => ({
+          ...e,
+          event_name: e.eventName,
+          tickets_sold: e.ticketsSold
+        })) as any);
+        
+        setRevenueTimeline(timeline);
+      } catch (err) {
+        console.error("Failed to load revenue analytics:", err);
+      } finally {
+        setIsLoading(false);
       }
-      map[tx.event_id].revenue += tx.total_price;
-      map[tx.event_id].tickets_sold += tx.quantity;
     }
-    return Object.values(map).sort((a, b) => b.revenue - a.revenue);
-  }, [paidTransactions]);
+    loadData();
+  }, [brandSlug]);
 
-  const ticketsByCategory = useMemo(() => {
-    const map: Record<string, { category: string; quantity: number; revenue: number }> = {};
-    for (const tx of paidTransactions) {
-      if (!map[tx.ticket_name]) {
-        map[tx.ticket_name] = { category: tx.ticket_name, quantity: 0, revenue: 0 };
-      }
-      map[tx.ticket_name].quantity += tx.quantity;
-      map[tx.ticket_name].revenue += tx.total_price;
-    }
-    return Object.values(map).sort((a, b) => b.revenue - a.revenue);
-  }, [paidTransactions]);
-
-  const revenueTimeline = useMemo(() => {
-    const map: Record<string, { date: string; revenue: number; transactions: number }> = {};
-    for (const tx of paidTransactions) {
-      if (!tx.created_at) continue;
-      const date = tx.created_at.slice(0, 10);
-      if (!map[date]) {
-        map[date] = { date, revenue: 0, transactions: 0 };
-      }
-      map[date].revenue += tx.total_price;
-      map[date].transactions += 1;
-    }
-    return Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
-  }, [paidTransactions]);
-
-  const maxRevenue = useMemo(
-    () => Math.max(...revenueTimeline.map((d) => d.revenue), 1),
-    [revenueTimeline],
-  );
+  const maxRevenue = Math.max(...revenueTimeline.map((d) => d.revenue), 1);
 
   return {
-    brandTransactions,
-    brandEvents,
-    paidTransactions,
+    isLoading,
+    totalTransactions,
     totalRevenue,
     totalTicketsSold,
     revenueByEvent,
-    ticketsByCategory,
     revenueTimeline,
     maxRevenue,
   };

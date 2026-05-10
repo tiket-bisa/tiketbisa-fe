@@ -14,3 +14,4 @@ export * from "./steps/order-details-form";
 export * from "./steps/payment-instruction";
 export * from "./steps/payment-method-selection";
 export * from "./steps/order-success";
+export * from "./steps/manual-transfer-pending";
