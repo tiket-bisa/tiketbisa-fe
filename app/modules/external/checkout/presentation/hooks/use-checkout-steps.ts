@@ -43,10 +43,7 @@ export function useCheckoutSteps(
 
   const handlePaymentMethodSelect = useCallback((methodId: string) => {
     setMethodId(methodId);
-    setAgreedToTerms(true);
-    setAgreedToPrivacy(true);
-    setSearchParams({ ...Object.fromEntries(searchParams), step: "3" });
-  }, [searchParams, setSearchParams, setMethodId, setAgreedToTerms, setAgreedToPrivacy]);
+  }, [setMethodId]);
 
   /**
    * Phase 1: Ticket Locking (DDD - Intent Acquisition)

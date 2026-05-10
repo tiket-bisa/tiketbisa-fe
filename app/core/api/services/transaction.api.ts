@@ -49,6 +49,7 @@ export interface PaymentProofResponse {
     fileName: string;
     mimeType: string;
     base64Content: string;
+    signedUrl?: string;
 }
 
 export interface TransactionListResponse {
@@ -100,6 +101,40 @@ export const transactionApi = {
     /** Get payment proof from manual transfer transaction */
     getPaymentProof: (id: string) =>
         internalHttpClient.get<PaymentProofResponse>(`/transaction/detail/${id}/payment-proof`),
+
+    /** Download payment proof as blob */
+    downloadPaymentProof: async (id: string): Promise<{ success: boolean; data: { fileName: string; mimeType: string; blob: Blob } | null; error: string | null }> => {
+        const stored = localStorage.getItem("tiketbisa_auth");
+        const session = stored ? JSON.parse(stored) : {};
+        const headers: Record<string, string> = {
+            "x-tb-identifier": session.email || "",
+            "x-tb-internal-token": session.internal_token || "",
+        };
+        
+        try {
+            const apiBase = typeof window !== "undefined" 
+                ? (import.meta.env.VITE_API_BASE_URL || "http://localhost:8080")
+                : "http://localhost:8080";
+            const url = `${apiBase}/internal-tb/transaction/detail/${id}/payment-proof/download`;
+            
+            const response = await fetch(url, { headers });
+            
+            if (!response.ok) {
+                return { success: false, data: null, error: `HTTP ${response.status}` };
+            }
+            
+            const contentDisposition = response.headers.get("Content-Disposition") || "";
+            const fileNameMatch = contentDisposition.match(/filename="?([^";]+)"?/);
+            const fileName = fileNameMatch ? fileNameMatch[1] : `payment-proof-${id}`;
+            const mimeType = response.headers.get("Content-Type") || "application/octet-stream";
+            
+            const blob = await response.blob();
+            
+            return { success: true, data: { fileName, mimeType, blob }, error: null };
+        } catch (e) {
+            return { success: false, data: null, error: e instanceof Error ? e.message : "Download failed" };
+        }
+    },
 
     /** Review manual transfer transaction */
     reviewManualTransfer: (id: string, request: ManualTransferReviewRequest) =>
