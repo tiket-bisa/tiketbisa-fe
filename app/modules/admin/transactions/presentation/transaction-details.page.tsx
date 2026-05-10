@@ -107,8 +107,7 @@ export default function AdminTransactionDetailsPage() {
             throw new Error(response.error ?? "Gagal download bukti transfer");
           }
           
-          const blob = new Blob([response.data], { type: response.data.mimeType || "application/octet-stream" });
-          const url = URL.createObjectURL(blob);
+          const url = URL.createObjectURL(response.data.blob);
           const anchor = document.createElement("a");
           anchor.href = url;
           anchor.download = response.data.fileName || `payment-proof-${id}`;

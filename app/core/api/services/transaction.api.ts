@@ -1,4 +1,5 @@
 import { httpClient, internalHttpClient } from "../http-client";
+import { toAbsoluteApiUrl } from "../api-url";
 
 /* ── API functions ── */
 
@@ -112,10 +113,7 @@ export const transactionApi = {
         };
         
         try {
-            const apiBase = typeof window !== "undefined" 
-                ? (import.meta.env.VITE_API_BASE_URL || "http://localhost:8080")
-                : "http://localhost:8080";
-            const url = `${apiBase}/internal-tb/transaction/detail/${id}/payment-proof/download`;
+            const url = toAbsoluteApiUrl(`/internal-tb/transaction/detail/${id}/payment-proof/download`);
             
             const response = await fetch(url, { headers });
             
