@@ -34,11 +34,25 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Push Docker Image
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          VITE_API_INTERNAL_BASE_URL: ${{ secrets.VITE_API_INTERNAL_BASE_URL }}
+          VITE_GOOGLE_AUTH_CLIENT_ID: ${{ secrets.VITE_GOOGLE_AUTH_CLIENT_ID }}
         run: |
+          API_BASE_URL="${VITE_API_BASE_URL:-https://api.tiketbisa.com}"
+          API_INTERNAL_BASE_URL="${VITE_API_INTERNAL_BASE_URL:-$API_BASE_URL}"
+
+          case "$API_BASE_URL $API_INTERNAL_BASE_URL" in
+            *localhost:8080*|*127.0.0.1:8080*)
+              echo "::error::Production API build args must not point to localhost"
+              exit 1
+              ;;
+          esac
+
           docker build \
-            --build-arg VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }} \
-            --build-arg VITE_API_INTERNAL_BASE_URL=${{ secrets.VITE_API_INTERNAL_BASE_URL }} \
-            --build-arg VITE_GOOGLE_AUTH_CLIENT_ID=${{ secrets.VITE_GOOGLE_AUTH_CLIENT_ID }} \
+            --build-arg "VITE_API_BASE_URL=$API_BASE_URL" \
+            --build-arg "VITE_API_INTERNAL_BASE_URL=$API_INTERNAL_BASE_URL" \
+            --build-arg "VITE_GOOGLE_AUTH_CLIENT_ID=$VITE_GOOGLE_AUTH_CLIENT_ID" \
             -t ${{ steps.image.outputs.image-tag }} \
             -f Dockerfile .
           docker push ${{ steps.image.outputs.image-tag }}
