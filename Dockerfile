@@ -1,16 +1,19 @@
-FROM node:22-alpine AS development-dependencies-env
+# Define the version once at the top
+ARG NODE_VERSION=22-alpine
+
+FROM node:${NODE_VERSION} AS development-dependencies-env
 RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY . /app
 WORKDIR /app
 RUN pnpm install --frozen-lockfile
 
-FROM node:20-alpine AS production-dependencies-env
+FROM node:${NODE_VERSION} AS production-dependencies-env
 RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY ./package.json pnpm-lock.yaml /app/
 WORKDIR /app
 RUN pnpm install --frozen-lockfile --prod
 
-FROM node:20-alpine AS build-env
+FROM node:${NODE_VERSION} AS build-env
 RUN corepack enable && corepack prepare pnpm@latest --activate
 ARG VITE_API_BASE_URL
 ARG VITE_API_INTERNAL_BASE_URL
@@ -23,7 +26,7 @@ COPY --from=development-dependencies-env /app/node_modules /app/node_modules
 WORKDIR /app
 RUN pnpm run build
 
-FROM node:20-alpine
+FROM node:${NODE_VERSION}
 RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY ./package.json pnpm-lock.yaml /app/
 COPY --from=production-dependencies-env /app/node_modules /app/node_modules
