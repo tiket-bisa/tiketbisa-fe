@@ -47,7 +47,37 @@ jobs:
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }} # The private key we generated earlier
           script: |
-            cd ~/tiketbisa/fe
+            set -Eeuo pipefail
+
+            log() {
+              printf '[deploy] %s\n' "$1"
+            }
+
+            fail() {
+              printf '[deploy] ERROR: %s\n' "$1" >&2
+              exit 1
+            }
+
+            trap 'status=$?; if [ "$status" -eq 0 ]; then log "Deployment finished successfully"; else printf "[deploy] FAILED\n" >&2; fi' EXIT
+
+            deploy_dir=""
+            for candidate in "$HOME/tiketbisa/fe" "$HOME/tiketbisa-fe" "$HOME/tiketbisa/frontend"; do
+              if [ -f "$candidate/docker-compose.yml" ]; then
+                deploy_dir="$candidate"
+                break
+              fi
+            done
+
+            [ -n "$deploy_dir" ] || fail "Could not find docker-compose.yml in any expected deploy directory"
+
+            log "Using deploy directory: $deploy_dir"
+            cd "$deploy_dir"
+
+            log "Pulling latest app image"
             docker compose pull app
+
+            log "Starting app container"
             docker compose up -d app
+
+            log "Pruning unused Docker images"
             docker system prune -f # Clean up old images to save disk space
