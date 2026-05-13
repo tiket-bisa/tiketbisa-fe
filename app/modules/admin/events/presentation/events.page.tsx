@@ -1,9 +1,27 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router";
-import { Card, Badge, SearchInput, Pagination, Tabs, Select, Button } from "~/core/design-system/components";
+import {
+  Card,
+  Badge,
+  SearchInput,
+  Pagination,
+  Tabs,
+  Select,
+  Button,
+  Input,
+} from "~/core/design-system/components";
 import { useApiQuery } from "~/core/api";
-import { eventApi, mapEventApiToFe } from "~/core/api/services/event.api";
-import { brandApi, mapBrandApiToFe } from "~/core/api/services/brand.api";
+import {
+  internalEventApi,
+  mapInternalEventToSummary,
+  normalizeInternalEvent,
+  type InternalEventApiData,
+} from "~/core/api/services/internal-event.api";
+import {
+  internalBrandApi,
+  normalizeInternalBrand,
+  type InternalBrandApiData,
+} from "~/core/api/services/internal-brand.api";
 import type { EventSummary } from "~/core/types";
 
 const STATUS_MAP = {
@@ -29,37 +47,64 @@ export default function AdminEventsPage() {
   const [tab, setTab] = useState("all");
   const [brandFilter, setBrandFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [formMode, setFormMode] = useState<"create" | "edit" | null>(null);
+  const [editingEvent, setEditingEvent] = useState<InternalEventApiData | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formSuccess, setFormSuccess] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    brandId: "",
+    name: "",
+    startDate: "",
+    endDate: "",
+    venue: "",
+    location: "",
+    city: "",
+    bannerPath: "",
+    description: "",
+    termAndCondition: "",
+    status: "ONGOING",
+    isPublished: false,
+  });
 
   // Fetch brands for mapping brandId → brandName
-  const { data: brandsMap } = useApiQuery(
+  const { data: brandsRaw } = useApiQuery(
     async () => {
-      const res = await brandApi.getList({ limit: 100, offset: 0 });
-      if (!res.success || !res.data) return new Map<string, { name: string; slug: string }>();
-      const map = new Map<string, { name: string; slug: string }>();
-      for (const b of res.data.brands ?? []) {
-        const fe = mapBrandApiToFe(b);
-        map.set(b.id, { name: fe.name, slug: fe.slug });
-      }
-      return map;
+      const res = await internalBrandApi.getList({ limit: 200, offset: 0 });
+      if (!res.success || !res.data) return [] as InternalBrandApiData[];
+      return (res.data.brands ?? []).map(normalizeInternalBrand);
     },
     [],
   );
 
   // Fetch events from real API
-  const { data: allEvents, loading, error } = useApiQuery(
+  const { data: allEventsRaw, loading, error, refetch } = useApiQuery(
     async () => {
-      const res = await eventApi.getList({ limit: 100, offset: 0 });
-      if (!res.success || !res.data) return [] as EventSummary[];
-      const bMap = brandsMap ?? new Map();
-      return (res.data.events ?? []).map((e) => {
-        const brand = bMap.get(e.brand_id) ?? { name: "Unknown", slug: "" };
-        return mapEventApiToFe(e, brand.name, brand.slug);
-      });
+      const res = await internalEventApi.getList({ limit: 200, offset: 0 });
+      if (!res.success || !res.data) return [] as InternalEventApiData[];
+      return (res.data.events ?? []).map(normalizeInternalEvent);
     },
-    [brandsMap],
+    [],
   );
 
-  const events = allEvents ?? [];
+  const eventsRaw = allEventsRaw ?? [];
+  const brands = brandsRaw ?? [];
+
+  const brandMap = useMemo(() => {
+    return new Map(
+      brands.map((brand) => [
+        brand.id,
+        { name: brand.name, slug: brand.name.toLowerCase().replace(/\s+/g, "-") },
+      ]),
+    );
+  }, [brands]);
+
+  const events = useMemo(() => {
+    return eventsRaw.map((event) => {
+      const brand = brandMap.get(event.brandId) ?? { name: "Unknown", slug: "" };
+      return mapInternalEventToSummary(event, brand.name, brand.slug);
+    });
+  }, [eventsRaw, brandMap]);
 
   // Unique brand names from events
   const brandOptions = useMemo(() => {
@@ -88,6 +133,161 @@ export default function AdminEventsPage() {
     currentPage * ITEMS_PER_PAGE,
   );
 
+  const brandOptionsForForm = useMemo(() => {
+    return brands.map((brand) => ({ value: brand.id, label: brand.name }));
+  }, [brands]);
+
+  const resetForm = () => {
+    setFormMode(null);
+    setEditingEvent(null);
+    setFormError(null);
+    setFormSuccess(null);
+    setFormData({
+      brandId: "",
+      name: "",
+      startDate: "",
+      endDate: "",
+      venue: "",
+      location: "",
+      city: "",
+      bannerPath: "",
+      description: "",
+      termAndCondition: "",
+      status: "ONGOING",
+      isPublished: false,
+    });
+  };
+
+  const startCreate = () => {
+    setFormMode("create");
+    setEditingEvent(null);
+    setFormError(null);
+    setFormSuccess(null);
+    setFormData((prev) => ({
+      ...prev,
+      brandId: brandOptionsForForm[0]?.value ?? "",
+    }));
+  };
+
+  const startEdit = (id: string) => {
+    const event = eventsRaw.find((evt) => evt.id === id);
+    if (!event) return;
+    setEditingEvent(event);
+    setFormMode("edit");
+    setFormError(null);
+    setFormSuccess(null);
+    setFormData({
+      brandId: event.brandId ?? "",
+      name: event.name ?? "",
+      startDate: toDateTimeLocal(event.startDate),
+      endDate: toDateTimeLocal(event.endDate),
+      venue: event.venue ?? "",
+      location: event.location ?? "",
+      city: event.city ?? "",
+      bannerPath: event.bannerPath ?? "",
+      description: event.description ?? "",
+      termAndCondition: event.termAndCondition ?? "",
+      status: event.status ?? "ONGOING",
+      isPublished: Boolean(event.isPublished),
+    });
+  };
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
+  ) => {
+    const { name, value, type } = e.target;
+    if (type === "checkbox") {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData((prev) => ({ ...prev, [name]: checked }));
+      return;
+    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+    setFormSuccess(null);
+
+    if (!formData.brandId) {
+      setFormError("Brand wajib dipilih.");
+      return;
+    }
+    if (!formData.name.trim()) {
+      setFormError("Nama event wajib diisi.");
+      return;
+    }
+    if (!formData.startDate || !formData.endDate) {
+      setFormError("Tanggal mulai dan selesai wajib diisi.");
+      return;
+    }
+    if (!formData.venue.trim() || !formData.location.trim() || !formData.city.trim()) {
+      setFormError("Venue, lokasi, dan kota wajib diisi.");
+      return;
+    }
+
+    const startDate = toIsoString(formData.startDate);
+    const endDate = toIsoString(formData.endDate);
+    if (!startDate || !endDate) {
+      setFormError("Format tanggal tidak valid.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        brandId: formData.brandId,
+        name: formData.name.trim(),
+        bannerPath: formData.bannerPath.trim() || null,
+        startDate,
+        endDate,
+        description: formData.description.trim() || null,
+        termAndCondition: formData.termAndCondition.trim() || null,
+        venue: formData.venue.trim(),
+        location: formData.location.trim(),
+        city: formData.city.trim(),
+        status: formData.status as InternalEventApiData["status"],
+        isPublished: formData.isPublished,
+      };
+
+      const result = formMode === "edit" && editingEvent
+        ? await internalEventApi.update(editingEvent.id, payload)
+        : await internalEventApi.create(payload);
+
+      if (!result.success) {
+        setFormError(result.error || "Gagal menyimpan event.");
+        return;
+      }
+
+      setFormSuccess(formMode === "edit" ? "Event berhasil diperbarui." : "Event berhasil dibuat.");
+      await refetch();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Koneksi bermasalah.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    const confirmed = window.confirm("Hapus event ini?");
+    if (!confirmed) return;
+    setIsSubmitting(true);
+    setFormError(null);
+    setFormSuccess(null);
+    try {
+      const result = await internalEventApi.delete(id);
+      if (!result.success) {
+        setFormError(result.error || "Gagal menghapus event.");
+        return;
+      }
+      await refetch();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Koneksi bermasalah.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -106,7 +306,167 @@ export default function AdminEventsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-text-primary text-2xl font-bold">Semua Event</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-text-primary text-2xl font-bold">Semua Event</h1>
+        <Button variant="primary" onClick={startCreate}>Tambah Event</Button>
+      </div>
+
+      {formMode && (
+        <Card padding="lg">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-lg font-semibold text-text-primary">
+                {formMode === "edit" ? "Edit Event" : "Buat Event Baru"}
+              </h2>
+              <p className="text-sm text-text-tertiary">
+                Admin bisa membuat event untuk semua brand.
+              </p>
+            </div>
+
+            {formError && (
+              <div className="bg-red-50 text-destructive-text p-3 rounded-md text-sm">
+                {formError}
+              </div>
+            )}
+            {formSuccess && (
+              <div className="bg-green-50 text-success-text p-3 rounded-md text-sm">
+                {formSuccess}
+              </div>
+            )}
+
+            <Select
+              label="Brand"
+              name="brandId"
+              value={formData.brandId}
+              onChange={handleChange}
+              options={brandOptionsForForm}
+              placeholder="Pilih Brand"
+            />
+
+            <Input
+              label="Nama Event"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="Contoh: Jazz Night 2026"
+              required
+            />
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input
+                label="Tanggal Mulai"
+                name="startDate"
+                type="datetime-local"
+                value={formData.startDate}
+                onChange={handleChange}
+                required
+              />
+              <Input
+                label="Tanggal Selesai"
+                name="endDate"
+                type="datetime-local"
+                value={formData.endDate}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <Input
+                label="Venue"
+                name="venue"
+                value={formData.venue}
+                onChange={handleChange}
+                required
+              />
+              <Input
+                label="Lokasi"
+                name="location"
+                value={formData.location}
+                onChange={handleChange}
+                required
+              />
+              <Input
+                label="Kota"
+                name="city"
+                value={formData.city}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <Input
+              label="Banner URL"
+              name="bannerPath"
+              value={formData.bannerPath}
+              onChange={handleChange}
+              placeholder="https://.../banner.jpg"
+            />
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Select
+                label="Status"
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                options={[
+                  { value: "ONGOING", label: "Berlangsung" },
+                  { value: "ENDED", label: "Selesai" },
+                ]}
+              />
+              <label className="flex items-center gap-2 text-sm font-medium text-text-primary mt-2">
+                <input
+                  type="checkbox"
+                  name="isPublished"
+                  checked={formData.isPublished}
+                  onChange={handleChange}
+                  className="h-4 w-4 rounded border-border-default"
+                />
+                Publish event
+              </label>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-text-primary" htmlFor="event-description">
+                Deskripsi
+              </label>
+              <textarea
+                id="event-description"
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                placeholder="Deskripsi singkat event"
+                className="w-full rounded-lg border border-border-default bg-surface-alt px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                rows={4}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-text-primary" htmlFor="event-terms">
+                Syarat & Ketentuan
+              </label>
+              <textarea
+                id="event-terms"
+                name="termAndCondition"
+                value={formData.termAndCondition}
+                onChange={handleChange}
+                placeholder="Pisahkan dengan baris baru"
+                className="w-full rounded-lg border border-border-default bg-surface-alt px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                rows={4}
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2 justify-end">
+              <Button type="button" variant="ghost" onClick={resetForm}>
+                Batal
+              </Button>
+              <Button type="submit" variant="primary" isLoading={isSubmitting}>
+                {formMode === "edit" ? "Simpan Perubahan" : "Buat Event"}
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
 
       <Tabs
         items={tabItems.map((t) => ({
@@ -173,15 +533,32 @@ export default function AdminEventsPage() {
                 <Badge variant={status.variant}>{status.label}</Badge>
               </div>
               <div className="mt-4 flex justify-end border-t border-border-subtle pt-3">
-                <Button 
-                  variant="secondary" 
-                  size="sm"
-                  onClick={() => navigate(`/internal-tb/admin/events/${evt.id}/tickets/new`)}
-                  className="flex items-center gap-1"
-                >
-                  <span className="material-symbols-outlined text-sm">add</span>
-                  Tambah Tiket
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => navigate(`/internal-tb/admin/events/${evt.id}/tickets/new`)}
+                    className="flex items-center gap-1"
+                  >
+                    <span className="material-symbols-outlined text-sm">add</span>
+                    Tambah Tiket
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => startEdit(evt.id)}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleDelete(evt.id)}
+                    disabled={isSubmitting}
+                  >
+                    Hapus
+                  </Button>
+                </div>
               </div>
             </Card>
           );
@@ -201,4 +578,23 @@ export default function AdminEventsPage() {
       )}
     </div>
   );
+}
+
+function toDateTimeLocal(value?: string | null): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function toIsoString(value: string): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
 }

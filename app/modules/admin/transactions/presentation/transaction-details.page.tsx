@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router";
+import { useNavigate, useParams, Link, useSearchParams } from "react-router";
 import { Badge, Button, Card } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
 import { useApiQuery } from "~/core/api";
@@ -26,10 +26,16 @@ function base64ToBlob(base64: string, mimeType: string): Blob {
 
 export default function AdminTransactionDetailsPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [isReviewLoading, setIsReviewLoading] = useState(false);
   const [isProofLoading, setIsProofLoading] = useState(false);
+  const rawReturnTo = searchParams.get("returnTo");
+  const returnTo = rawReturnTo?.startsWith("/internal-tb/admin")
+    ? rawReturnTo
+    : "/internal-tb/admin";
 
-  const { data: detail, loading, refetch } = useApiQuery(
+  const { data: detail, loading } = useApiQuery(
     async () => {
       if (!id) return null;
       const response = await transactionApi.getDetail(id);
@@ -42,7 +48,7 @@ export default function AdminTransactionDetailsPage() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <Link to="/internal-tb/admin" className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1">
+        <Link to={returnTo} className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1">
           <span className="material-symbols-outlined text-sm">arrow_back</span>
           Kembali ke Dashboard
         </Link>
@@ -56,7 +62,7 @@ export default function AdminTransactionDetailsPage() {
   if (!detail || !detail.transaction) {
     return (
       <div className="space-y-4">
-        <Link to="/internal-tb/admin" className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1">
+        <Link to={returnTo} className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1">
           <span className="material-symbols-outlined text-sm">arrow_back</span>
           Kembali ke Dashboard
         </Link>
@@ -81,7 +87,7 @@ export default function AdminTransactionDetailsPage() {
       if (!response.success) {
         throw new Error(response.error ?? "Gagal memproses approval");
       }
-      await refetch();
+      navigate(returnTo, { replace: true });
     } catch (error) {
       alert(error instanceof Error ? error.message : "Gagal memproses approval");
     } finally {
@@ -154,7 +160,7 @@ export default function AdminTransactionDetailsPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/internal-tb/admin" className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1">
+      <Link to={returnTo} className="text-brand-primary text-sm hover:underline inline-flex items-center gap-1">
         <span className="material-symbols-outlined text-sm">arrow_back</span>
         Kembali ke Dashboard
       </Link>

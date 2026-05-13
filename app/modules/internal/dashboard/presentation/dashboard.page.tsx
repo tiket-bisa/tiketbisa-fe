@@ -1,11 +1,12 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { Card, Badge, SearchInput, Pagination, Select } from "~/core/design-system/components";
+import { Card, Badge, SearchInput, Select } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
 import { useAuth } from "~/core/auth";
 import { analyticsApi, type DashboardStats } from "../../analytics/analytics.api";
 import { transactionApi, mapTransactionApiToFe } from "~/core/api/services/transaction.api";
 import { useApiQuery } from "~/core/api";
+import { TransactionPaginationControls } from "~/modules/internal/common/presentation/transaction-pagination-controls";
 
 const STATUS_MAP = {
   paid: { label: "Lunas", variant: "success" as const },
@@ -14,7 +15,7 @@ const STATUS_MAP = {
   refunded: { label: "Refund", variant: "default" as const },
 };
 
-const ITEMS_PER_PAGE = 5;
+const DEFAULT_PAGE_SIZE = 5;
 
 function mapStatusFilterToApi(statusFilter: string): string | undefined {
   if (statusFilter === "all") return undefined;
@@ -36,6 +37,7 @@ export default function DashboardPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isStatsLoading, setIsStatsLoading] = useState(true);
 
@@ -50,11 +52,11 @@ export default function DashboardPage() {
   const { data: transactionRes, loading: loadingTransactions } = useApiQuery(
     async () => {
       // Don't fetch if brand is not loaded yet
-      if (!user?.brand_slug) return { transactions: [], totalPages: 1 };
+      if (!user?.brand_slug) return { transactions: [], totalCount: 0, totalPages: 1 };
       
       const res = await transactionApi.getList({
-        limit: ITEMS_PER_PAGE,
-        offset: (currentPage - 1) * ITEMS_PER_PAGE,
+        limit: pageSize,
+        offset: (currentPage - 1) * pageSize,
         brandId: user.brand_id,
         customerName: search || undefined,
         status: mapStatusFilterToApi(statusFilter),
@@ -62,15 +64,17 @@ export default function DashboardPage() {
       if (res.success && res.data) {
         return {
           transactions: (res.data.transactions ?? []).map(mapTransactionApiToFe),
-          totalPages: res.data.total_pages ?? 1,
+          totalCount: res.data.totalCount ?? res.data.total_count ?? 0,
+          totalPages: res.data.totalPages ?? res.data.total_pages ?? 1,
         };
       }
-      return { transactions: [], totalPages: 1 };
+      return { transactions: [], totalCount: 0, totalPages: 1 };
     },
-    [currentPage, search, statusFilter, user?.brand_slug, user?.brand_id],
+    [currentPage, pageSize, search, statusFilter, user?.brand_slug, user?.brand_id],
   );
 
   const paged = transactionRes?.transactions ?? [];
+  const totalCount = transactionRes?.totalCount ?? 0;
   const totalPages = transactionRes?.totalPages ?? 1;
 
   return (
@@ -210,16 +214,18 @@ export default function DashboardPage() {
         </Card>
         )}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="mt-4 flex justify-center">
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          </div>
-        )}
+        <TransactionPaginationControls
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          itemCount={paged.length}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(nextPageSize) => {
+            setPageSize(nextPageSize);
+            setCurrentPage(1);
+          }}
+        />
       </div>
     </div>
   );
