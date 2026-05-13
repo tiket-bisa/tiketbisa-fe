@@ -1,13 +1,45 @@
-import { useState, useMemo } from "react";
-import { Card, SearchInput, Pagination, Select } from "~/core/design-system/components";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
+import { Card, SearchInput, Select } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
 import { statusFilterOptions } from "~/core/constants/transaction";
 import { TransactionTable } from "./components/transaction-table";
 import { transactionApi, mapTransactionApiToFe } from "~/core/api/services/transaction.api";
 import { useApiQuery } from "~/core/api";
 import { analyticsApi } from "~/modules/internal/analytics/analytics.api";
+import { TransactionPaginationControls } from "~/modules/internal/common/presentation/transaction-pagination-controls";
 
-const ITEMS_PER_PAGE = 5;
+const DEFAULT_PAGE_SIZE = 5;
+const PAGE_SIZE_OPTIONS = new Set([5, 10, 25, 50]);
+
+function parsePositiveInt(value: string | null, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function parsePageSize(value: string | null): number {
+  const parsed = parsePositiveInt(value, DEFAULT_PAGE_SIZE);
+  return PAGE_SIZE_OPTIONS.has(parsed) ? parsed : DEFAULT_PAGE_SIZE;
+}
+
+function buildDashboardParams({
+  currentPage,
+  pageSize,
+  search,
+  statusFilter,
+}: {
+  currentPage: number;
+  pageSize: number;
+  search: string;
+  statusFilter: string;
+}) {
+  const params = new URLSearchParams();
+  if (currentPage > 1) params.set("page", String(currentPage));
+  if (pageSize !== DEFAULT_PAGE_SIZE) params.set("pageSize", String(pageSize));
+  if (search.trim()) params.set("search", search.trim());
+  if (statusFilter !== "all") params.set("status", statusFilter);
+  return params;
+}
 
 function mapStatusFilterToApi(statusFilter: string): string | undefined {
   if (statusFilter === "all") return undefined;
@@ -17,9 +49,11 @@ function mapStatusFilterToApi(statusFilter: string): string | undefined {
 
 /** Admin — Dashboard (overview across all brands) */
 export default function AdminDashboardPage() {
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
+  const [statusFilter, setStatusFilter] = useState(() => searchParams.get("status") ?? "all");
+  const [currentPage, setCurrentPage] = useState(() => parsePositiveInt(searchParams.get("page"), 1));
+  const [pageSize, setPageSize] = useState(() => parsePageSize(searchParams.get("pageSize")));
 
   // Fetch real dashboard stats
   const { data: stats } = useApiQuery(
@@ -33,24 +67,38 @@ export default function AdminDashboardPage() {
   const { data: transactionRes, loading: loadingTransactions } = useApiQuery(
     async () => {
       const res = await transactionApi.getList({
-        limit: ITEMS_PER_PAGE,
-        offset: (currentPage - 1) * ITEMS_PER_PAGE,
+        limit: pageSize,
+        offset: (currentPage - 1) * pageSize,
         customerName: search || undefined,
         status: mapStatusFilterToApi(statusFilter),
       });
       if (res.success && res.data) {
         return {
           transactions: (res.data.transactions ?? []).map(mapTransactionApiToFe),
-          totalPages: res.data.total_pages ?? 1,
+          totalCount: res.data.totalCount ?? res.data.total_count ?? 0,
+          totalPages: res.data.totalPages ?? res.data.total_pages ?? 1,
         };
       }
-      return { transactions: [], totalPages: 1 };
+      return { transactions: [], totalCount: 0, totalPages: 1 };
     },
-    [currentPage, search, statusFilter],
+    [currentPage, pageSize, search, statusFilter],
   );
 
   const transactions = transactionRes?.transactions ?? [];
+  const totalCount = transactionRes?.totalCount ?? 0;
   const totalPages = transactionRes?.totalPages ?? 1;
+  const dashboardParams = buildDashboardParams({ currentPage, pageSize, search, statusFilter });
+  const returnTo = `/internal-tb/admin${dashboardParams.toString() ? `?${dashboardParams.toString()}` : ""}`;
+
+  useEffect(() => {
+    setSearchParams(buildDashboardParams({ currentPage, pageSize, search, statusFilter }), { replace: true });
+  }, [currentPage, pageSize, search, statusFilter, setSearchParams]);
+
+  useEffect(() => {
+    if (!loadingTransactions && currentPage > totalPages) {
+      setCurrentPage(Math.max(totalPages, 1));
+    }
+  }, [currentPage, loadingTransactions, totalPages]);
 
   return (
     <div className="space-y-8">
@@ -106,14 +154,21 @@ export default function AdminDashboardPage() {
             <div className="text-center py-12 text-text-tertiary">Memuat transaksi...</div>
           </Card>
         ) : (
-          <TransactionTable transactions={transactions} />
+          <TransactionTable transactions={transactions} returnTo={returnTo} />
         )}
 
-        {totalPages > 1 && (
-          <div className="mt-4 flex justify-center">
-            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-          </div>
-        )}
+        <TransactionPaginationControls
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          itemCount={transactions.length}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(nextPageSize) => {
+            setPageSize(nextPageSize);
+            setCurrentPage(1);
+          }}
+        />
       </div>
     </div>
   );

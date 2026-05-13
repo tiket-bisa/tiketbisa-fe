@@ -55,13 +55,18 @@ export interface PaymentProofResponse {
 
 export interface TransactionListResponse {
     transactions: TransactionApiData[];
-    total_count: number;
+    totalCount?: number;
+    total_count?: number;
     limit: number;
     offset: number;
-    total_pages: number;
-    current_page: number;
-    has_next_page: boolean;
-    has_previous_page: boolean;
+    totalPages?: number;
+    total_pages?: number;
+    currentPage?: number;
+    current_page?: number;
+    hasNextPage?: boolean;
+    has_next_page?: boolean;
+    hasPreviousPage?: boolean;
+    has_previous_page?: boolean;
 }
 
 export interface TransactionListParams {
