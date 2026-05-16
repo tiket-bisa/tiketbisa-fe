@@ -1,4 +1,4 @@
-import { apiFetch } from "~/core/api";
+import { apiFetch, internalHttpClient } from "~/core/api";
 import type { ApiResponse } from "~/core/api";
 
 export interface InternalTokenResponseData {
@@ -79,12 +79,7 @@ export async function requestInternalGoogleToken(
 }
 
 export async function getMe(): Promise<Omit<InternalTokenResponseData, "idToken">> {
-  const response = await apiFetch<ApiResponse<RawInternalTokenResponseData>>(
-    "/internal-tb/user/me",
-    {
-      method: "GET",
-    },
-  );
+  const response = await internalHttpClient.get<RawInternalTokenResponseData>("/user/me");
 
   if (!response.success) {
     throw new Error(getErrorMessage(response.error) ?? "Failed to fetch user details");

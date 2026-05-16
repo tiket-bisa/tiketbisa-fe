@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import {
   Card,
@@ -36,6 +36,37 @@ const tabItems = [
 
 const ITEMS_PER_PAGE = 6;
 
+const EMPTY_FORM_DATA = {
+  name: "",
+  startDate: "",
+  endDate: "",
+  venue: "",
+  location: "",
+  city: "",
+  bannerPath: "",
+  description: "",
+  termAndCondition: "",
+  status: "ONGOING",
+  isPublished: false,
+};
+
+async function convertFileToBase64(file: File): Promise<string> {
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== "string") {
+        reject(new Error("Gagal membaca file banner"));
+        return;
+      }
+
+      resolve(result.includes(",") ? result.split(",")[1] : result);
+    };
+    reader.onerror = () => reject(new Error("Gagal membaca file banner"));
+    reader.readAsDataURL(file);
+  });
+}
+
 /** Partner — Event Management (filtered by partner's brand) */
 export default function EventsPage() {
   const { user } = useAuth();
@@ -48,19 +79,10 @@ export default function EventsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    startDate: "",
-    endDate: "",
-    venue: "",
-    location: "",
-    city: "",
-    bannerPath: "",
-    description: "",
-    termAndCondition: "",
-    status: "ONGOING",
-    isPublished: false,
-  });
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [bannerPreviewUrl, setBannerPreviewUrl] = useState<string | null>(null);
+  const [formData, setFormData] = useState(EMPTY_FORM_DATA);
+  const bannerInputRef = useRef<HTMLInputElement | null>(null);
 
   const { data: eventsRaw, loading, error, refetch } = useApiQuery(
     async () => {
@@ -124,35 +146,22 @@ export default function EventsPage() {
     setEditingEvent(null);
     setFormError(null);
     setFormSuccess(null);
-    setFormData({
-      name: "",
-      startDate: "",
-      endDate: "",
-      venue: "",
-      location: "",
-      city: "",
-      bannerPath: "",
-      description: "",
-      termAndCondition: "",
-      status: "ONGOING",
-      isPublished: false,
-    });
+    setBannerFile(null);
+    setBannerPreviewUrl(null);
+    setFormData(EMPTY_FORM_DATA);
   };
 
   const startCreate = () => {
+    resetForm();
     setFormMode("create");
-    setEditingEvent(null);
-    setFormError(null);
-    setFormSuccess(null);
   };
 
   const startEdit = (id: string) => {
     const event = eventsRawList.find((evt) => evt.id === id);
     if (!event) return;
+    resetForm();
     setEditingEvent(event);
     setFormMode("edit");
-    setFormError(null);
-    setFormSuccess(null);
     setFormData({
       name: event.name ?? "",
       startDate: toDateTimeLocal(event.startDate),
@@ -179,6 +188,25 @@ export default function EventsPage() {
     }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
+
+  const handleBannerFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setBannerFile(file);
+  };
+
+  useEffect(() => {
+    if (!bannerFile) {
+      setBannerPreviewUrl(null);
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(bannerFile);
+    setBannerPreviewUrl(previewUrl);
+
+    return () => {
+      URL.revokeObjectURL(previewUrl);
+    };
+  }, [bannerFile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,10 +239,29 @@ export default function EventsPage() {
 
     setIsSubmitting(true);
     try {
+      let bannerPath = formData.bannerPath.trim() || null;
+      if (bannerFile) {
+        const bannerBase64 = await convertFileToBase64(bannerFile);
+        const uploadResult = await internalEventApi.uploadBanner({
+          bannerBase64,
+          bannerMimeType: bannerFile.type || "application/octet-stream",
+          bannerFileName: bannerFile.name || "banner",
+        });
+
+        if (!uploadResult.success || !uploadResult.data?.bannerUrl) {
+          setFormError(uploadResult.error || "Gagal mengunggah banner.");
+          return;
+        }
+
+        bannerPath = uploadResult.data.bannerUrl;
+        setFormData((prev) => ({ ...prev, bannerPath: uploadResult.data.bannerUrl }));
+        setBannerFile(null);
+      }
+
       const payload = {
         brandId: user.brand_id,
         name: formData.name.trim(),
-        bannerPath: formData.bannerPath.trim() || null,
+        bannerPath,
         startDate,
         endDate,
         description: formData.description.trim() || null,
@@ -235,8 +282,8 @@ export default function EventsPage() {
         return;
       }
 
-      setFormSuccess(formMode === "edit" ? "Event berhasil diperbarui." : "Event berhasil dibuat.");
       await refetch();
+      resetForm();
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Koneksi bermasalah.");
     } finally {
@@ -341,18 +388,20 @@ export default function EventsPage() {
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Input
-                label="Venue"
+                label="Judul Lokasi / Venue"
                 name="venue"
                 value={formData.venue}
                 onChange={handleChange}
                 required
               />
               <Input
-                label="Lokasi"
+                label="Lokasi (link Google Maps)"
                 name="location"
                 value={formData.location}
                 onChange={handleChange}
                 required
+                placeholder="https://maps.app.goo.gl/..."
+                hint="Tempel link Google Maps, bukan alamat biasa."
               />
               <Input
                 label="Kota"
@@ -363,11 +412,54 @@ export default function EventsPage() {
               />
             </div>
 
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-text-primary" htmlFor="banner-upload">
+                Banner (upload image)
+              </label>
+              <input
+                id="banner-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleBannerFileChange}
+                ref={bannerInputRef}
+                className="w-full rounded-lg border border-border-default bg-surface-alt px-3 py-2 text-sm text-text-primary file:mr-4 file:rounded-md file:border-0 file:bg-brand-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-brand-primary-hover"
+              />
+              <p className="text-xs text-text-tertiary">
+                Upload gambar banner atau isi URL di bawah jika sudah punya link.
+              </p>
+              {bannerFile && (
+                <div className="space-y-2">
+                  <p className="text-xs text-text-secondary">File terpilih: {bannerFile.name}</p>
+                  {bannerPreviewUrl && (
+                    <img
+                      src={bannerPreviewUrl}
+                      alt="Preview banner"
+                      className="h-40 w-full rounded-xl object-cover border border-border-subtle"
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBannerFile(null);
+                      if (bannerInputRef.current) {
+                        bannerInputRef.current.value = "";
+                      }
+                    }}
+                    className="text-xs font-medium text-brand-primary hover:text-brand-primary-hover"
+                  >
+                    Hapus file
+                  </button>
+                </div>
+              )}
+            </div>
+
             <Input
               label="Banner URL"
               name="bannerPath"
               value={formData.bannerPath}
               onChange={handleChange}
+              placeholder="https://..."
+              hint="Opsional jika ingin pakai link gambar yang sudah ada."
             />
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

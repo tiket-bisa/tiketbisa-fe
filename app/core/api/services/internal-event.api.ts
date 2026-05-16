@@ -40,6 +40,10 @@ export interface InternalEventListParams {
   sortBy?: string;
 }
 
+export interface EventBannerUploadResponse {
+  bannerUrl: string;
+}
+
 function buildQuery(params?: InternalEventListParams): string {
   if (!params) return "";
   const qs = new URLSearchParams();
@@ -105,6 +109,13 @@ export const internalEventApi = {
 
   delete: (id: string) =>
     internalHttpClient.delete<null>(`/event/${id}`),
+
+  uploadBanner: (data: {
+    bannerBase64: string;
+    bannerMimeType: string;
+    bannerFileName: string;
+  }) =>
+    internalHttpClient.post<EventBannerUploadResponse>("/event/banner/upload", data),
 };
 
 export function mapInternalEventToSummary(

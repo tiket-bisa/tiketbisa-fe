@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import type { InternalTokenResponseData } from "./internal-auth.api";
 import { AUTH_STORAGE_KEY } from "./auth.constants";
+import { internalHttpClient } from "~/core/api";
 
 export interface BaseAuthUser {
   email: string;
@@ -62,23 +63,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Restore session on mount
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as AuthUser;
-        // Invalidate legacy sessions that are missing the internal_token
-        if (!parsed.internal_token || (parsed.role === "partner" && !parsed.brand_id)) {
-          localStorage.removeItem(AUTH_STORAGE_KEY);
-          setUser(null);
-        } else {
-          setUser(parsed);
+    let isActive = true;
+
+    async function restoreSession() {
+      try {
+        const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored) as AuthUser;
+          // Invalidate legacy sessions that are missing the internal_token
+          if (!parsed.internal_token || (parsed.role === "partner" && !parsed.brand_id)) {
+            localStorage.removeItem(AUTH_STORAGE_KEY);
+            if (isActive) {
+              setUser(null);
+            }
+          } else {
+            if (isActive) {
+              setUser(parsed);
+            }
+
+            const meResponse = await internalHttpClient.get("/user/me");
+            if (!isActive) {
+              return;
+            }
+
+            if (!meResponse.success && (meResponse.status_code === 401 || meResponse.status_code === 403)) {
+              localStorage.removeItem(AUTH_STORAGE_KEY);
+              setUser(null);
+            }
+          }
+        }
+      } catch {
+        // ignore parse errors
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
         }
       }
-    } catch {
-      // ignore parse errors
-    } finally {
-      setIsLoading(false);
     }
+
+    void restoreSession();
+
+    return () => {
+      isActive = false;
+    };
   }, []);
 
   const loginWithOAuth = useCallback((payload: InternalTokenResponseData) => {

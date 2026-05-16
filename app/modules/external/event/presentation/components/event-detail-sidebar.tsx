@@ -36,6 +36,7 @@ export function EventDetailSidebar({
             icon="location_on"
             label="Lokasi"
             value={event.location}
+            href={event.location}
           />
           <SidebarInfo
             icon="calendar_month"
@@ -78,11 +79,15 @@ function SidebarInfo({
   icon,
   label,
   value,
+  href,
 }: {
   icon: string;
   label: string;
   value: string;
+  href?: string;
 }) {
+  const isLink = Boolean(href && /^https?:\/\//i.test(href));
+
   return (
     <div className="flex items-start gap-4 group">
       <div className="bg-brand-primary/10 p-2.5 rounded-xl group-hover:bg-brand-primary/20 transition-colors">
@@ -94,9 +99,21 @@ function SidebarInfo({
         <p className="text-[10px] text-text-tertiary uppercase tracking-[0.2em] font-black">
           {label}
         </p>
-        <p className="text-text-primary font-semibold leading-relaxed">
-          {value}
-        </p>
+        {isLink ? (
+          <a
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 font-semibold text-brand-primary hover:text-brand-primary-hover leading-relaxed"
+          >
+            <span>Buka di Google Maps</span>
+            <span className="material-symbols-outlined text-sm">open_in_new</span>
+          </a>
+        ) : (
+          <p className="text-text-primary font-semibold leading-relaxed">
+            {value}
+          </p>
+        )}
       </div>
     </div>
   );
