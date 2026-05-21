@@ -12,8 +12,7 @@ const footerColumns = [
     title: "Tiketbisa",
     links: [
       { label: "Tentang Kami", to: "/tentang" },
-      { label: "Karir", to: "#" },
-      { label: "Blog", to: "#" },
+      { label: "Social Media", to: "https://www.instagram.com/tiketbisa/" },
     ],
   },
   {
@@ -21,14 +20,14 @@ const footerColumns = [
     links: [
       { label: "FAQ", to: "/faq" },
       { label: "Hubungi Kami", to: "/hubungi" },
-      { label: "Syarat & Ketentuan", to: "#" },
+      { label: "Syarat & Ketentuan", to: "/syarat-ketentuan" },
     ],
   },
   {
     title: "Legal",
     links: [
-      { label: "Kebijakan Privasi", to: "#" },
-      { label: "Ketentuan Layanan", to: "#" },
+      { label: "Kebijakan Privasi", to: "/kebijakan-privasi" },
+      { label: "Ketentuan Layanan", to: "/ketentuan-layanan" },
     ],
   },
   {
@@ -70,16 +69,30 @@ export function Footer({ socialLinks = [], className = "" }: FooterProps) {
                 {col.title}
               </h3>
               <ul className="mt-3 flex flex-col gap-2">
-                {col.links.map((link) => (
-                  <li key={link.label}>
-                    <Link
-                      to={link.to}
-                      className="text-sm text-text-tertiary hover:text-text-secondary transition-colors"
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
+                {col.links.map((link) => {
+                  const isExternal = link.to.startsWith("http");
+                  const linkClassName =
+                    "text-sm text-text-tertiary hover:text-text-secondary transition-colors";
+
+                  return (
+                    <li key={link.label}>
+                      {isExternal ? (
+                        <a
+                          href={link.to}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={linkClassName}
+                        >
+                          {link.label}
+                        </a>
+                      ) : (
+                        <Link to={link.to} className={linkClassName}>
+                          {link.label}
+                        </Link>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}
