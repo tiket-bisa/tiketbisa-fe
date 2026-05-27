@@ -35,6 +35,7 @@ const tabItems = [
 ];
 
 const ITEMS_PER_PAGE = 6;
+const MAX_BANNER_SIZE_BYTES = 10 * 1024 * 1024;
 
 const EMPTY_FORM_DATA = {
   name: "",
@@ -191,6 +192,21 @@ export default function EventsPage() {
 
   const handleBannerFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
+    if (!file) {
+      setBannerFile(null);
+      return;
+    }
+
+    if (file.size > MAX_BANNER_SIZE_BYTES) {
+      setFormError("Ukuran banner maksimal 10MB.");
+      setBannerFile(null);
+      if (bannerInputRef.current) {
+        bannerInputRef.current.value = "";
+      }
+      return;
+    }
+
+    setFormError(null);
     setBannerFile(file);
   };
 
@@ -425,7 +441,7 @@ export default function EventsPage() {
                 className="w-full rounded-lg border border-border-default bg-surface-alt px-3 py-2 text-sm text-text-primary file:mr-4 file:rounded-md file:border-0 file:bg-brand-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-brand-primary-hover"
               />
               <p className="text-xs text-text-tertiary">
-                Upload gambar banner atau isi URL di bawah jika sudah punya link.
+                Upload gambar banner (maks 10MB) atau isi URL di bawah jika sudah punya link.
               </p>
               {bannerFile && (
                 <div className="space-y-2">

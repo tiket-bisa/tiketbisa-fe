@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import type { InternalTokenResponseData } from "./internal-auth.api";
+import { refreshInternalToken } from "./internal-auth.api";
 import { AUTH_STORAGE_KEY } from "./auth.constants";
 import { internalHttpClient } from "~/core/api";
 
@@ -70,16 +71,71 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const stored = localStorage.getItem(AUTH_STORAGE_KEY);
         if (stored) {
           const parsed = JSON.parse(stored) as AuthUser;
-          // Invalidate legacy sessions that are missing the internal_token
-          if (!parsed.internal_token || (parsed.role === "partner" && !parsed.brand_id)) {
+          const clearSession = () => {
             localStorage.removeItem(AUTH_STORAGE_KEY);
             if (isActive) {
               setUser(null);
             }
-          } else {
+          };
+
+          const applySession = (nextUser: AuthUser) => {
+            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(nextUser));
             if (isActive) {
-              setUser(parsed);
+              setUser(nextUser);
             }
+          };
+
+          const buildRefreshedUser = (
+            currentUser: AuthUser,
+            refreshed: InternalTokenResponseData,
+          ): AuthUser => {
+            const baseUser = {
+              email: currentUser.email,
+              name: currentUser.name,
+              picture: currentUser.picture,
+              internal_token: refreshed.idToken,
+            };
+
+            if (refreshed.role === "admin") {
+              return { ...baseUser, role: "admin" };
+            }
+
+            const brandId = refreshed.brandId ?? currentUser.brand_id ?? "";
+            const brandSlug = refreshed.brandSlug ?? currentUser.brand_slug ?? "";
+            const brandName = refreshed.brandName ?? currentUser.brand_name ?? currentUser.name;
+
+            if (!brandId || !brandSlug || !brandName) {
+              throw new Error("Partner account is missing brand details");
+            }
+
+            return {
+              ...baseUser,
+              role: "partner",
+              brand_id: brandId,
+              brand_slug: brandSlug,
+              brand_name: brandName,
+            };
+          };
+
+          const refreshSession = async () => {
+            const refreshed = await refreshInternalToken();
+            if (!isActive) {
+              return;
+            }
+
+            const refreshedUser = buildRefreshedUser(parsed, refreshed);
+            applySession(refreshedUser);
+          };
+
+          // Invalidate legacy sessions that are missing the internal_token
+          if (!parsed.internal_token || (parsed.role === "partner" && !parsed.brand_id)) {
+            try {
+              await refreshSession();
+            } catch {
+              clearSession();
+            }
+          } else {
+            applySession(parsed);
 
             const meResponse = await internalHttpClient.get("/user/me");
             if (!isActive) {
@@ -87,8 +143,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
 
             if (!meResponse.success && (meResponse.status_code === 401 || meResponse.status_code === 403)) {
-              localStorage.removeItem(AUTH_STORAGE_KEY);
-              setUser(null);
+              try {
+                await refreshSession();
+
+                const meRetry = await internalHttpClient.get("/user/me");
+                if (!meRetry.success && (meRetry.status_code === 401 || meRetry.status_code === 403)) {
+                  clearSession();
+                }
+              } catch {
+                clearSession();
+              }
             }
           }
         }

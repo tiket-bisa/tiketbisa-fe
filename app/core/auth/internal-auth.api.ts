@@ -36,6 +36,28 @@ function getErrorMessage(error: unknown): string | null {
   return null;
 }
 
+function normalizeInternalTokenResponse(
+  data: RawInternalTokenResponseData,
+): InternalTokenResponseData {
+  const role = data.role?.trim().toLowerCase();
+  if (role !== "admin" && role !== "partner") {
+    throw new Error("Token response missing valid role");
+  }
+
+  const idToken = data.idToken ?? data.id_token;
+  if (!idToken) {
+    throw new Error("Token response missing id token");
+  }
+
+  return {
+    idToken,
+    role,
+    brandSlug: data.brandSlug ?? data.brand_slug ?? null,
+    brandName: data.brandName ?? data.brand_name ?? null,
+    brandId: data.brandId ?? data.brand_id ?? null,
+  };
+}
+
 export async function requestInternalGoogleToken(
   authCode: string,
 ): Promise<InternalTokenResponseData> {
@@ -59,23 +81,25 @@ export async function requestInternalGoogleToken(
     throw new Error("Unauthorized");
   }
 
-  const role = response.data.role?.trim().toLowerCase();
-  if (role !== "admin" && role !== "partner") {
-    throw new Error("Token response missing valid role");
+  return normalizeInternalTokenResponse(response.data);
+}
+
+export async function refreshInternalToken(): Promise<InternalTokenResponseData> {
+  const response = await internalHttpClient.post<RawInternalTokenResponseData>("/token/refresh", {});
+
+  if (!response.success) {
+    const message = getErrorMessage(response.error);
+    if (response.status_code === 401 || response.status_code === 403) {
+      throw new Error(message ?? "Unauthorized");
+    }
+    throw new Error(message ?? "Failed to refresh token");
   }
 
-  const idToken = response.data.idToken ?? response.data.id_token;
-  if (!idToken) {
-    throw new Error("Token response missing id token");
+  if (!response.data) {
+    throw new Error("Unauthorized");
   }
 
-  return {
-    idToken,
-    role,
-    brandSlug: response.data.brandSlug ?? response.data.brand_slug ?? null,
-    brandName: response.data.brandName ?? response.data.brand_name ?? null,
-    brandId: response.data.brandId ?? response.data.brand_id ?? null,
-  };
+  return normalizeInternalTokenResponse(response.data);
 }
 
 export async function getMe(): Promise<Omit<InternalTokenResponseData, "idToken">> {

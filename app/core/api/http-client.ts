@@ -105,12 +105,16 @@ export const httpClient = {
 function getInternalAuthHeaders(): Record<string, string> {
   const session = getStoredAuthSession();
   if (!session?.internal_token) {
-    return {};
+    if (!session?.email) {
+      return {};
+    }
+    return {
+      "x-tb-identifier": session.email,
+    };
   }
 
   const headers: Record<string, string> = {
     "x-tb-internal-token": session.internal_token,
-    Authorization: `Bearer ${session.internal_token}`,
   };
 
   if (session.email) {
