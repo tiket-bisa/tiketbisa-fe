@@ -1,0 +1,59 @@
+
+Running 2 tests using 1 worker
+
+BROWSER CONSOLE: [vite] connecting...
+BROWSER CONSOLE: [vite] connected.
+BROWSER CONSOLE: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+BROWSER CONSOLE: [vite] connecting...
+BROWSER CONSOLE: [vite] connected.
+BROWSER CONSOLE: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+BROWSER CONSOLE: [vite] connecting...
+BROWSER CONSOLE: [vite] connected.
+BROWSER CONSOLE: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+BROWSER CONSOLE: [vite] connecting...
+BROWSER CONSOLE: [vite] connected.
+BROWSER CONSOLE: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+  ✘  1 e2e/smoke.spec.ts:14:3 › local smoke flows › public browse and checkout (4.9s)
+  -  2 e2e/smoke.spec.ts:64:3 › local smoke flows › internal admin approval and partner scan
+
+
+  1) e2e/smoke.spec.ts:14:3 › local smoke flows › public browse and checkout ───────────────────────
+
+    Error: locator.check: Error: strict mode violation: getByLabel(/Syarat & Ketentuan/i) resolved to 2 elements:
+        1) <input type="checkbox" class="peer h-5 w-5 cursor-pointer appearance-none rounded-md border-2 border-gray-200 checked:border-brand-primary checked:bg-brand-primary transition-all"/> aka getByLabel('Saya menyetujui Syarat &').first()
+        2) <input type="checkbox" class="peer h-5 w-5 cursor-pointer appearance-none rounded-md border-2 border-gray-200 checked:border-brand-primary checked:bg-brand-primary transition-all"/> aka getByRole('checkbox', { name: 'Saya menyetujui Syarat &' })
+
+    Call log:
+    [2m  - waiting for getByLabel(/Syarat & Ketentuan/i)[22m
+
+
+      44 |
+      45 |     await page.locator('button', { hasText: 'Manual Transfer' }).click();
+    > 46 |     await page.getByLabel(/Syarat & Ketentuan/i).check();
+         |                                                  ^
+      47 |     await page.getByLabel(/Kebijakan Privasi/i).check();
+      48 |     await page.getByRole("button", { name: /Bayar Sekarang/i }).click();
+      49 |
+        at /Users/muhammadaldofahrezy/Documents/Developer/tiketbisa/tiketbisa-fe/e2e/smoke.spec.ts:46:50
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-local-smoke-flows-public-browse-and-checkout/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/smoke-local-smoke-flows-public-browse-and-checkout/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/smoke-local-smoke-flows-public-browse-and-checkout/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-local-smoke-flows-public-browse-and-checkout/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/smoke-local-smoke-flows-public-browse-and-checkout/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    e2e/smoke.spec.ts:14:3 › local smoke flows › public browse and checkout ────────────────────────
+  1 did not run
