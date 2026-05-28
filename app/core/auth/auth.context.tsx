@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import type { InternalTokenResponseData } from "./internal-auth.api";
+import { refreshInternalToken } from "./internal-auth.api";
 import { AUTH_STORAGE_KEY } from "./auth.constants";
+import { internalHttpClient } from "~/core/api";
 
 export interface BaseAuthUser {
   email: string;
@@ -62,23 +64,112 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Restore session on mount
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as AuthUser;
-        // Invalidate legacy sessions that are missing the internal_token
-        if (!parsed.internal_token || (parsed.role === "partner" && !parsed.brand_id)) {
-          localStorage.removeItem(AUTH_STORAGE_KEY);
-          setUser(null);
-        } else {
-          setUser(parsed);
+    let isActive = true;
+
+    async function restoreSession() {
+      try {
+        const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored) as AuthUser;
+          const clearSession = () => {
+            localStorage.removeItem(AUTH_STORAGE_KEY);
+            if (isActive) {
+              setUser(null);
+            }
+          };
+
+          const applySession = (nextUser: AuthUser) => {
+            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(nextUser));
+            if (isActive) {
+              setUser(nextUser);
+            }
+          };
+
+          const buildRefreshedUser = (
+            currentUser: AuthUser,
+            refreshed: InternalTokenResponseData,
+          ): AuthUser => {
+            const baseUser = {
+              email: currentUser.email,
+              name: currentUser.name,
+              picture: currentUser.picture,
+              internal_token: refreshed.idToken,
+            };
+
+            if (refreshed.role === "admin") {
+              return { ...baseUser, role: "admin" };
+            }
+
+            const brandId = refreshed.brandId ?? currentUser.brand_id ?? "";
+            const brandSlug = refreshed.brandSlug ?? currentUser.brand_slug ?? "";
+            const brandName = refreshed.brandName ?? currentUser.brand_name ?? currentUser.name;
+
+            if (!brandId || !brandSlug || !brandName) {
+              throw new Error("Partner account is missing brand details");
+            }
+
+            return {
+              ...baseUser,
+              role: "partner",
+              brand_id: brandId,
+              brand_slug: brandSlug,
+              brand_name: brandName,
+            };
+          };
+
+          const refreshSession = async () => {
+            const refreshed = await refreshInternalToken();
+            if (!isActive) {
+              return;
+            }
+
+            const refreshedUser = buildRefreshedUser(parsed, refreshed);
+            applySession(refreshedUser);
+          };
+
+          // Invalidate legacy sessions that are missing the internal_token
+          if (!parsed.internal_token || (parsed.role === "partner" && !parsed.brand_id)) {
+            try {
+              await refreshSession();
+            } catch {
+              clearSession();
+            }
+          } else {
+            applySession(parsed);
+
+            const meResponse = await internalHttpClient.get("/user/me");
+            if (!isActive) {
+              return;
+            }
+
+            if (!meResponse.success && (meResponse.status_code === 401 || meResponse.status_code === 403)) {
+              try {
+                await refreshSession();
+
+                const meRetry = await internalHttpClient.get("/user/me");
+                if (!meRetry.success && (meRetry.status_code === 401 || meRetry.status_code === 403)) {
+                  clearSession();
+                }
+              } catch {
+                clearSession();
+              }
+            }
+          }
+        }
+      } catch {
+        // ignore parse errors
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
         }
       }
-    } catch {
-      // ignore parse errors
-    } finally {
-      setIsLoading(false);
     }
+
+    void restoreSession();
+
+    return () => {
+      isActive = false;
+    };
   }, []);
 
   const loginWithOAuth = useCallback((payload: InternalTokenResponseData) => {

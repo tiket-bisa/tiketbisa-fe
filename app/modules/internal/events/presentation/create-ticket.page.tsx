@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router";
 import { Card, Button } from "~/core/design-system/components";
 import { ticketCategoryApi } from "~/core/api/services/ticket-category.api";
 import { useAuth } from "~/core/auth";
+import { formatIDRInput, parseIDRInput } from "~/core/utils";
 
 export default function CreateTicketPage() {
   const { eventId } = useParams();
@@ -22,7 +23,13 @@ export default function CreateTicketPage() {
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    if (name === "price") {
+      setFormData((prev) => ({ ...prev, price: formatIDRInput(value) }));
+      return;
+    }
+
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,7 +47,7 @@ export default function CreateTicketPage() {
         description: formData.description,
         categoryCode: formData.categoryCode,
         totalTicket: parseInt(formData.totalTicket) || 0,
-        price: parseFloat(formData.price) || 0,
+        price: parseIDRInput(formData.price),
       });
 
       if (res.success && res.data) {
@@ -146,10 +153,10 @@ export default function CreateTicketPage() {
                 required
                 id="price"
                 name="price"
-                type="number"
-                min="0"
+                type="text"
+                inputMode="numeric"
                 className="w-full rounded-md border border-gray-300 p-2"
-                placeholder="Contoh: 150000"
+                placeholder="Contoh: 150.000"
                 value={formData.price}
                 onChange={handleChange}
               />

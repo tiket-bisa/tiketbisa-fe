@@ -34,6 +34,25 @@ function normalizePath(path: string): string {
   return path.startsWith("/") ? path : `/${path}`;
 }
 
+function persistInternalAuthToken(token: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const session = getStoredAuthSession();
+  if (!session) {
+    return;
+  }
+
+  localStorage.setItem(
+    AUTH_STORAGE_KEY,
+    JSON.stringify({
+      ...session,
+      internal_token: token,
+    }),
+  );
+}
+
 async function request<T>(
   method: string,
   path: string,
@@ -42,11 +61,19 @@ async function request<T>(
 ): Promise<ApiResponse<T>> {
   try {
     const url = toAbsoluteApiUrl(path);
+    const isInternalRequest = path.startsWith(INTERNAL_API_PREFIX);
     const response = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json", ...headers },
       body: body ? JSON.stringify(body) : undefined,
     });
+
+    if (isInternalRequest) {
+      const refreshedToken = response.headers.get("x-tb-internal-token");
+      if (refreshedToken) {
+        persistInternalAuthToken(refreshedToken);
+      }
+    }
 
     const json = await response.json();
 
@@ -77,14 +104,24 @@ export const httpClient = {
 
 function getInternalAuthHeaders(): Record<string, string> {
   const session = getStoredAuthSession();
-  if (!session?.email || !session.internal_token) {
-    return {};
+  if (!session?.internal_token) {
+    if (!session?.email) {
+      return {};
+    }
+    return {
+      "x-tb-identifier": session.email,
+    };
   }
 
-  return {
-    "x-tb-identifier": session.email,
+  const headers: Record<string, string> = {
     "x-tb-internal-token": session.internal_token,
   };
+
+  if (session.email) {
+    headers["x-tb-identifier"] = session.email;
+  }
+
+  return headers;
 }
 
 export const internalHttpClient = {
