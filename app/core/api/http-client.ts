@@ -75,6 +75,28 @@ async function request<T>(
       }
     }
 
+    // Handle non-JSON error responses (e.g. nginx 413, 502, 504)
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!response.ok && !contentType.includes("application/json")) {
+      let errorMessage: string;
+      if (response.status === 413) {
+        errorMessage = "Ukuran file terlalu besar. Maksimal 10MB.";
+      } else if (response.status === 502 || response.status === 503) {
+        errorMessage = "Server sedang tidak tersedia. Coba lagi nanti.";
+      } else if (response.status === 504) {
+        errorMessage = "Server tidak merespons. Coba lagi nanti.";
+      } else {
+        errorMessage = `Server error (${response.status})`;
+      }
+      return {
+        success: false,
+        data: null as unknown as T,
+        error: errorMessage,
+        reason: `HTTP_${response.status}`,
+        status_code: response.status,
+      };
+    }
+
     const json = await response.json();
 
     return {
