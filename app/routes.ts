@@ -12,6 +12,9 @@ export default [
     route("tentang", "modules/external/static/tentang.page.tsx"),
     route("hubungi", "modules/external/static/hubungi.page.tsx"),
     route("faq", "modules/external/static/faq.page.tsx"),
+    route("syarat-ketentuan", "modules/external/static/syarat-ketentuan.page.tsx"),
+    route("kebijakan-privasi", "modules/external/static/kebijakan-privasi.page.tsx"),
+    route("ketentuan-layanan", "modules/external/static/ketentuan-layanan.page.tsx"),
     route("event", "modules/external/event/presentation/event.page.tsx"),
     route("event/:eventId", "modules/external/event/presentation/event-detail.page.tsx"),
     route("brand", "modules/external/brand/presentation/brand.page.tsx", {

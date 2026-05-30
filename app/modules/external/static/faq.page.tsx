@@ -37,24 +37,32 @@ function FAQItem({ question, answer }: FAQItemProps) {
 export default function FAQPage() {
   const faqs = [
     {
-      question: "Bagaimana cara membeli tiket di TiketBisa?",
-      answer: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
+      question: "1. Bagaimana cara membeli tiket di TiketBisa?",
+      answer: "Pilih event yang ingin Anda kunjungi, tentukan kategori tiket dan jumlah tiket yang diinginkan, isi data diri, kemudian lanjutkan ke halaman checkout untuk menyelesaikan pembayaran."
     },
     {
-      question: "Metode pembayaran apa saja yang tersedia?",
-      answer: "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+      question: "2. Metode pembayaran apa saja yang tersedia?",
+      answer: "TiketBisa menyediakan berbagai metode pembayaran seperti manual transfer, Virtual Account, QRIS, e-wallet, kartu debit/kredit, dan metode pembayaran lain yang tersedia pada halaman checkout."
     },
     {
-      question: "Kapan saya akan menerima e-tiket saya?",
-      answer: "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo."
+      question: "3. Apakah saya harus memiliki akun untuk membeli tiket?",
+      answer: "Tidak. Pengguna bisa langsung membeli tiket yang tersedia dan menyelesaikan transaksi tanpa pembuatan akun."
     },
     {
-      question: "Apakah saya bisa melakukan refund tiket?",
-      answer: "At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident."
+      question: "4. Kapan e-ticket akan diterima?",
+      answer: "E-ticket akan dikirim secara otomatis melalui email setelah pembayaran berhasil diverifikasi"
     },
     {
-      question: "Bagaimana jika saya tidak menerima email konfirmasi?",
-      answer: "Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus."
+      question: "5. Saya belum menerima e-ticket, apa yang harus dilakukan?",
+      answer: "Pastikan alamat email yang digunakan saat pembelian sudah benar dan aktif. Periksa folder Spam, Junk, atau Promotions. Jika tiket masih belum diterima, silakan hubungi Customer Support TiketBisa."
+    },
+    {
+      question: "6. Apakah tiket yang sudah dibeli dapat direfund?",
+      answer: "Kebijakan refund mengikuti ketentuan masing-masing penyelenggara event. Beberapa event mungkin tidak menyediakan refund kecuali event dibatalkan atau dijadwalkan ulang."
+    },
+    {
+      question: "7. Apakah tiket dapat dipindah tangankan?",
+      answer: "Ketentuan pemindahan tiket mengikuti kebijakan event yang berlaku. Untuk beberapa event, tiket bersifat personal dan wajib menggunakan identitas yang sesuai."
     }
   ];
 
