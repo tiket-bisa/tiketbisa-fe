@@ -51,7 +51,7 @@ export function PaymentConsent({
           </svg>
         </div>
         <span className="text-xs font-bold text-text-secondary leading-tight select-none">
-          Saya menyetujui <Link to="/terms" className="text-brand-primary hover:underline">Syarat & Ketentuan</Link> yang berlaku di Artatix
+          Saya menyetujui <Link to="/terms" className="text-brand-primary hover:underline">Syarat & Ketentuan</Link> yang berlaku di Tiketbisa
         </span>
       </label>
 
@@ -68,7 +68,7 @@ export function PaymentConsent({
           </svg>
         </div>
         <span className="text-xs font-bold text-text-secondary leading-tight select-none">
-          Saya menyetujui <Link to="/privacy" className="text-brand-primary hover:underline">Kebijakan Privasi & Pemrosesan Data</Link> yang berlaku di Artatix
+          Saya menyetujui <Link to="/privacy" className="text-brand-primary hover:underline">Kebijakan Privasi & Pemrosesan Data</Link> yang berlaku di Tiketbisa
         </span>
       </label>
     </div>
