@@ -1,9 +1,67 @@
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { Button } from "~/core/design-system/components/button";
 import { Input } from "~/core/design-system/components/input";
 import { Card } from "~/core/design-system/components/card";
+import { sendContactMessage } from "./contact.api";
+
+const INITIAL_FORM = {
+  name: "",
+  email: "",
+  subject: "",
+  message: "",
+};
 
 /** External — Hubungi Kami (Static) */
 export default function HubungiPage() {
+  const [formData, setFormData] = useState(INITIAL_FORM);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleChange = (field: keyof typeof INITIAL_FORM) =>
+    (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      setFormData((prev) => ({ ...prev, [field]: event.target.value }));
+    };
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    if (!formData.name.trim()) {
+      setError("Nama lengkap wajib diisi.");
+      return;
+    }
+    if (!formData.email.trim()) {
+      setError("Email wajib diisi.");
+      return;
+    }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(formData.email.trim())) {
+      setError("Format email tidak valid.");
+      return;
+    }
+    if (!formData.message.trim()) {
+      setError("Pesan wajib diisi.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await sendContactMessage({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        subject: formData.subject.trim(),
+        message: formData.message.trim(),
+      });
+      setSuccess("Pesan berhasil dikirim. Tim kami akan segera menghubungi Anda.");
+      setFormData(INITIAL_FORM);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal mengirim pesan.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
       <div className="text-center mb-16">
@@ -11,7 +69,7 @@ export default function HubungiPage() {
           Hubungi <span className="text-brand-primary">Kami</span>
         </h1>
         <p className="mt-4 text-lg text-text-secondary">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do eiusmod.
+          Kami siap membantu untuk kebutuhan event dan tiket Anda.
         </p>
       </div>
 
@@ -55,33 +113,65 @@ export default function HubungiPage() {
 
         {/* Contact Form */}
         <Card className="p-8 border-border-default bg-surface-alt/50 backdrop-blur-sm">
-          <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            {error && (
+              <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-destructive-text">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-success-text">
+                {success}
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-text-secondary">Nama Lengkap</label>
-                <Input placeholder="Lorem Ipsum" className="bg-surface-primary" />
+                <Input
+                  placeholder="Masukkan nama lengkap"
+                  className="bg-surface-primary"
+                  value={formData.name}
+                  onChange={handleChange("name")}
+                  disabled={isSubmitting}
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-text-secondary">Email</label>
-                <Input type="email" placeholder="lorem@example.com" className="bg-surface-primary" />
+                <Input
+                  type="email"
+                  placeholder="nama@email.com"
+                  className="bg-surface-primary"
+                  value={formData.email}
+                  onChange={handleChange("email")}
+                  disabled={isSubmitting}
+                />
               </div>
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-text-secondary">Subjek</label>
-              <Input placeholder="Lorem Ipsum Dolor" className="bg-surface-primary" />
+              <Input
+                placeholder="Contoh: Kerja sama event"
+                className="bg-surface-primary"
+                value={formData.subject}
+                onChange={handleChange("subject")}
+                disabled={isSubmitting}
+              />
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-text-secondary">Pesan</label>
               <textarea 
                 className="w-full min-h-[150px] rounded-xl border border-border-default bg-surface-primary p-4 text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-brand-primary/50 transition-all"
-                placeholder="Lorem ipsum dolor sit amet..."
+                placeholder="Tulis pesan Anda di sini"
+                value={formData.message}
+                onChange={handleChange("message")}
+                disabled={isSubmitting}
               />
             </div>
 
-            <Button className="w-full h-12 text-lg font-bold" variant="primary">
-              Kirim Pesan
+            <Button className="w-full h-12 text-lg font-bold" variant="primary" isLoading={isSubmitting}>
+              {isSubmitting ? "Mengirim..." : "Kirim Pesan"}
             </Button>
           </form>
         </Card>

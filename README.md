@@ -39,6 +39,29 @@ http://localhost:5173/internal-tb
 
 The checkout flow stays on the public `/checkout/*` path.
 
+## E2E Smoke Tests (Local)
+
+Prerequisites:
+- Backend compose is running (local compose enables `TB_E2E_MODE` by default).
+- Frontend dev server is running.
+
+```bash
+cd tiketbisa-fe
+pnpm install
+pnpm exec playwright install
+pnpm e2e
+```
+
+### Optional Environment Variables (E2E)
+
+```bash
+E2E_BASE_URL=http://localhost:5173
+E2E_API_BASE_URL=http://localhost:8080
+E2E_ADMIN_EMAIL=admin.e2e@tiketbisa.local
+E2E_PARTNER_EMAIL=partner.e2e@tiketbisa.local
+E2E_INTERNAL_TOKEN=e2e-token
+```
+
 ## Deployment
 
 ### Docker Deployment
@@ -101,12 +124,12 @@ app/
 │   │   ├── api-response.type.ts       # ApiResponse<T> contract
 │   │   ├── pagination.type.ts         # PaginationParams (limit/offset)
 │   │   └── index.ts                   # Barrel exports
-│   ├── auth/                          # Auth provider & guard (TODO)
+│   ├── auth/                          # Auth provider & guard
 │   ├── design-system/
 │   │   ├── theme.ts                   # TS color token constants
-│   │   └── components/                # Shared UI atoms (TODO)
+│   │   └── components/                # Shared UI atoms
 │   ├── types/
-│   │   └── index.ts                   # Shared domain entities (TODO)
+│   │   └── index.ts                   # Shared domain entities
 │   └── utils/
 │       └── index.ts
 │

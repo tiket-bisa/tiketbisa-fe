@@ -1,1 +1,1 @@
-export { formatIDR } from "./currency";
+export { formatIDR, formatIDRInput, parseIDRInput } from "./currency";

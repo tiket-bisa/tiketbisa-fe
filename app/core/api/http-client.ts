@@ -34,6 +34,25 @@ function normalizePath(path: string): string {
   return path.startsWith("/") ? path : `/${path}`;
 }
 
+function persistInternalAuthToken(token: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const session = getStoredAuthSession();
+  if (!session) {
+    return;
+  }
+
+  localStorage.setItem(
+    AUTH_STORAGE_KEY,
+    JSON.stringify({
+      ...session,
+      internal_token: token,
+    }),
+  );
+}
+
 async function request<T>(
   method: string,
   path: string,
@@ -42,11 +61,41 @@ async function request<T>(
 ): Promise<ApiResponse<T>> {
   try {
     const url = toAbsoluteApiUrl(path);
+    const isInternalRequest = path.startsWith(INTERNAL_API_PREFIX);
     const response = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json", ...headers },
       body: body ? JSON.stringify(body) : undefined,
     });
+
+    if (isInternalRequest) {
+      const refreshedToken = response.headers.get("x-tb-internal-token");
+      if (refreshedToken) {
+        persistInternalAuthToken(refreshedToken);
+      }
+    }
+
+    // Handle non-JSON error responses (e.g. nginx 413, 502, 504)
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!response.ok && !contentType.includes("application/json")) {
+      let errorMessage: string;
+      if (response.status === 413) {
+        errorMessage = "Ukuran file terlalu besar. Maksimal 10MB.";
+      } else if (response.status === 502 || response.status === 503) {
+        errorMessage = "Server sedang tidak tersedia. Coba lagi nanti.";
+      } else if (response.status === 504) {
+        errorMessage = "Server tidak merespons. Coba lagi nanti.";
+      } else {
+        errorMessage = `Server error (${response.status})`;
+      }
+      return {
+        success: false,
+        data: null as unknown as T,
+        error: errorMessage,
+        reason: `HTTP_${response.status}`,
+        status_code: response.status,
+      };
+    }
 
     const json = await response.json();
 
@@ -77,14 +126,24 @@ export const httpClient = {
 
 function getInternalAuthHeaders(): Record<string, string> {
   const session = getStoredAuthSession();
-  if (!session?.email || !session.internal_token) {
-    return {};
+  if (!session?.internal_token) {
+    if (!session?.email) {
+      return {};
+    }
+    return {
+      "x-tb-identifier": session.email,
+    };
   }
 
-  return {
-    "x-tb-identifier": session.email,
+  const headers: Record<string, string> = {
     "x-tb-internal-token": session.internal_token,
   };
+
+  if (session.email) {
+    headers["x-tb-identifier"] = session.email;
+  }
+
+  return headers;
 }
 
 export const internalHttpClient = {

@@ -10,3 +10,14 @@ export function formatIDR(amount: number): string {
     minimumFractionDigits: 0,
   }).format(amount);
 }
+
+export function formatIDRInput(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return "";
+  return new Intl.NumberFormat("id-ID").format(Number(digits));
+}
+
+export function parseIDRInput(value: string): number {
+  const digits = value.replace(/\D/g, "");
+  return digits ? Number(digits) : 0;
+}
