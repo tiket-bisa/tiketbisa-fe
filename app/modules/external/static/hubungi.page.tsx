@@ -86,23 +86,20 @@ export default function HubungiPage() {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-text-primary uppercase tracking-wider">Lorem Ipsum</h3>
-                  <p className="mt-1 text-text-secondary font-medium">support@tiketbisa.com</p>
+                  <h3 className="text-sm font-semibold text-text-primary uppercase tracking-wider">Email</h3>
+                  <p className="mt-1 text-text-secondary font-medium">helpdesk@tiketbisa.com</p>
                 </div>
               </div>
 
               <div className="flex items-start gap-4">
                 <div className="mt-1 h-10 w-10 shrink-0 rounded-lg bg-brand-primary/10 flex items-center justify-center border border-brand-primary/20">
                   <svg className="h-5 w-5 text-brand-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-text-primary uppercase tracking-wider">Alamat Kantor</h3>
-                  <p className="mt-1 text-text-secondary leading-relaxed font-medium">
-                    Jakarta, Indonesia
-                  </p>
+                  <h3 className="text-sm font-semibold text-text-primary uppercase tracking-wider">WhatsApp</h3>
+                  <p className="mt-1 text-text-secondary font-medium">+62 xxx xxxx xxxx</p>
                 </div>
               </div>
             </div>
@@ -110,8 +107,7 @@ export default function HubungiPage() {
 
           <div className="pt-8 border-t border-divider">
             <h3 className="text-lg font-bold text-text-primary mb-4">Jam Operasional</h3>
-            <p className="text-text-secondary">Senin - Jumat: 09.00 - 18.00 WIB</p>
-            <p className="text-text-secondary">Sabtu - Minggu: 10.00 - 16.00 WIB</p>
+            <p className="text-text-secondary">Setiap Hari: 09.00 – 21.00 WIB</p>
           </div>
         </div>
 

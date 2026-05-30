@@ -19,10 +19,10 @@ export default function TentangPage() {
         <div className="max-w-3xl">
           <h2 className="text-3xl font-bold text-text-primary mb-6">Visi & Misi Kami</h2>
           <p className="text-text-secondary text-lg leading-relaxed mb-6">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+            TiketBisa adalah platform penjualan tiket online yang menghadirkan kemudahan dalam mendapatkan tiket event, pertandingan olahraga, konser, hiburan, dan berbagai acara lainnya secara cepat, aman, dan terpercaya.
           </p>
           <p className="text-text-secondary text-lg leading-relaxed">
-            Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+            Dengan sistem yang modern dan user-friendly, TiketBisa berkomitmen memberikan pengalaman pembelian tiket yang nyaman bagi seluruh pengguna dan partner.
           </p>
         </div>
       </div>
