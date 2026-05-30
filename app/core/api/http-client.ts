@@ -99,6 +99,22 @@ async function request<T>(
 
     const json = await response.json();
 
+    // Auto-logout on 401/403 for internal API requests (e.g. expired Google token)
+    // Skip token endpoints to avoid redirect loops during login/refresh flows
+    if (
+      isInternalRequest &&
+      !json.success &&
+      (json.status_code === 401 || json.status_code === 403) &&
+      !path.includes("/token/request") &&
+      !path.includes("/token/refresh") &&
+      !path.includes("/user/me")
+    ) {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+        window.location.href = "/internal-tb";
+      }
+    }
+
     return {
       success: json.success,
       data: json.data as T,

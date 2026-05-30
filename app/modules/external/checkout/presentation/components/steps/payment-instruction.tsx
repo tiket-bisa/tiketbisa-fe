@@ -103,7 +103,13 @@ export function PaymentInstruction({
                 <p className="text-xs font-black text-text-tertiary uppercase tracking-widest">Metode Pembayaran</p>
                 <div className="flex items-center gap-4 p-5 border-2 border-gray-100 rounded-3xl bg-white">
                   <div className="p-3 bg-white rounded-xl shadow-sm border border-gray-100">
-                    <img src={order.paymentMethod.logo} alt={order.paymentMethod.name} className="h-8 w-auto object-contain" />
+                    {order.paymentMethod.logo ? (
+                      <img src={order.paymentMethod.logo} alt={order.paymentMethod.name} className="h-8 w-auto object-contain" />
+                    ) : (
+                      <svg className="h-8 w-8 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                    )}
                   </div>
                   <div className="space-y-0.5">
                     <p className="font-black text-text-primary">{order.paymentMethod.name}</p>
@@ -180,7 +186,13 @@ export function PaymentInstruction({
               Metode Pembayaran
             </h3>
             <div className="flex items-center gap-6 p-6 border-2 border-gray-100 rounded-2xl bg-white">
-              <img src={order.paymentMethod.logo} alt={order.paymentMethod.name} className="h-8 w-auto object-contain" />
+              {order.paymentMethod.logo ? (
+                <img src={order.paymentMethod.logo} alt={order.paymentMethod.name} className="h-8 w-auto object-contain" />
+              ) : (
+                <svg className="h-8 w-8 text-text-tertiary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              )}
               <div className="space-y-1">
                 <p className="text-lg font-black text-text-primary">{order.paymentMethod.name}</p>
                 <p className="text-sm font-medium text-text-secondary">
