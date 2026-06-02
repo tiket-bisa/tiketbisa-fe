@@ -3,15 +3,18 @@ import { Html5Qrcode } from "html5-qrcode";
 
 interface UseQrScannerOptions {
   onScanSuccess: (decodedText: string) => void;
+  disabled?: boolean;
 }
 
-export function useQrScanner({ onScanSuccess }: UseQrScannerOptions) {
+export function useQrScanner({ onScanSuccess, disabled = false }: UseQrScannerOptions) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lastScannedRef = useRef<string | null>(null);
   const onScanSuccessRef = useRef(onScanSuccess);
+  const disabledRef = useRef(disabled);
   onScanSuccessRef.current = onScanSuccess;
+  disabledRef.current = disabled;
 
   const scannerElementId = "qr-scanner-region";
 
@@ -29,6 +32,7 @@ export function useQrScanner({ onScanSuccess }: UseQrScannerOptions) {
           aspectRatio: 16 / 9,
         },
         (decodedText) => {
+          if (disabledRef.current) return;
           if (decodedText === lastScannedRef.current) return;
           lastScannedRef.current = decodedText;
           onScanSuccessRef.current(decodedText);

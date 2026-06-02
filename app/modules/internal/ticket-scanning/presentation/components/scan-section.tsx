@@ -33,7 +33,7 @@ const SCAN_STATUS_MAP: Record<
 export function ScanSection() {
   const { scanResult, isLoading, handleScan, clearResult } = useCheckIn();
   const { isScanning, error, startScanning, stopScanning, scannerElementId } =
-    useQrScanner({ onScanSuccess: handleScan });
+    useQrScanner({ onScanSuccess: handleScan, disabled: isLoading });
   const [manualCode, setManualCode] = useState("");
 
   const handleManualSubmit = () => {
@@ -69,7 +69,7 @@ export function ScanSection() {
 
           <div className="flex gap-3">
             {!isScanning ? (
-              <Button variant="primary" onClick={startScanning}>
+              <Button variant="primary" onClick={startScanning} disabled={isLoading}>
                 <span className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-sm">
                     videocam
@@ -78,7 +78,7 @@ export function ScanSection() {
                 </span>
               </Button>
             ) : (
-              <Button variant="ghost" onClick={stopScanning}>
+              <Button variant="ghost" onClick={stopScanning} disabled={isLoading}>
                 Matikan Kamera
               </Button>
             )}
@@ -99,6 +99,7 @@ export function ScanSection() {
             onChange={(e) => setManualCode(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
             placeholder="Masukkan kode tiket (contoh: TKB...)"
+            disabled={isLoading}
             className="flex-1 rounded-lg border border-border-default bg-surface-alt px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-brand-primary"
           />
           <Button
@@ -106,7 +107,7 @@ export function ScanSection() {
             onClick={handleManualSubmit}
             disabled={!manualCode.trim() || isLoading}
           >
-            Check In
+            {isLoading ? "Memproses..." : "Check In"}
           </Button>
         </div>
       </Card>

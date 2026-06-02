@@ -7,6 +7,7 @@ import { analyticsApi, type DashboardStats } from "../../analytics/analytics.api
 import { transactionApi, mapTransactionApiToFe } from "~/core/api/services/transaction.api";
 import { useApiQuery } from "~/core/api";
 import { TransactionPaginationControls } from "~/modules/internal/common/presentation/transaction-pagination-controls";
+import { useDebouncedValue } from "~/modules/internal/common/presentation/use-debounced-value";
 
 const STATUS_MAP = {
   paid: { label: "Lunas", variant: "success" as const },
@@ -40,6 +41,7 @@ export default function DashboardPage() {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isStatsLoading, setIsStatsLoading] = useState(true);
+  const debouncedSearch = useDebouncedValue(search);
 
   useEffect(() => {
     analyticsApi.getDashboardStats()
@@ -58,7 +60,7 @@ export default function DashboardPage() {
         limit: pageSize,
         offset: (currentPage - 1) * pageSize,
         brandId: user.brand_id,
-        customerName: search || undefined,
+        customerName: debouncedSearch || undefined,
         status: mapStatusFilterToApi(statusFilter),
       });
       if (res.success && res.data) {
@@ -70,7 +72,7 @@ export default function DashboardPage() {
       }
       return { transactions: [], totalCount: 0, totalPages: 1 };
     },
-    [currentPage, pageSize, search, statusFilter, user?.brand_slug, user?.brand_id],
+    [currentPage, pageSize, debouncedSearch, statusFilter, user?.brand_slug, user?.brand_id],
   );
 
   const paged = transactionRes?.transactions ?? [];

@@ -23,6 +23,7 @@ import {
   type InternalBrandApiData,
 } from "~/core/api/services/internal-brand.api";
 import type { EventSummary } from "~/core/types";
+import { fileToBase64, ImageSourceInput } from "~/modules/internal/common/presentation/image-source-input";
 
 const STATUS_MAP = {
   draft: { label: "Draft", variant: "default" as const },
@@ -288,6 +289,19 @@ export default function AdminEventsPage() {
     }
   };
 
+  const uploadEventBanner = async (file: File) => {
+    const bannerBase64 = await fileToBase64(file);
+    const result = await internalEventApi.uploadBanner({
+      bannerBase64,
+      bannerMimeType: file.type || "application/octet-stream",
+      bannerFileName: file.name || "event-banner",
+    });
+    if (!result.success || !result.data?.bannerUrl) {
+      throw new Error(result.error || "Gagal mengunggah banner event.");
+    }
+    return result.data.bannerUrl;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -395,12 +409,12 @@ export default function AdminEventsPage() {
               />
             </div>
 
-            <Input
-              label="Banner URL"
-              name="bannerPath"
+            <ImageSourceInput
+              label="Banner Event"
               value={formData.bannerPath}
-              onChange={handleChange}
-              placeholder="https://.../banner.jpg"
+              onChange={(value) => setFormData((prev) => ({ ...prev, bannerPath: value }))}
+              uploadFile={uploadEventBanner}
+              disabled={isSubmitting}
             />
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

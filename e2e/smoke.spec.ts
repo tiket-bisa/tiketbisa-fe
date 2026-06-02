@@ -48,6 +48,9 @@ test.describe.serial("local smoke flows", () => {
     await page.getByRole("button", { name: "Bayar Sekarang", exact: true }).and(page.locator(':visible')).click();
 
     await page.getByRole("button", { name: /Konfirmasi & Bayar Sekarang/i }).click();
+    await expect(page.getByText("Mandiri")).toBeVisible();
+    await expect(page.getByText("1010014855397")).toBeVisible();
+    await expect(page.getByText("PT. Tiketbisa Digital Sejahtera")).toBeVisible();
 
     const proofFile = createPaymentProofFile();
     await page.setInputFiles('input[type="file"]', proofFile);
@@ -89,5 +92,9 @@ test.describe.serial("local smoke flows", () => {
     await page.getByPlaceholder(/Masukkan kode tiket/i).fill(issuedTicket.codeHash);
     await page.getByRole("button", { name: /Check In/i }).click();
     await expect(page.getByText(/Valid - Check In Berhasil/i)).toBeVisible();
+
+    await page.getByPlaceholder(/Masukkan kode tiket/i).fill(issuedTicket.codeHash);
+    await page.getByRole("button", { name: /Check In/i }).click();
+    await expect(page.getByText(/Sudah Check In/i)).toBeVisible();
   });
 });

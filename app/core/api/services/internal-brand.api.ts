@@ -30,6 +30,10 @@ export interface InternalBrandListParams {
   name?: string;
 }
 
+export interface BrandImageUploadResponse {
+  imageUrl: string;
+}
+
 function buildQuery(params?: InternalBrandListParams): string {
   if (!params) return "";
   const qs = new URLSearchParams();
@@ -69,6 +73,14 @@ export const internalBrandApi = {
 
   delete: (id: string) =>
     internalHttpClient.delete<null>(`/brand/${id}`),
+
+  uploadImage: (data: {
+    imageBase64: string;
+    imageMimeType: string;
+    imageFileName: string;
+    imageKind: "LOGO" | "BANNER";
+  }) =>
+    internalHttpClient.post<BrandImageUploadResponse>("/brand/image/upload", data),
 };
 
 export function mapInternalBrandToFe(api: InternalBrandApiData): Brand {

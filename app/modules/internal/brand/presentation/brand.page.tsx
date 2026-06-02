@@ -8,6 +8,7 @@ import {
   normalizeInternalBrand,
   type InternalBrandApiData,
 } from "~/core/api/services/internal-brand.api";
+import { fileToBase64, ImageSourceInput } from "~/modules/internal/common/presentation/image-source-input";
 
 /** Partner — Brand detail page (shows partner's own brand info) */
 export default function BrandPage() {
@@ -88,6 +89,20 @@ export default function BrandPage() {
     }
   };
 
+  const uploadBrandImage = async (file: File, imageKind: "LOGO" | "BANNER") => {
+    const imageBase64 = await fileToBase64(file);
+    const result = await internalBrandApi.uploadImage({
+      imageBase64,
+      imageMimeType: file.type || "application/octet-stream",
+      imageFileName: file.name || "brand-image",
+      imageKind,
+    });
+    if (!result.success || !result.data?.imageUrl) {
+      throw new Error(result.error || "Gagal mengunggah gambar brand.");
+    }
+    return result.data.imageUrl;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -154,17 +169,20 @@ export default function BrandPage() {
             />
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Input
-                label="Logo URL"
-                name="logoPath"
+              <ImageSourceInput
+                label="Logo Brand"
                 value={formData.logoPath}
-                onChange={handleChange}
+                onChange={(value) => setFormData((prev) => ({ ...prev, logoPath: value }))}
+                uploadFile={(file) => uploadBrandImage(file, "LOGO")}
+                cropSquare
+                disabled={isSubmitting}
               />
-              <Input
-                label="Banner URL"
-                name="bannerPath"
+              <ImageSourceInput
+                label="Banner Brand"
                 value={formData.bannerPath}
-                onChange={handleChange}
+                onChange={(value) => setFormData((prev) => ({ ...prev, bannerPath: value }))}
+                uploadFile={(file) => uploadBrandImage(file, "BANNER")}
+                disabled={isSubmitting}
               />
             </div>
 

@@ -8,6 +8,7 @@ import { transactionApi, mapTransactionApiToFe } from "~/core/api/services/trans
 import { useApiQuery } from "~/core/api";
 import { analyticsApi } from "~/modules/internal/analytics/analytics.api";
 import { TransactionPaginationControls } from "~/modules/internal/common/presentation/transaction-pagination-controls";
+import { useDebouncedValue } from "~/modules/internal/common/presentation/use-debounced-value";
 
 const DEFAULT_PAGE_SIZE = 5;
 const PAGE_SIZE_OPTIONS = new Set([5, 10, 25, 50]);
@@ -54,6 +55,7 @@ export default function AdminDashboardPage() {
   const [statusFilter, setStatusFilter] = useState(() => searchParams.get("status") ?? "all");
   const [currentPage, setCurrentPage] = useState(() => parsePositiveInt(searchParams.get("page"), 1));
   const [pageSize, setPageSize] = useState(() => parsePageSize(searchParams.get("pageSize")));
+  const debouncedSearch = useDebouncedValue(search);
 
   // Fetch real dashboard stats
   const { data: stats } = useApiQuery(
@@ -69,7 +71,7 @@ export default function AdminDashboardPage() {
       const res = await transactionApi.getList({
         limit: pageSize,
         offset: (currentPage - 1) * pageSize,
-        customerName: search || undefined,
+        customerName: debouncedSearch || undefined,
         status: mapStatusFilterToApi(statusFilter),
       });
       if (res.success && res.data) {
@@ -81,18 +83,18 @@ export default function AdminDashboardPage() {
       }
       return { transactions: [], totalCount: 0, totalPages: 1 };
     },
-    [currentPage, pageSize, search, statusFilter],
+    [currentPage, pageSize, debouncedSearch, statusFilter],
   );
 
   const transactions = transactionRes?.transactions ?? [];
   const totalCount = transactionRes?.totalCount ?? 0;
   const totalPages = transactionRes?.totalPages ?? 1;
-  const dashboardParams = buildDashboardParams({ currentPage, pageSize, search, statusFilter });
+  const dashboardParams = buildDashboardParams({ currentPage, pageSize, search: debouncedSearch, statusFilter });
   const returnTo = `/internal-tb/admin${dashboardParams.toString() ? `?${dashboardParams.toString()}` : ""}`;
 
   useEffect(() => {
-    setSearchParams(buildDashboardParams({ currentPage, pageSize, search, statusFilter }), { replace: true });
-  }, [currentPage, pageSize, search, statusFilter, setSearchParams]);
+    setSearchParams(buildDashboardParams({ currentPage, pageSize, search: debouncedSearch, statusFilter }), { replace: true });
+  }, [currentPage, pageSize, debouncedSearch, statusFilter, setSearchParams]);
 
   useEffect(() => {
     if (!loadingTransactions && currentPage > totalPages) {

@@ -142,9 +142,9 @@ export function PaymentInstruction({
 
   // --- 2. BANK TRANSFER LAYOUT (Traditional Style) ---
   const manualTransferBankInfo = {
-    bankName: import.meta.env.VITE_MANUAL_TRANSFER_BANK_NAME ?? "BCA",
-    accountNumber: import.meta.env.VITE_MANUAL_TRANSFER_ACCOUNT_NUMBER ?? "1234567890",
-    accountHolder: import.meta.env.VITE_MANUAL_TRANSFER_ACCOUNT_HOLDER ?? "PT TIKET BISA INDONESIA",
+    bankName: import.meta.env.VITE_MANUAL_TRANSFER_BANK_NAME ?? "Mandiri",
+    accountNumber: import.meta.env.VITE_MANUAL_TRANSFER_ACCOUNT_NUMBER ?? "1010014855397",
+    accountHolder: import.meta.env.VITE_MANUAL_TRANSFER_ACCOUNT_HOLDER ?? "PT. Tiketbisa Digital Sejahtera",
   };
 
   return (
