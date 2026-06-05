@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Html5Qrcode } from "html5-qrcode";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 
 interface UseQrScannerOptions {
   onScanSuccess: (decodedText: string) => void;
@@ -21,14 +21,23 @@ export function useQrScanner({ onScanSuccess, disabled = false }: UseQrScannerOp
   const startScanning = useCallback(async () => {
     try {
       setError(null);
-      const scanner = new Html5Qrcode(scannerElementId);
+      const scanner = new Html5Qrcode(scannerElementId, {
+        verbose: false,
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.QR_CODE,
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.CODE_39,
+          Html5QrcodeSupportedFormats.CODE_93,
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+        ],
+      });
       scannerRef.current = scanner;
 
       await scanner.start(
         { facingMode: "environment" },
         {
           fps: 10,
-          qrbox: { width: 280, height: 280 },
           aspectRatio: 4 / 3,
         },
         (decodedText) => {
