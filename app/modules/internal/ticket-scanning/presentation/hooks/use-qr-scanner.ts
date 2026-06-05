@@ -28,8 +28,8 @@ export function useQrScanner({ onScanSuccess, disabled = false }: UseQrScannerOp
         { facingMode: "environment" },
         {
           fps: 10,
-          qrbox: { width: 350, height: 150 },
-          aspectRatio: 16 / 9,
+          qrbox: { width: 280, height: 280 },
+          aspectRatio: 4 / 3,
         },
         (decodedText) => {
           if (disabledRef.current) return;
