@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router";
-import { Card, Badge, SearchInput, Select } from "~/core/design-system/components";
+import { useNavigate } from "react-router";
+import { Card, Badge, SearchInput, Select, Button } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
 import { useAuth } from "~/core/auth";
 import { analyticsApi, type DashboardStats } from "../../analytics/analytics.api";
@@ -35,12 +35,14 @@ const statusFilterOptions = [
 /** Partner — Dashboard / Beranda (filtered by partner's brand) */
 export default function DashboardPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isStatsLoading, setIsStatsLoading] = useState(true);
+  const [pendingDetailId, setPendingDetailId] = useState<string | null>(null);
   const debouncedSearch = useDebouncedValue(search);
 
   useEffect(() => {
@@ -78,6 +80,10 @@ export default function DashboardPage() {
   const paged = transactionRes?.transactions ?? [];
   const totalCount = transactionRes?.totalCount ?? 0;
   const totalPages = transactionRes?.totalPages ?? 1;
+  const openDetail = (id: string) => {
+    setPendingDetailId(id);
+    navigate(`/internal-tb/partner/transactions/${id}`);
+  };
 
   return (
     <div className="space-y-8">
@@ -190,12 +196,15 @@ export default function DashboardPage() {
                         <Badge variant={status.variant}>{status.label}</Badge>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <Link
-                          to={`/internal-tb/partner/transactions/${tx.id}`}
-                          className="text-brand-primary text-xs hover:underline"
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openDetail(tx.id)}
+                          isLoading={pendingDetailId === tx.id}
+                          className="text-xs"
                         >
                           Detail
-                        </Link>
+                        </Button>
                       </td>
                     </tr>
                   );

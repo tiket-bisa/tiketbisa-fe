@@ -2,6 +2,7 @@ import { Outlet, useNavigate } from "react-router";
 import { AuthProvider, useAuth } from "~/core/auth/auth.context";
 import { AuthGuard } from "~/core/auth/auth-guard";
 import { NavbarInternal } from "~/shared/components";
+import { RouteProgress } from "~/shared/components/route-progress";
 
 /**
  * Internal Layout — Internal Dashboard (/internal-tb)
@@ -26,6 +27,7 @@ function InternalShell() {
 
   return (
     <div className="flex min-h-screen flex-col bg-surface-primary text-text-primary" data-theme="light">
+      <RouteProgress />
       <NavbarInternal
         userEmail={user?.email}
         brandName={user?.brand_name}

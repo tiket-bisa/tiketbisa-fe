@@ -63,6 +63,7 @@ export default function EventsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM_DATA);
 
   const { data: eventsRaw, loading, error, refetch } = useApiQuery(
@@ -235,6 +236,7 @@ export default function EventsPage() {
   const handleDelete = async (id: string) => {
     const confirmed = window.confirm("Hapus event ini?");
     if (!confirmed) return;
+    setPendingAction(`delete-${id}`);
     setIsSubmitting(true);
     setFormError(null);
     setFormSuccess(null);
@@ -249,7 +251,14 @@ export default function EventsPage() {
       setFormError(err instanceof Error ? err.message : "Koneksi bermasalah.");
     } finally {
       setIsSubmitting(false);
+      setPendingAction(null);
     }
+  };
+
+  const navigateToEventAction = (id: string, action: "tickets" | "complimentary") => {
+    setPendingAction(`${action}-${id}`);
+    const suffix = action === "tickets" ? "tickets/new" : "complimentary/new";
+    navigate(`/internal-tb/partner/events/${id}/${suffix}`);
   };
 
   const uploadEventBanner = async (file: File) => {
@@ -514,16 +523,28 @@ export default function EventsPage() {
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => navigate(`/internal-tb/partner/events/${evt.id}/tickets/new`)}
+                    onClick={() => navigateToEventAction(evt.id, "tickets")}
+                    isLoading={pendingAction === `tickets-${evt.id}`}
                     className="flex items-center gap-1"
                   >
                     <span className="material-symbols-outlined text-sm">add</span>
                     Tambah Tiket
                   </Button>
                   <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => navigateToEventAction(evt.id, "complimentary")}
+                    isLoading={pendingAction === `complimentary-${evt.id}`}
+                    className="flex items-center gap-1"
+                  >
+                    <span className="material-symbols-outlined text-sm">redeem</span>
+                    Tiket Gratis
+                  </Button>
+                  <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => startEdit(evt.id)}
+                    disabled={isSubmitting}
                   >
                     Edit
                   </Button>
@@ -532,6 +553,7 @@ export default function EventsPage() {
                     size="sm"
                     onClick={() => handleDelete(evt.id)}
                     disabled={isSubmitting}
+                    isLoading={pendingAction === `delete-${evt.id}`}
                   >
                     Hapus
                   </Button>
