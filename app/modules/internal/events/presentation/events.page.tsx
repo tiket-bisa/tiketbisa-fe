@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router";
 import {
   Card,
@@ -19,6 +19,7 @@ import {
   type InternalEventApiData,
 } from "~/core/api/services/internal-event.api";
 import type { EventSummary } from "~/core/types";
+import { fileToBase64, ImageSourceInput } from "~/modules/internal/common/presentation/image-source-input";
 
 const STATUS_MAP = {
   draft: { label: "Draft", variant: "default" as const },
@@ -35,7 +36,6 @@ const tabItems = [
 ];
 
 const ITEMS_PER_PAGE = 6;
-const MAX_BANNER_SIZE_BYTES = 10 * 1024 * 1024;
 
 const EMPTY_FORM_DATA = {
   name: "",
@@ -51,23 +51,6 @@ const EMPTY_FORM_DATA = {
   isPublished: false,
 };
 
-async function convertFileToBase64(file: File): Promise<string> {
-  return await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result;
-      if (typeof result !== "string") {
-        reject(new Error("Gagal membaca file banner"));
-        return;
-      }
-
-      resolve(result.includes(",") ? result.split(",")[1] : result);
-    };
-    reader.onerror = () => reject(new Error("Gagal membaca file banner"));
-    reader.readAsDataURL(file);
-  });
-}
-
 /** Partner — Event Management (filtered by partner's brand) */
 export default function EventsPage() {
   const { user } = useAuth();
@@ -80,10 +63,8 @@ export default function EventsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [bannerFile, setBannerFile] = useState<File | null>(null);
-  const [bannerPreviewUrl, setBannerPreviewUrl] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM_DATA);
-  const bannerInputRef = useRef<HTMLInputElement | null>(null);
 
   const { data: eventsRaw, loading, error, refetch } = useApiQuery(
     async () => {
@@ -147,8 +128,6 @@ export default function EventsPage() {
     setEditingEvent(null);
     setFormError(null);
     setFormSuccess(null);
-    setBannerFile(null);
-    setBannerPreviewUrl(null);
     setFormData(EMPTY_FORM_DATA);
   };
 
@@ -190,40 +169,6 @@ export default function EventsPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleBannerFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
-    if (!file) {
-      setBannerFile(null);
-      return;
-    }
-
-    if (file.size > MAX_BANNER_SIZE_BYTES) {
-      setFormError("Ukuran banner maksimal 10MB.");
-      setBannerFile(null);
-      if (bannerInputRef.current) {
-        bannerInputRef.current.value = "";
-      }
-      return;
-    }
-
-    setFormError(null);
-    setBannerFile(file);
-  };
-
-  useEffect(() => {
-    if (!bannerFile) {
-      setBannerPreviewUrl(null);
-      return;
-    }
-
-    const previewUrl = URL.createObjectURL(bannerFile);
-    setBannerPreviewUrl(previewUrl);
-
-    return () => {
-      URL.revokeObjectURL(previewUrl);
-    };
-  }, [bannerFile]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
@@ -255,29 +200,10 @@ export default function EventsPage() {
 
     setIsSubmitting(true);
     try {
-      let bannerPath = formData.bannerPath.trim() || null;
-      if (bannerFile) {
-        const bannerBase64 = await convertFileToBase64(bannerFile);
-        const uploadResult = await internalEventApi.uploadBanner({
-          bannerBase64,
-          bannerMimeType: bannerFile.type || "application/octet-stream",
-          bannerFileName: bannerFile.name || "banner",
-        });
-
-        if (!uploadResult.success || !uploadResult.data?.bannerUrl) {
-          setFormError(uploadResult.error || "Gagal mengunggah banner.");
-          return;
-        }
-
-        bannerPath = uploadResult.data.bannerUrl;
-        setFormData((prev) => ({ ...prev, bannerPath: uploadResult.data.bannerUrl }));
-        setBannerFile(null);
-      }
-
       const payload = {
         brandId: user.brand_id,
         name: formData.name.trim(),
-        bannerPath,
+        bannerPath: formData.bannerPath.trim() || null,
         startDate,
         endDate,
         description: formData.description.trim() || null,
@@ -310,6 +236,7 @@ export default function EventsPage() {
   const handleDelete = async (id: string) => {
     const confirmed = window.confirm("Hapus event ini?");
     if (!confirmed) return;
+    setPendingAction(`delete-${id}`);
     setIsSubmitting(true);
     setFormError(null);
     setFormSuccess(null);
@@ -324,7 +251,27 @@ export default function EventsPage() {
       setFormError(err instanceof Error ? err.message : "Koneksi bermasalah.");
     } finally {
       setIsSubmitting(false);
+      setPendingAction(null);
     }
+  };
+
+  const navigateToEventAction = (id: string, action: "tickets" | "complimentary") => {
+    setPendingAction(`${action}-${id}`);
+    const suffix = action === "tickets" ? "tickets/new" : "complimentary/new";
+    navigate(`/internal-tb/partner/events/${id}/${suffix}`);
+  };
+
+  const uploadEventBanner = async (file: File) => {
+    const bannerBase64 = await fileToBase64(file);
+    const result = await internalEventApi.uploadBanner({
+      bannerBase64,
+      bannerMimeType: file.type || "application/octet-stream",
+      bannerFileName: file.name || "event-banner",
+    });
+    if (!result.success || !result.data?.bannerUrl) {
+      throw new Error(result.error || "Gagal mengunggah banner event.");
+    }
+    return result.data.bannerUrl;
   };
 
   if (loading) {
@@ -428,46 +375,14 @@ export default function EventsPage() {
               />
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-text-primary" htmlFor="banner-upload">
-                Banner (upload image)
-              </label>
-              <input
-                id="banner-upload"
-                type="file"
-                accept="image/*"
-                onChange={handleBannerFileChange}
-                ref={bannerInputRef}
-                className="w-full rounded-lg border border-border-default bg-surface-alt px-3 py-2 text-sm text-text-primary file:mr-4 file:rounded-md file:border-0 file:bg-brand-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-brand-primary-hover"
-              />
-              <p className="text-xs text-text-tertiary">
-                Upload gambar banner (maks 10MB) atau isi URL di bawah jika sudah punya link.
-              </p>
-              {bannerFile && (
-                <div className="space-y-2">
-                  <p className="text-xs text-text-secondary">File terpilih: {bannerFile.name}</p>
-                  {bannerPreviewUrl && (
-                    <img
-                      src={bannerPreviewUrl}
-                      alt="Preview banner"
-                      className="h-40 w-full rounded-xl object-cover border border-border-subtle"
-                    />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setBannerFile(null);
-                      if (bannerInputRef.current) {
-                        bannerInputRef.current.value = "";
-                      }
-                    }}
-                    className="text-xs font-medium text-brand-primary hover:text-brand-primary-hover"
-                  >
-                    Hapus file
-                  </button>
-                </div>
-              )}
-            </div>
+            <ImageSourceInput
+              label="Banner Event"
+              value={formData.bannerPath}
+              onChange={(value) => setFormData((prev) => ({ ...prev, bannerPath: value }))}
+              uploadFile={uploadEventBanner}
+              disabled={isSubmitting}
+              hint="Tempel URL banner atau upload gambar baru."
+            />
 
             <Input
               label="Banner URL"
@@ -608,16 +523,28 @@ export default function EventsPage() {
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => navigate(`/internal-tb/partner/events/${evt.id}/tickets/new`)}
+                    onClick={() => navigateToEventAction(evt.id, "tickets")}
+                    isLoading={pendingAction === `tickets-${evt.id}`}
                     className="flex items-center gap-1"
                   >
                     <span className="material-symbols-outlined text-sm">add</span>
                     Tambah Tiket
                   </Button>
                   <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => navigateToEventAction(evt.id, "complimentary")}
+                    isLoading={pendingAction === `complimentary-${evt.id}`}
+                    className="flex items-center gap-1"
+                  >
+                    <span className="material-symbols-outlined text-sm">redeem</span>
+                    Tiket Gratis
+                  </Button>
+                  <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => startEdit(evt.id)}
+                    disabled={isSubmitting}
                   >
                     Edit
                   </Button>
@@ -626,6 +553,7 @@ export default function EventsPage() {
                     size="sm"
                     onClick={() => handleDelete(evt.id)}
                     disabled={isSubmitting}
+                    isLoading={pendingAction === `delete-${evt.id}`}
                   >
                     Hapus
                   </Button>

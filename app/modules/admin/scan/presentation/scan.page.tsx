@@ -27,23 +27,21 @@ export default function AdminScanPage() {
       if (!eventsRes.success || !eventsRes.data) return [] as TicketDashboardSummary[];
 
       const events = eventsRes.data.events ?? [];
-      const summaries: TicketDashboardSummary[] = [];
 
-      // 3. For each event, fetch ticket categories and aggregate
-      for (const evt of events) {
+      // 3. Fetch ticket categories in parallel and aggregate
+      const summaries = await Promise.all(events.map(async (evt) => {
         const brand = brandsMap.get(evt.brand_id);
         const catRes = await ticketCategoryApi.getByEvent(evt.id);
         if (catRes.success && catRes.data) {
           const categories = Array.isArray(catRes.data) ? catRes.data : [];
           if (categories.length > 0) {
-            summaries.push(
-              aggregateTicketDashboard(evt.id, evt.name, categories, brand?.slug),
-            );
+            return aggregateTicketDashboard(evt.id, evt.name, categories, brand?.slug);
           }
         }
-      }
+        return null;
+      }));
 
-      return summaries;
+      return summaries.filter((summary): summary is TicketDashboardSummary => summary !== null);
     },
     [],
   );

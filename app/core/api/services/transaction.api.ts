@@ -84,6 +84,20 @@ export interface ManualTransferReviewRequest {
     action: "APPROVE" | "REJECT";
 }
 
+export interface ManualGenerateTicketsRequest {
+    eventId: string;
+    customerName: string;
+    customerEmail: string;
+    customerPhone: string;
+    paymentMethod: "COMPLIMENTARY";
+    codeType: "QR_CODE" | "BARCODE";
+    isGenerateCodeOnly: boolean;
+    tickets: Array<{
+        categoryId: string;
+        quantity: number;
+    }>;
+}
+
 function buildQuery(params?: TransactionListParams): string {
     if (!params) return "";
     const qs = new URLSearchParams();
@@ -144,6 +158,10 @@ export const transactionApi = {
     /** Review manual transfer transaction */
     reviewManualTransfer: (id: string, request: ManualTransferReviewRequest) =>
         internalHttpClient.post<TransactionApiData>(`/transaction/detail/${id}/review`, request),
+
+    /** Generate complimentary tickets from admin/partner dashboard */
+    manualGenerateTickets: (request: ManualGenerateTicketsRequest) =>
+        internalHttpClient.post<TransactionApiData>("/transaction/manual-generate", request),
 
     /** Get single transaction status */
     getStatus: (id: string) =>

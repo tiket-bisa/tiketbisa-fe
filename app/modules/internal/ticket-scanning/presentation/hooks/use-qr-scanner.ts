@@ -97,7 +97,7 @@ export function useQrScanner({ onScanSuccess, disabled = false }: UseQrScannerOp
           }, 3000);
         },
         () => {
-          // No QR code found in frame — normal, ignore
+          // No QR/barcode found in frame - normal, ignore
         },
       );
 

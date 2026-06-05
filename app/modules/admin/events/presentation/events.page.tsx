@@ -23,6 +23,7 @@ import {
   type InternalBrandApiData,
 } from "~/core/api/services/internal-brand.api";
 import type { EventSummary } from "~/core/types";
+import { fileToBase64, ImageSourceInput } from "~/modules/internal/common/presentation/image-source-input";
 
 const STATUS_MAP = {
   draft: { label: "Draft", variant: "default" as const },
@@ -52,6 +53,7 @@ export default function AdminEventsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     brandId: "",
     name: "",
@@ -271,6 +273,7 @@ export default function AdminEventsPage() {
   const handleDelete = async (id: string) => {
     const confirmed = window.confirm("Hapus event ini?");
     if (!confirmed) return;
+    setPendingAction(`delete-${id}`);
     setIsSubmitting(true);
     setFormError(null);
     setFormSuccess(null);
@@ -285,7 +288,27 @@ export default function AdminEventsPage() {
       setFormError(err instanceof Error ? err.message : "Koneksi bermasalah.");
     } finally {
       setIsSubmitting(false);
+      setPendingAction(null);
     }
+  };
+
+  const navigateToEventAction = (id: string, action: "tickets" | "complimentary") => {
+    setPendingAction(`${action}-${id}`);
+    const suffix = action === "tickets" ? "tickets/new" : "complimentary/new";
+    navigate(`/internal-tb/admin/events/${id}/${suffix}`);
+  };
+
+  const uploadEventBanner = async (file: File) => {
+    const bannerBase64 = await fileToBase64(file);
+    const result = await internalEventApi.uploadBanner({
+      bannerBase64,
+      bannerMimeType: file.type || "application/octet-stream",
+      bannerFileName: file.name || "event-banner",
+    });
+    if (!result.success || !result.data?.bannerUrl) {
+      throw new Error(result.error || "Gagal mengunggah banner event.");
+    }
+    return result.data.bannerUrl;
   };
 
   if (loading) {
@@ -395,12 +418,12 @@ export default function AdminEventsPage() {
               />
             </div>
 
-            <Input
-              label="Banner URL"
-              name="bannerPath"
+            <ImageSourceInput
+              label="Banner Event"
               value={formData.bannerPath}
-              onChange={handleChange}
-              placeholder="https://.../banner.jpg"
+              onChange={(value) => setFormData((prev) => ({ ...prev, bannerPath: value }))}
+              uploadFile={uploadEventBanner}
+              disabled={isSubmitting}
             />
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -537,16 +560,28 @@ export default function AdminEventsPage() {
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => navigate(`/internal-tb/admin/events/${evt.id}/tickets/new`)}
+                    onClick={() => navigateToEventAction(evt.id, "tickets")}
+                    isLoading={pendingAction === `tickets-${evt.id}`}
                     className="flex items-center gap-1"
                   >
                     <span className="material-symbols-outlined text-sm">add</span>
                     Tambah Tiket
                   </Button>
                   <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => navigateToEventAction(evt.id, "complimentary")}
+                    isLoading={pendingAction === `complimentary-${evt.id}`}
+                    className="flex items-center gap-1"
+                  >
+                    <span className="material-symbols-outlined text-sm">redeem</span>
+                    Tiket Gratis
+                  </Button>
+                  <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => startEdit(evt.id)}
+                    disabled={isSubmitting}
                   >
                     Edit
                   </Button>
@@ -555,6 +590,7 @@ export default function AdminEventsPage() {
                     size="sm"
                     onClick={() => handleDelete(evt.id)}
                     disabled={isSubmitting}
+                    isLoading={pendingAction === `delete-${evt.id}`}
                   >
                     Hapus
                   </Button>

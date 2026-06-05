@@ -2,6 +2,7 @@ import { Outlet, useNavigate } from "react-router";
 import { AuthProvider, useAuth } from "~/core/auth/auth.context";
 import { AuthGuard } from "~/core/auth/auth-guard";
 import { NavbarAdmin } from "~/shared/components";
+import { RouteProgress } from "~/shared/components/route-progress";
 
 function AdminShell() {
   const { user, logout } = useAuth();
@@ -18,6 +19,7 @@ function AdminShell() {
 
   return (
     <div className="flex min-h-screen flex-col bg-surface-primary text-text-primary" data-theme="light">
+      <RouteProgress />
       <NavbarAdmin
         userEmail={user?.email}
         onLogout={handleLogout}

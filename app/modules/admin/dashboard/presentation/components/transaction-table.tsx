@@ -1,5 +1,6 @@
-import { Link } from "react-router";
-import { Badge, Card } from "~/core/design-system/components";
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { Badge, Button, Card } from "~/core/design-system/components";
 import { STATUS_MAP } from "~/core/constants/transaction";
 import { formatIDR } from "~/core/utils";
 import type { Transaction } from "~/core/types";
@@ -10,6 +11,14 @@ interface TransactionTableProps {
 }
 
 export function TransactionTable({ transactions, returnTo = "/internal-tb/admin" }: TransactionTableProps) {
+  const navigate = useNavigate();
+  const [pendingId, setPendingId] = useState<string | null>(null);
+
+  const openDetail = (id: string) => {
+    setPendingId(id);
+    navigate(`/internal-tb/admin/transactions/${id}?${new URLSearchParams({ returnTo }).toString()}`);
+  };
+
   return (
     <Card padding="none">
       <div className="overflow-x-auto">
@@ -35,12 +44,15 @@ export function TransactionTable({ transactions, returnTo = "/internal-tb/admin"
                     <Badge variant={status.variant}>{status.label}</Badge>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <Link
-                      to={`/internal-tb/admin/transactions/${tx.id}?${new URLSearchParams({ returnTo }).toString()}`}
-                      className="text-brand-primary text-xs hover:underline"
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openDetail(tx.id)}
+                      isLoading={pendingId === tx.id}
+                      className="text-xs"
                     >
                       Detail
-                    </Link>
+                    </Button>
                   </td>
                 </tr>
               );
