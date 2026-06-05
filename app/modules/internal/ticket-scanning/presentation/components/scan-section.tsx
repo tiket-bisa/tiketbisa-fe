@@ -19,12 +19,12 @@ const SCAN_STATUS_MAP: Record<
     icon: "warning",
   },
   invalid: {
-    label: "Tiket Tidak Valid",
+    label: "Tiket Tidak Terdeteksi",
     variant: "destructive",
     icon: "cancel",
   },
   expired: {
-    label: "Tiket Kedaluwarsa",
+    label: "Tiket Tidak Aktif / Kedaluwarsa",
     variant: "destructive",
     icon: "schedule",
   },
