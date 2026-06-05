@@ -10,9 +10,11 @@ export interface CheckInRequest {
 }
 
 export interface CheckInResponse {
-    ticketId: string;
-    checkInTime: string;
-    message: string;
+    id?: string;
+    ticketId?: string;
+    checkInTime?: string;
+    check_in_time?: string;
+    message?: string;
 }
 
 export interface TransactionApiData {

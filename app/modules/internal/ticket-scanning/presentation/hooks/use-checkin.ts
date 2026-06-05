@@ -32,9 +32,9 @@ export function useCheckIn() {
         if (response.success) {
           const data = response.data as CheckInResponse;
           setScanResult({
-            ticket_id: data.ticketId,
+            ticket_id: data.ticketId ?? data.id ?? normalizedCode.substring(0, 20),
             status: "valid",
-            checked_in_at: data.checkInTime,
+            checked_in_at: data.checkInTime ?? data.check_in_time,
             message: data.message,
           });
         } else {
