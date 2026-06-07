@@ -44,6 +44,30 @@ export interface EventBannerUploadResponse {
   bannerUrl: string;
 }
 
+export interface EventImageData {
+  id: string;
+  eventId: string;
+  imageUrl: string;
+  sortOrder: number;
+  isCover: boolean;
+}
+
+interface EventImageApiData extends Record<string, unknown> {
+  id?: string;
+  eventId?: string;
+  event_id?: string;
+  imageUrl?: string;
+  image_url?: string;
+  sortOrder?: number;
+  sort_order?: number;
+  isCover?: boolean;
+  is_cover?: boolean;
+}
+
+export interface EventImageListResponse {
+  images: EventImageApiData[];
+}
+
 function buildQuery(params?: InternalEventListParams): string {
   if (!params) return "";
   const qs = new URLSearchParams();
@@ -75,6 +99,16 @@ function normalizeEvent(api: InternalEventApiData & Record<string, unknown>): In
     status: (api.status ?? null) as InternalEventApiData["status"],
     isPublished: (api.isPublished ?? api.is_published ?? null) as boolean | null,
     created: (api.created ?? null) as string | null,
+  };
+}
+
+function normalizeEventImage(api: EventImageApiData): EventImageData {
+  return {
+    id: String(api.id ?? ""),
+    eventId: String(api.eventId ?? api.event_id ?? ""),
+    imageUrl: String(api.imageUrl ?? api.image_url ?? ""),
+    sortOrder: Number(api.sortOrder ?? api.sort_order ?? 0),
+    isCover: Boolean(api.isCover ?? api.is_cover),
   };
 }
 
@@ -116,6 +150,35 @@ export const internalEventApi = {
     bannerFileName: string;
   }) =>
     internalHttpClient.post<EventBannerUploadResponse>("/event/banner/upload", data),
+
+  getImages: async (eventId: string) => {
+    const response = await internalHttpClient.get<EventImageListResponse>(`/event/${eventId}/images`);
+    return {
+      ...response,
+      data: response.data
+        ? { images: (response.data.images ?? []).map(normalizeEventImage) }
+        : response.data,
+    };
+  },
+
+  addImage: (eventId: string, data: { imageUrl: string; sortOrder?: number; isCover?: boolean }) =>
+    internalHttpClient.post<EventImageData>(`/event/${eventId}/images`, data),
+
+  reorderImages: async (
+    eventId: string,
+    data: { images: { id: string; sortOrder: number }[]; coverImageId?: string },
+  ) => {
+    const response = await internalHttpClient.put<EventImageListResponse>(`/event/${eventId}/images/reorder`, data);
+    return {
+      ...response,
+      data: response.data
+        ? { images: (response.data.images ?? []).map(normalizeEventImage) }
+        : response.data,
+    };
+  },
+
+  deleteImage: (eventId: string, imageId: string) =>
+    internalHttpClient.delete<null>(`/event/${eventId}/images/${imageId}`),
 };
 
 export function mapInternalEventToSummary(

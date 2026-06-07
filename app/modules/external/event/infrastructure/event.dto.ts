@@ -17,3 +17,15 @@ export interface EventDto {
   isPublished: boolean;
   minPrice: number | null;
 }
+
+export interface EventImageDto {
+  id: string;
+  eventId?: string;
+  event_id?: string;
+  imageUrl?: string;
+  image_url?: string;
+  sortOrder?: number;
+  sort_order?: number;
+  isCover?: boolean;
+  is_cover?: boolean;
+}

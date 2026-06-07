@@ -13,6 +13,7 @@ export interface Event {
   brand: string;
   description: string;
   imageUrl: string;
+  galleryImages?: string[];
   date: string;
   location: string;
   minPrice?: number;
