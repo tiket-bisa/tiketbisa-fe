@@ -77,7 +77,7 @@ function buildFailureResult(
   const message = error || "";
   const normalizedMessage = message.toLowerCase();
   let status: TicketScanResult["status"] = "invalid";
-  let fallbackMessage = "Tiket tidak terdeteksi atau kode QR tidak valid.";
+  let fallbackMessage = "Tiket tidak terdeteksi atau kode QR/barcode tidak valid.";
 
   if (statusCode === 409) {
     if (normalizedMessage.includes("already")) {
@@ -97,7 +97,7 @@ function buildFailureResult(
   } else if (statusCode === 403 || normalizedMessage.includes("forbidden")) {
     fallbackMessage = "Akun ini tidak punya akses untuk scan tiket event tersebut.";
   } else if (normalizedMessage.includes("invalid")) {
-    fallbackMessage = "Kode QR tidak dikenali sebagai tiket yang valid.";
+    fallbackMessage = "Kode QR/barcode tidak dikenali sebagai tiket yang valid.";
   }
 
   return {

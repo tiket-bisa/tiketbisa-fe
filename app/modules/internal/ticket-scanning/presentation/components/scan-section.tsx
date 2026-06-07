@@ -32,8 +32,21 @@ const SCAN_STATUS_MAP: Record<
 
 export function ScanSection() {
   const { scanResult, isLoading, handleScan, clearResult } = useCheckIn();
-  const { isScanning, error, startScanning, stopScanning, scannerElementId } =
-    useQrScanner({ onScanSuccess: handleScan, disabled: isLoading });
+  const {
+    cameras,
+    error,
+    isFileScanning,
+    isScanning,
+    isTorchOn,
+    isTorchSupported,
+    scanImageFile,
+    selectedCameraId,
+    startScanning,
+    stopScanning,
+    switchCamera,
+    toggleTorch,
+    scannerElementId,
+  } = useQrScanner({ onScanSuccess: handleScan, disabled: isLoading });
   const [manualCode, setManualCode] = useState("");
 
   const handleManualSubmit = () => {
@@ -48,6 +61,27 @@ export function ScanSection() {
       {/* Camera / Scanner View */}
       <Card padding="md">
         <div className="flex flex-col items-center gap-4">
+          {cameras.length > 1 && (
+            <div className="w-full max-w-md">
+              <label className="block text-sm font-medium text-text-primary mb-1" htmlFor="camera-select">
+                Kamera
+              </label>
+              <select
+                id="camera-select"
+                value={selectedCameraId}
+                onChange={(e) => switchCamera(e.target.value)}
+                disabled={isLoading}
+                className="w-full rounded-lg border border-border-default bg-surface-alt px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
+              >
+                {cameras.map((camera) => (
+                  <option key={camera.id} value={camera.id}>
+                    {camera.label || `Kamera ${camera.id.slice(0, 8)}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="relative w-full max-w-md aspect-[4/3] bg-surface-alt rounded-lg overflow-hidden">
             <div id={scannerElementId} className="w-full h-full" />
             {!isScanning && (
@@ -69,7 +103,7 @@ export function ScanSection() {
 
           <div className="flex gap-3">
             {!isScanning ? (
-              <Button variant="primary" onClick={startScanning} disabled={isLoading}>
+              <Button variant="primary" onClick={() => startScanning()} disabled={isLoading}>
                 <span className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-sm">
                     videocam
@@ -82,8 +116,41 @@ export function ScanSection() {
                 Matikan Kamera
               </Button>
             )}
+            {isScanning && isTorchSupported && (
+              <Button variant="secondary" onClick={toggleTorch} disabled={isLoading}>
+                <span className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-sm">
+                    flashlight_on
+                  </span>
+                  {isTorchOn ? "Matikan Flash" : "Nyalakan Flash"}
+                </span>
+              </Button>
+            )}
           </div>
         </div>
+      </Card>
+
+      {/* Image Upload Fallback */}
+      <Card padding="md">
+        <h3 className="text-text-primary font-semibold mb-3">Upload Gambar QR/Barcode</h3>
+        <p className="text-text-tertiary text-sm mb-3">
+          Gunakan screenshot tiket jika kamera tidak bisa fokus atau perangkat tidak punya kamera.
+        </p>
+        <label className="inline-flex cursor-pointer items-center justify-center rounded-md border border-button-secondary-border px-3 py-2 text-sm font-medium text-button-secondary-text hover:bg-surface-hover">
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/jpg,image/webp"
+            className="sr-only"
+            disabled={isLoading || isFileScanning}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) scanImageFile(file);
+              e.target.value = "";
+            }}
+          />
+          <span className="material-symbols-outlined mr-2 text-sm">upload</span>
+          {isFileScanning ? "Memproses gambar..." : "Pilih Gambar"}
+        </label>
       </Card>
 
       {/* Manual Code Input */}
