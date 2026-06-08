@@ -91,7 +91,7 @@ export interface ManualGenerateTicketsRequest {
     customerPhone: string;
     paymentMethod: "COMPLIMENTARY";
     codeType: "QR_CODE" | "BARCODE";
-    isGenerateCodeOnly: boolean;
+    isGenerateCodeOnly?: boolean;
     tickets: Array<{
         categoryId: string;
         quantity: number;
