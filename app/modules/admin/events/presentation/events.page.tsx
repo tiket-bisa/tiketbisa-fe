@@ -293,9 +293,9 @@ export default function AdminEventsPage() {
     }
   };
 
-  const navigateToEventAction = (id: string, action: "tickets" | "complimentary") => {
+  const navigateToEventAction = (id: string, action: "tickets" | "complimentary" | "dashboard") => {
     setPendingAction(`${action}-${id}`);
-    const suffix = action === "tickets" ? "tickets/new" : "complimentary/new";
+    const suffix = action === "tickets" ? "tickets/new" : action === "complimentary" ? "complimentary/new" : "tickets";
     navigate(`/internal-tb/admin/events/${id}/${suffix}`);
   };
 
@@ -574,6 +574,16 @@ export default function AdminEventsPage() {
                   >
                     <span className="material-symbols-outlined text-sm">add</span>
                     Tambah Tiket
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => navigateToEventAction(evt.id, "dashboard")}
+                    isLoading={pendingAction === `dashboard-${evt.id}`}
+                    className="flex items-center gap-1"
+                  >
+                    <span className="material-symbols-outlined text-sm">confirmation_number</span>
+                    Ticket
                   </Button>
                   <Button
                     variant="secondary"

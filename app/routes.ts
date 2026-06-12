@@ -65,6 +65,11 @@ export default [
       { id: "admin-create-ticket" } // <-- Added unique ID here
     ),
     route(
+      "internal-tb/admin/events/:eventId/tickets",
+      "modules/internal/events/presentation/event-ticket-dashboard.page.tsx",
+      { id: "admin-event-ticket-dashboard" },
+    ),
+    route(
       "internal-tb/admin/events/:eventId/complimentary/new",
       "modules/internal/events/presentation/generate-complimentary-ticket.page.tsx",
       { id: "admin-generate-complimentary-ticket" },
@@ -102,6 +107,11 @@ export default [
       "internal-tb/partner/events/:eventId/tickets/new",
       "modules/internal/events/presentation/create-ticket.page.tsx",
       { id: "partner-create-ticket" }
+    ),
+    route(
+      "internal-tb/partner/events/:eventId/tickets",
+      "modules/internal/events/presentation/event-ticket-dashboard.page.tsx",
+      { id: "partner-event-ticket-dashboard" },
     ),
     route(
       "internal-tb/partner/events/:eventId/complimentary/new",
