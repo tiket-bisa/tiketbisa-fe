@@ -101,11 +101,11 @@ export function BannerCarousel({
                 role="group"
                 aria-roledescription="slide"
               >
-                <div className="w-full h-full relative group/slide">
+                <div className="relative w-full overflow-hidden rounded-2xl group/slide md:h-full md:overflow-visible md:rounded-none">
                   <img
                     src={slide.imageUrl}
                     alt={slide.alt || "Banner"}
-                    className="w-full h-auto object-cover rounded-2xl select-none transition-transform duration-700 group-hover/slide:scale-105"
+                    className="aspect-[16/9] min-h-[150px] w-full rounded-2xl object-cover select-none transition-transform duration-700 group-hover/slide:scale-105 sm:min-h-[190px] md:aspect-auto md:h-auto md:min-h-0"
                     draggable={false}
                   />
 
