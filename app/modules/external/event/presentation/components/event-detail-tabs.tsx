@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import { Avatar, Tabs } from "~/core/design-system/components";
 import { TicketRow } from "~/shared/components";
 import type { Event } from "../../domain/event.entity";
+import { EventImageCarousel } from "./event-image-carousel";
 
 interface EventDetailTabsProps {
   event: Event;
@@ -37,10 +38,9 @@ export function EventDetailTabs({
       <main className="mt-8 transition-all duration-300">
         {activeTab === "deskripsi" && (
           <article className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-            <img
-              src={event.imageUrl}
-              alt={event.name}
-              className="w-full aspect-video rounded-2xl object-cover shadow-2xl border border-border-default"
+            <EventImageCarousel
+              eventName={event.name}
+              images={event.galleryImages?.length ? event.galleryImages : [event.imageUrl]}
             />
             <div className="prose prose-invert max-w-none">
               <h2 className="text-2xl font-bold text-text-primary mb-4">

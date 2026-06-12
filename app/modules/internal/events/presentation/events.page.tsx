@@ -20,6 +20,7 @@ import {
 } from "~/core/api/services/internal-event.api";
 import type { EventSummary } from "~/core/types";
 import { fileToBase64, ImageSourceInput } from "~/modules/internal/common/presentation/image-source-input";
+import { EventGalleryManager } from "~/modules/internal/common/presentation/event-gallery-manager";
 
 const STATUS_MAP = {
   draft: { label: "Draft", variant: "default" as const },
@@ -382,6 +383,13 @@ export default function EventsPage() {
               uploadFile={uploadEventBanner}
               disabled={isSubmitting}
               hint="Tempel URL banner atau upload gambar baru."
+            />
+
+            <EventGalleryManager
+              eventId={editingEvent?.id}
+              uploadFile={uploadEventBanner}
+              disabled={isSubmitting}
+              onCoverChange={(imageUrl) => setFormData((prev) => ({ ...prev, bannerPath: imageUrl }))}
             />
 
             <Input

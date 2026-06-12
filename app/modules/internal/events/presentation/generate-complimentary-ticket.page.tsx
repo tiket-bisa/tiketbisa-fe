@@ -22,7 +22,6 @@ export default function GenerateComplimentaryTicketPage() {
     categoryId: "",
     quantity: "1",
     codeType: "QR_CODE" as "QR_CODE" | "BARCODE",
-    isGenerateCodeOnly: false,
   });
 
   const { data: event } = useApiQuery(
@@ -98,7 +97,6 @@ export default function GenerateComplimentaryTicketPage() {
         customerPhone: formData.customerPhone.trim(),
         paymentMethod: "COMPLIMENTARY",
         codeType: formData.codeType,
-        isGenerateCodeOnly: formData.isGenerateCodeOnly,
         tickets: [{ categoryId: formData.categoryId, quantity }],
       });
 
@@ -110,7 +108,6 @@ export default function GenerateComplimentaryTicketPage() {
           customerEmail: "",
           customerPhone: "",
           quantity: "1",
-          isGenerateCodeOnly: false,
         }));
       } else {
         setErrorMsg(res.error || "Gagal membuat tiket gratis.");
@@ -236,17 +233,6 @@ export default function GenerateComplimentaryTicketPage() {
               name="codeType"
             />
           </div>
-
-          <label className="flex items-start gap-2 text-sm text-text-secondary">
-            <input
-              type="checkbox"
-              name="isGenerateCodeOnly"
-              checked={formData.isGenerateCodeOnly}
-              onChange={handleChange}
-              className="mt-1"
-            />
-            <span>Generate kode saja tanpa PDF tiket lengkap</span>
-          </label>
 
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="ghost" onClick={() => navigate(fallbackPath)}>
