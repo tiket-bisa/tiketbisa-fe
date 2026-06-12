@@ -3,7 +3,7 @@ import type { PaginatedApiResponse, ApiResponse } from "~/core/api";
 import type { Event } from "../domain/event.entity";
 import type { EventRepository } from "../domain/event.repository";
 import type { EventFilterParams } from "./event-filter.params";
-import type { EventDto } from "./event.dto";
+import type { EventDto, EventImageDto } from "./event.dto";
 import { mapEventDtoToEntity } from "./event.mapper";
 
 interface EventListResponseData {
@@ -34,6 +34,10 @@ interface BrandDto {
   name: string;
 }
 
+interface EventImageListResponseData {
+  images: EventImageDto[];
+}
+
 async function getBrandNameMap(): Promise<Map<string, string>> {
   try {
     const response = await apiFetch<ApiResponse<BrandListResponseData>>(
@@ -59,6 +63,20 @@ async function getBrandNameById(brandId: string | undefined): Promise<string | u
   } catch {
     return undefined;
   }
+}
+
+function normalizeEventImages(images: EventImageDto[] | undefined, fallbackImageUrl: string): string[] {
+  const urls = (images ?? [])
+    .sort((a, b) => {
+      const aCover = Boolean(a.isCover ?? a.is_cover);
+      const bCover = Boolean(b.isCover ?? b.is_cover);
+      return Number(bCover) - Number(aCover)
+        || Number(a.sortOrder ?? a.sort_order ?? 0) - Number(b.sortOrder ?? b.sort_order ?? 0);
+    })
+    .map((image) => String(image.imageUrl ?? image.image_url ?? ""))
+    .filter(Boolean);
+  if (urls.length > 0) return urls;
+  return fallbackImageUrl ? [fallbackImageUrl] : [];
 }
 
 export const eventApi: EventRepository = {
@@ -119,18 +137,22 @@ export const eventApi: EventRepository = {
   },
 
   async getEventById(id: string): Promise<Event | null> {
-    const [eventResponse, ticketsResponse] = await Promise.all([
+    const [eventResponse, ticketsResponse, imagesResponse] = await Promise.all([
       apiFetch<ApiResponse<EventDto>>(`/event/${id}`),
       apiFetch<ApiResponse<TicketCategoryDto[]>>(`/ticket-category/event/${id}`),
+      apiFetch<ApiResponse<EventImageListResponseData>>(`/event/${id}/images`).catch(() => null),
     ]);
 
     if (!eventResponse.data) return null;
 
     const brandName = await getBrandNameById(eventResponse.data.brandId);
     const baseEvent = mapEventDtoToEntity(eventResponse.data, 0, brandName);
+    const galleryImages = normalizeEventImages(imagesResponse?.data?.images, baseEvent.imageUrl);
 
     return {
       ...baseEvent,
+      imageUrl: galleryImages[0] ?? baseEvent.imageUrl,
+      galleryImages,
       time: "19:00 - Selesai",
       terms: eventResponse.data.termAndCondition
         ? eventResponse.data.termAndCondition.split("\n")
