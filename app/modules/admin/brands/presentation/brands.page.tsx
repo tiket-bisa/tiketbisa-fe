@@ -8,7 +8,6 @@ import {
   type InternalBrandApiData,
 } from "~/core/api/services/internal-brand.api";
 import { fileToBase64, ImageSourceInput } from "~/modules/internal/common/presentation/image-source-input";
-import { SponsorManager } from "~/modules/internal/common/presentation/sponsor-manager";
 
 const ITEMS_PER_PAGE = 8;
 
@@ -170,7 +169,7 @@ export default function AdminBrandsPage() {
     }
   };
 
-  const uploadBrandImage = async (file: File, imageKind: "LOGO" | "BANNER" | "SPONSOR") => {
+  const uploadBrandImage = async (file: File, imageKind: "LOGO" | "BANNER") => {
     const imageBase64 = await fileToBase64(file);
     const result = await internalBrandApi.uploadImage({
       imageBase64,
@@ -281,15 +280,6 @@ export default function AdminBrandsPage() {
               </Button>
             </div>
           </form>
-          {formMode === "edit" && editingBrand && (
-            <div className="mt-6">
-              <SponsorManager
-                scope="brand"
-                ownerId={editingBrand.id}
-                disabled={isSubmitting}
-              />
-            </div>
-          )}
         </Card>
       )}
 

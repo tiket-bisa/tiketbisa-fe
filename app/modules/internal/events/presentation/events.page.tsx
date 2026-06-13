@@ -21,7 +21,6 @@ import {
 import type { EventSummary } from "~/core/types";
 import { fileToBase64, ImageSourceInput } from "~/modules/internal/common/presentation/image-source-input";
 import { EventGalleryManager } from "~/modules/internal/common/presentation/event-gallery-manager";
-import { SponsorManager } from "~/modules/internal/common/presentation/sponsor-manager";
 
 const STATUS_MAP = {
   draft: { label: "Draft", variant: "default" as const },
@@ -391,13 +390,6 @@ export default function EventsPage() {
               uploadFile={uploadEventBanner}
               disabled={isSubmitting}
               onCoverChange={(imageUrl) => setFormData((prev) => ({ ...prev, bannerPath: imageUrl }))}
-            />
-
-            <SponsorManager
-              scope="event"
-              ownerId={editingEvent?.id}
-              brandId={user?.brand_id}
-              disabled={isSubmitting}
             />
 
             <Input
