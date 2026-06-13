@@ -9,6 +9,7 @@ import {
   type InternalBrandApiData,
 } from "~/core/api/services/internal-brand.api";
 import { fileToBase64, ImageSourceInput } from "~/modules/internal/common/presentation/image-source-input";
+import { SponsorManager } from "~/modules/internal/common/presentation/sponsor-manager";
 
 /** Partner — Brand detail page (shows partner's own brand info) */
 export default function BrandPage() {
@@ -89,7 +90,7 @@ export default function BrandPage() {
     }
   };
 
-  const uploadBrandImage = async (file: File, imageKind: "LOGO" | "BANNER") => {
+  const uploadBrandImage = async (file: File, imageKind: "LOGO" | "BANNER" | "SPONSOR") => {
     const imageBase64 = await fileToBase64(file);
     const result = await internalBrandApi.uploadImage({
       imageBase64,
@@ -208,6 +209,12 @@ export default function BrandPage() {
           </form>
         </Card>
       )}
+
+      <SponsorManager
+        scope="brand"
+        ownerId={brand.id}
+        disabled={isSubmitting}
+      />
     </div>
   );
 }

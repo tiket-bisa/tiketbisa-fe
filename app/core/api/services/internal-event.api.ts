@@ -68,6 +68,32 @@ export interface EventImageListResponse {
   images: EventImageApiData[];
 }
 
+export interface SponsorData {
+  id: string;
+  name: string;
+  imageUrl: string;
+  sortOrder: number;
+}
+
+interface SponsorApiData extends Record<string, unknown> {
+  id?: string;
+  name?: string;
+  imageUrl?: string;
+  image_url?: string;
+  sortOrder?: number;
+  sort_order?: number;
+}
+
+export interface SponsorListResponse {
+  sponsors: SponsorApiData[];
+}
+
+export interface SponsorCreateUpdateRequest {
+  name: string;
+  imageUrl: string;
+  sortOrder?: number;
+}
+
 export interface EventTicketCategorySummary {
   id: string;
   eventId: string;
@@ -211,6 +237,15 @@ function normalizeEventImage(api: EventImageApiData): EventImageData {
   };
 }
 
+function normalizeSponsor(api: SponsorApiData): SponsorData {
+  return {
+    id: String(api.id ?? ""),
+    name: String(api.name ?? ""),
+    imageUrl: String(api.imageUrl ?? api.image_url ?? ""),
+    sortOrder: Number(api.sortOrder ?? api.sort_order ?? 0),
+  };
+}
+
 function normalizeEventTicketCategory(api: EventTicketCategoryApiData): EventTicketCategorySummary {
   return {
     id: String(api.id ?? ""),
@@ -245,6 +280,15 @@ function normalizeIssuedTicket(api: IssuedTicketApiData): IssuedTicketSummary {
     transactionStatus: (api.transactionStatus ?? api.transaction_status ?? null) as string | null,
     paymentMethod: (api.paymentMethod ?? api.payment_method ?? null) as string | null,
     created: (api.created ?? null) as string | null,
+  };
+}
+
+function normalizeSponsorListResponse(response: Awaited<ReturnType<typeof internalHttpClient.get<SponsorListResponse>>>) {
+  return {
+    ...response,
+    data: response.data
+      ? { sponsors: (response.data.sponsors ?? []).map(normalizeSponsor) }
+      : response.data,
   };
 }
 
@@ -315,6 +359,28 @@ export const internalEventApi = {
 
   deleteImage: (eventId: string, imageId: string) =>
     internalHttpClient.delete<null>(`/event/${eventId}/images/${imageId}`),
+
+  getSponsors: async (eventId: string) => {
+    const response = await internalHttpClient.get<SponsorListResponse>(`/event/${eventId}/sponsors`);
+    return normalizeSponsorListResponse(response);
+  },
+
+  addSponsor: (eventId: string, data: SponsorCreateUpdateRequest) =>
+    internalHttpClient.post<SponsorData>(`/event/${eventId}/sponsors`, data),
+
+  updateSponsor: (eventId: string, sponsorId: string, data: SponsorCreateUpdateRequest) =>
+    internalHttpClient.put<SponsorData>(`/event/${eventId}/sponsors/${sponsorId}`, data),
+
+  reorderSponsors: async (
+    eventId: string,
+    data: { sponsors: { id: string; sortOrder: number }[] },
+  ) => {
+    const response = await internalHttpClient.put<SponsorListResponse>(`/event/${eventId}/sponsors/reorder`, data);
+    return normalizeSponsorListResponse(response);
+  },
+
+  deleteSponsor: (eventId: string, sponsorId: string) =>
+    internalHttpClient.delete<null>(`/event/${eventId}/sponsors/${sponsorId}`),
 
   getTicketDashboard: async (eventId: string) => {
     const response = await internalHttpClient.get<EventTicketDashboardApiData>(`/event/${eventId}/tickets/dashboard`);
