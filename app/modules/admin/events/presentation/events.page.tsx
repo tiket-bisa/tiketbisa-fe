@@ -563,8 +563,18 @@ export default function AdminEventsPage() {
                 </div>
                 <Badge variant={status.variant}>{status.label}</Badge>
               </div>
-              <div className="mt-4 flex justify-end border-t border-border-subtle pt-3">
-                <div className="flex flex-wrap gap-2">
+              <div className="mt-4 space-y-3 border-t border-border-subtle pt-3">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => navigateToEventAction(evt.id, "dashboard")}
+                  isLoading={pendingAction === `dashboard-${evt.id}`}
+                  className="flex w-full items-center justify-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-sm">query_stats</span>
+                  Kelola Tiket & Penjualan
+                </Button>
+                <div className="flex flex-wrap justify-end gap-2">
                   <Button
                     variant="secondary"
                     size="sm"
@@ -574,16 +584,6 @@ export default function AdminEventsPage() {
                   >
                     <span className="material-symbols-outlined text-sm">add</span>
                     Tambah Tiket
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => navigateToEventAction(evt.id, "dashboard")}
-                    isLoading={pendingAction === `dashboard-${evt.id}`}
-                    className="flex items-center gap-1"
-                  >
-                    <span className="material-symbols-outlined text-sm">confirmation_number</span>
-                    Ticket
                   </Button>
                   <Button
                     variant="secondary"
