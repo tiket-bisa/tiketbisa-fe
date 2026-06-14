@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate, useParams, Link, useSearchParams } from "react-router";
 import { Badge, Button, Card } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
 import { useApiQuery } from "~/core/api";
 import { transactionApi } from "~/core/api/services/transaction.api";
+import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 
 const STATUS_MAP: Record<string, { label: string; variant: "success" | "warning" | "destructive" | "default" }> = {
   WAITING_PAYMENT: { label: "Menunggu Pembayaran", variant: "warning" },
@@ -35,7 +36,7 @@ export default function AdminTransactionDetailsPage() {
     ? rawReturnTo
     : "/internal-tb/admin";
 
-  const { data: detail, loading } = useApiQuery(
+  const { data: detail, loading, refetch } = useApiQuery(
     async () => {
       if (!id) return null;
       const response = await transactionApi.getDetail(id);
@@ -44,6 +45,14 @@ export default function AdminTransactionDetailsPage() {
     },
     [id],
   );
+
+  const handleRealtimeMessage = useCallback((message: RealtimeMessage) => {
+    if (message.type === "transaction.updated") {
+      void refetch();
+    }
+  }, [refetch]);
+
+  useRealtimeSubscription(id ? [`transaction:${id}`] : [], handleRealtimeMessage);
 
   if (loading) {
     return (

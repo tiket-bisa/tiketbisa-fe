@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { Card, SearchInput, Select } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
@@ -9,6 +9,7 @@ import { useApiQuery } from "~/core/api";
 import { analyticsApi } from "~/modules/internal/analytics/analytics.api";
 import { TransactionPaginationControls } from "~/modules/internal/common/presentation/transaction-pagination-controls";
 import { useDebouncedValue } from "~/modules/internal/common/presentation/use-debounced-value";
+import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 
 const DEFAULT_PAGE_SIZE = 5;
 const PAGE_SIZE_OPTIONS = new Set([5, 10, 25, 50]);
@@ -58,7 +59,7 @@ export default function AdminDashboardPage() {
   const debouncedSearch = useDebouncedValue(search);
 
   // Fetch real dashboard stats
-  const { data: stats } = useApiQuery(
+  const { data: stats, refetch: refetchStats } = useApiQuery(
     async () => {
       return await analyticsApi.getDashboardStats();
     },
@@ -66,7 +67,7 @@ export default function AdminDashboardPage() {
   );
 
   // Fetch real transaction list
-  const { data: transactionRes, loading: loadingTransactions } = useApiQuery(
+  const { data: transactionRes, loading: loadingTransactions, refetch: refetchTransactions } = useApiQuery(
     async () => {
       const res = await transactionApi.getList({
         limit: pageSize,
@@ -91,6 +92,18 @@ export default function AdminDashboardPage() {
   const totalPages = transactionRes?.totalPages ?? 1;
   const dashboardParams = buildDashboardParams({ currentPage, pageSize, search: debouncedSearch, statusFilter });
   const returnTo = `/internal-tb/admin${dashboardParams.toString() ? `?${dashboardParams.toString()}` : ""}`;
+
+  const handleRealtimeMessage = useCallback((message: RealtimeMessage) => {
+    if (message.type === "dashboard_stats.updated") {
+      void refetchStats();
+    }
+    if (message.type === "transaction.updated") {
+      void refetchTransactions();
+      void refetchStats();
+    }
+  }, [refetchStats, refetchTransactions]);
+
+  useRealtimeSubscription(["admin"], handleRealtimeMessage);
 
   useEffect(() => {
     setSearchParams(buildDashboardParams({ currentPage, pageSize, search: debouncedSearch, statusFilter }), { replace: true });

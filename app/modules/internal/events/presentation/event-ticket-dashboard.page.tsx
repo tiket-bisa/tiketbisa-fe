@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import { Badge, Button, Card, Input, Select } from "~/core/design-system/components";
 import { useApiQuery } from "~/core/api";
@@ -8,6 +8,7 @@ import {
   type IssuedTicketSummary,
 } from "~/core/api/services/internal-event.api";
 import { formatIDR } from "~/core/utils";
+import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 
 const statusOptions = [
   { value: "all", label: "Semua Status" },
@@ -34,8 +35,9 @@ export default function EventTicketDashboardPage() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [liveData, setLiveData] = useState<EventTicketDashboard | null>(null);
 
-  const { data, loading, error, refetch } = useApiQuery(
+  const { data: fetchedData, loading, error, refetch } = useApiQuery(
     async () => {
       if (!eventId) return null;
       const result = await internalEventApi.getTicketDashboard(eventId);
@@ -46,6 +48,24 @@ export default function EventTicketDashboardPage() {
     },
     [eventId],
   );
+
+  const handleRealtimeMessage = useCallback((message: RealtimeMessage) => {
+    if (message.type === "event_ticket_dashboard.updated" && message.payload) {
+      setLiveData(message.payload as EventTicketDashboard);
+      return;
+    }
+    if (
+      message.type === "transaction.updated"
+      || message.type === "ticket.checked_in"
+      || message.type === "ticket_category.updated"
+    ) {
+      void refetch();
+    }
+  }, [refetch]);
+
+  useRealtimeSubscription(eventId ? [`event:${eventId}`] : [], handleRealtimeMessage);
+
+  const data = liveData ?? fetchedData;
 
   const categoryOptions = useMemo(() => {
     const categories = data?.categories ?? [];
