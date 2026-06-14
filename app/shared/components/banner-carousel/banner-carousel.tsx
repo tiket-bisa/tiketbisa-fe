@@ -105,7 +105,7 @@ export function BannerCarousel({
                   <img
                     src={slide.imageUrl}
                     alt={slide.alt || "Banner"}
-                    className="aspect-[16/9] min-h-[150px] w-full rounded-2xl object-cover select-none transition-transform duration-700 group-hover/slide:scale-105 sm:min-h-[190px] md:aspect-auto md:h-auto md:min-h-0"
+                    className="aspect-[16/9] min-h-[150px] w-full rounded-2xl bg-white object-contain select-none transition-transform duration-700 sm:min-h-[190px] md:aspect-auto md:h-auto md:min-h-0 md:object-cover md:group-hover/slide:scale-105"
                     draggable={false}
                   />
 
