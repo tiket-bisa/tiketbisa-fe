@@ -40,6 +40,11 @@ export interface InternalEventListParams {
   sortBy?: string;
 }
 
+export interface EventTicketDashboardParams {
+  limit?: number;
+  offset?: number;
+}
+
 export interface EventBannerUploadResponse {
   bannerUrl: string;
 }
@@ -159,12 +164,31 @@ interface EventTicketDashboardApiData {
   categories?: EventTicketCategoryApiData[];
   issuedTickets?: IssuedTicketApiData[];
   issued_tickets?: IssuedTicketApiData[];
+  totalCount?: number;
+  total_count?: number;
+  limit?: number;
+  offset?: number;
+  totalPages?: number;
+  total_pages?: number;
+  currentPage?: number;
+  current_page?: number;
+  hasNextPage?: boolean;
+  has_next_page?: boolean;
+  hasPreviousPage?: boolean;
+  has_previous_page?: boolean;
 }
 
 export interface EventTicketDashboard {
   event: InternalEventApiData;
   categories: EventTicketCategorySummary[];
   issuedTickets: IssuedTicketSummary[];
+  totalCount: number;
+  limit: number;
+  offset: number;
+  totalPages: number;
+  currentPage: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
 }
 
 function buildQuery(params?: InternalEventListParams): string {
@@ -178,6 +202,15 @@ function buildQuery(params?: InternalEventListParams): string {
   if (params.isPublished != null) qs.set("isPublished", String(params.isPublished));
   if (params.city) qs.set("city", params.city);
   if (params.sortBy) qs.set("sortBy", params.sortBy);
+  const str = qs.toString();
+  return str ? `?${str}` : "";
+}
+
+function buildTicketDashboardQuery(params?: EventTicketDashboardParams): string {
+  if (!params) return "";
+  const qs = new URLSearchParams();
+  if (params.limit != null) qs.set("limit", String(params.limit));
+  if (params.offset != null) qs.set("offset", String(params.offset));
   const str = qs.toString();
   return str ? `?${str}` : "";
 }
@@ -316,8 +349,10 @@ export const internalEventApi = {
   deleteImage: (eventId: string, imageId: string) =>
     internalHttpClient.delete<null>(`/event/${eventId}/images/${imageId}`),
 
-  getTicketDashboard: async (eventId: string) => {
-    const response = await internalHttpClient.get<EventTicketDashboardApiData>(`/event/${eventId}/tickets/dashboard`);
+  getTicketDashboard: async (eventId: string, params?: EventTicketDashboardParams) => {
+    const response = await internalHttpClient.get<EventTicketDashboardApiData>(
+      `/event/${eventId}/tickets/dashboard${buildTicketDashboardQuery(params)}`,
+    );
     return {
       ...response,
       data: response.data
@@ -325,6 +360,13 @@ export const internalEventApi = {
             event: normalizeEvent(response.data.event as InternalEventApiData & Record<string, unknown>),
             categories: (response.data.categories ?? []).map(normalizeEventTicketCategory),
             issuedTickets: (response.data.issuedTickets ?? response.data.issued_tickets ?? []).map(normalizeIssuedTicket),
+            totalCount: Number(response.data.totalCount ?? response.data.total_count ?? 0),
+            limit: Number(response.data.limit ?? params?.limit ?? 50),
+            offset: Number(response.data.offset ?? params?.offset ?? 0),
+            totalPages: Number(response.data.totalPages ?? response.data.total_pages ?? 1),
+            currentPage: Number(response.data.currentPage ?? response.data.current_page ?? 1),
+            hasNextPage: Boolean(response.data.hasNextPage ?? response.data.has_next_page),
+            hasPreviousPage: Boolean(response.data.hasPreviousPage ?? response.data.has_previous_page),
           }
         : response.data,
     };

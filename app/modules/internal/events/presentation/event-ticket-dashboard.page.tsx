@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import { Badge, Button, Card, Input, Select } from "~/core/design-system/components";
 import { useApiQuery } from "~/core/api";
@@ -18,6 +18,8 @@ const statusOptions = [
   { value: "EXPIRED", label: "Expired" },
 ];
 
+const ISSUED_TICKET_PAGE_SIZE = 50;
+
 const statusMap: Record<string, { label: string; variant: "default" | "success" | "warning" | "destructive" | "brand" }> = {
   ISSUED: { label: "Issued", variant: "brand" },
   CHECKED_IN: { label: "Checked In", variant: "success" },
@@ -36,22 +38,30 @@ export default function EventTicketDashboardPage() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [liveData, setLiveData] = useState<EventTicketDashboard | null>(null);
+  const [issuedTicketOffset, setIssuedTicketOffset] = useState(0);
 
   const { data: fetchedData, loading, error, refetch } = useApiQuery(
     async () => {
       if (!eventId) return null;
-      const result = await internalEventApi.getTicketDashboard(eventId);
+      const result = await internalEventApi.getTicketDashboard(eventId, {
+        limit: ISSUED_TICKET_PAGE_SIZE,
+        offset: issuedTicketOffset,
+      });
       if (!result.success || !result.data) {
         throw new Error(result.error || "Gagal memuat data tiket event.");
       }
       return result.data as EventTicketDashboard;
     },
-    [eventId],
+    [eventId, issuedTicketOffset],
   );
 
   const handleRealtimeMessage = useCallback((message: RealtimeMessage) => {
     if (message.type === "event_ticket_dashboard.updated" && message.payload) {
-      setLiveData(message.payload as EventTicketDashboard);
+      if (issuedTicketOffset === 0) {
+        setLiveData(message.payload as EventTicketDashboard);
+      } else {
+        void refetch();
+      }
       return;
     }
     if (
@@ -61,9 +71,17 @@ export default function EventTicketDashboardPage() {
     ) {
       void refetch();
     }
-  }, [refetch]);
+  }, [issuedTicketOffset, refetch]);
 
   useRealtimeSubscription(eventId ? [`event:${eventId}`] : [], handleRealtimeMessage);
+
+  useEffect(() => {
+    setLiveData(null);
+  }, [eventId, issuedTicketOffset]);
+
+  useEffect(() => {
+    setIssuedTicketOffset(0);
+  }, [eventId]);
 
   const data = liveData ?? fetchedData;
 
@@ -119,6 +137,17 @@ export default function EventTicketDashboardPage() {
   const soldTicket = data.categories.reduce((sum, category) => sum + category.soldTicket, 0);
   const remainingTicket = data.categories.reduce((sum, category) => sum + category.remainingTicket, 0);
   const checkedInTicket = data.categories.reduce((sum, category) => sum + category.checkedInTicket, 0);
+  const displayedStart = data.totalCount === 0 ? 0 : data.offset + 1;
+  const displayedEnd = Math.min(data.offset + data.issuedTickets.length, data.totalCount);
+  const canGoPrevious = data.hasPreviousPage && data.offset > 0;
+  const canGoNext = data.hasNextPage;
+  const goToPreviousPage = () => {
+    setIssuedTicketOffset((current) => Math.max(current - ISSUED_TICKET_PAGE_SIZE, 0));
+  };
+  const goToNextPage = () => {
+    if (!canGoNext) return;
+    setIssuedTicketOffset((current) => current + ISSUED_TICKET_PAGE_SIZE);
+  };
 
   return (
     <div className="space-y-6">
@@ -239,6 +268,35 @@ export default function EventTicketDashboardPage() {
         {filteredIssuedTickets.length === 0 && (
           <p className="py-6 text-center text-sm text-text-tertiary">Tidak ada tiket terjual sesuai filter.</p>
         )}
+
+        <div className="mt-4 flex flex-col gap-3 border-t border-border-subtle pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-text-tertiary">
+            Menampilkan {displayedStart.toLocaleString()}-{displayedEnd.toLocaleString()} dari {data.totalCount.toLocaleString()} tiket
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={goToPreviousPage}
+              disabled={!canGoPrevious || loading}
+            >
+              Sebelumnya
+            </Button>
+            <span className="min-w-20 text-center text-sm text-text-secondary">
+              Page {data.currentPage}
+            </span>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={goToNextPage}
+              disabled={!canGoNext || loading}
+            >
+              Berikutnya
+            </Button>
+          </div>
+        </div>
       </Card>
     </div>
   );
