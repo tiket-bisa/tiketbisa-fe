@@ -556,7 +556,7 @@ export default function EventsPage() {
                     className="flex items-center gap-1"
                   >
                     <span className="material-symbols-outlined text-sm">redeem</span>
-                    Tiket Gratis
+                    Tiket Complimentary
                   </Button>
                   <Button
                     variant="ghost"

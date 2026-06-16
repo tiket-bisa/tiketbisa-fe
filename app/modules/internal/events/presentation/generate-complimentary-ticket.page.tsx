@@ -101,7 +101,7 @@ export default function GenerateComplimentaryTicketPage() {
       });
 
       if (res.success) {
-        setSuccessMsg("Tiket gratis berhasil dibuat dan dikirim jika template email aktif.");
+        setSuccessMsg("Tiket complimentary berhasil dibuat dan dikirim jika template email aktif.");
         setFormData((prev) => ({
           ...prev,
           customerName: "",
@@ -110,7 +110,7 @@ export default function GenerateComplimentaryTicketPage() {
           quantity: "1",
         }));
       } else {
-        setErrorMsg(res.error || "Gagal membuat tiket gratis.");
+        setErrorMsg(res.error || "Gagal membuat tiket complimentary.");
       }
     } catch {
       setErrorMsg("Koneksi bermasalah.");
@@ -130,7 +130,7 @@ export default function GenerateComplimentaryTicketPage() {
           <span className="material-symbols-outlined text-xl leading-none">arrow_back</span>
         </button>
         <div>
-          <h1 className="text-text-primary text-2xl font-bold">Generate Tiket Gratis</h1>
+          <h1 className="text-text-primary text-2xl font-bold">Generate Tiket Complimentary</h1>
           <p className="text-text-tertiary text-sm mt-1">{event?.name ?? "Event"}</p>
         </div>
       </div>
@@ -239,7 +239,7 @@ export default function GenerateComplimentaryTicketPage() {
               Kembali
             </Button>
             <Button type="submit" isLoading={loading} disabled={loadingCategories}>
-              Generate Gratis
+              Generate Complimentary
             </Button>
           </div>
         </form>

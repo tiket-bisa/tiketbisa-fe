@@ -140,7 +140,7 @@ export default function EventTicketDashboardPage() {
             Tambah Tiket
           </Button>
           <Button type="button" variant="secondary" onClick={() => navigate(`${basePath}/events/${eventId}/complimentary/new`)}>
-            Tiket Gratis
+            Tiket Complimentary
           </Button>
         </div>
       </div>
