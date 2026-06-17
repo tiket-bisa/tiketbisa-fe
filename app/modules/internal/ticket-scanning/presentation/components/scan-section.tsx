@@ -25,7 +25,7 @@ const SCAN_STATUS_MAP: Record<
   },
   expired: {
     label: "Tiket Tidak Aktif / Kedaluwarsa",
-    variant: "destructive",
+    variant: "warning",
     icon: "schedule",
   },
 };
@@ -48,6 +48,7 @@ export function ScanSection() {
     scannerElementId,
   } = useQrScanner({ onScanSuccess: handleScan, disabled: isLoading });
   const [manualCode, setManualCode] = useState("");
+  const backgroundClass = getScanBackgroundClass(scanResult?.status, error);
 
   const handleManualSubmit = () => {
     const code = manualCode.trim();
@@ -57,7 +58,12 @@ export function ScanSection() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 rounded-2xl p-3 transition-colors duration-300 ${backgroundClass}`}>
+      {/* Scan Result */}
+      {scanResult && (
+        <ScanResultCard scanResult={scanResult} clearResult={clearResult} />
+      )}
+
       {/* Camera / Scanner View */}
       <Card padding="md">
         <div className="flex flex-col items-center gap-4">
@@ -178,108 +184,71 @@ export function ScanSection() {
           </Button>
         </div>
       </Card>
-
-      {/* Scan Result */}
-      {scanResult && (
-        <Card padding="md">
-          <div className="flex items-start gap-4">
-            {(() => {
-              const info = SCAN_STATUS_MAP[scanResult.status];
-              return (
-                <>
-                  <span
-                    className={`material-symbols-outlined text-3xl ${
-                      scanResult.status === "valid"
-                        ? "text-success-default"
-                        : scanResult.status === "already_checked_in"
-                          ? "text-warning-default"
-                          : "text-destructive-default"
-                    }`}
-                  >
-                    {info.icon}
-                  </span>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge variant={info.variant}>{info.label}</Badge>
-                      <button
-                        onClick={clearResult}
-                        className="ml-auto text-text-tertiary hover:text-text-primary transition-colors cursor-pointer"
-                        aria-label="Tutup hasil scan"
-                      >
-                        <span className="material-symbols-outlined text-lg">
-                          close
-                        </span>
-                      </button>
-                    </div>
-                    <dl className="space-y-2 text-sm">
-                      <div className="flex gap-2">
-                        <dt className="text-text-tertiary w-24 shrink-0">
-                          ID Tiket:
-                        </dt>
-                        <dd className="text-text-primary font-mono">
-                          {scanResult.ticket_id}
-                        </dd>
-                      </div>
-                      {scanResult.event_name && (
-                        <div className="flex gap-2">
-                          <dt className="text-text-tertiary w-24 shrink-0">
-                            Event:
-                          </dt>
-                          <dd className="text-text-primary">
-                            {scanResult.event_name}
-                          </dd>
-                        </div>
-                      )}
-                      {scanResult.ticket_name && (
-                        <div className="flex gap-2">
-                          <dt className="text-text-tertiary w-24 shrink-0">
-                            Tiket:
-                          </dt>
-                          <dd className="text-text-primary">
-                            {scanResult.ticket_name}
-                          </dd>
-                        </div>
-                      )}
-                      {scanResult.buyer_name && (
-                        <div className="flex gap-2">
-                          <dt className="text-text-tertiary w-24 shrink-0">
-                            Pembeli:
-                          </dt>
-                          <dd className="text-text-primary">
-                            {scanResult.buyer_name}
-                          </dd>
-                        </div>
-                      )}
-                      {scanResult.checked_in_at && (
-                        <div className="flex gap-2">
-                          <dt className="text-text-tertiary w-24 shrink-0">
-                            Check-in:
-                          </dt>
-                          <dd className="text-text-primary">
-                            {new Date(scanResult.checked_in_at).toLocaleString(
-                              "id-ID",
-                            )}
-                          </dd>
-                        </div>
-                      )}
-                      {scanResult.message && (
-                        <div className="flex gap-2">
-                          <dt className="text-text-tertiary w-24 shrink-0">
-                            Info:
-                          </dt>
-                          <dd className="text-text-primary">
-                            {scanResult.message}
-                          </dd>
-                        </div>
-                      )}
-                    </dl>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        </Card>
-      )}
     </div>
   );
+}
+
+function ScanResultCard({
+  scanResult,
+  clearResult,
+}: {
+  scanResult: TicketScanResult;
+  clearResult: () => void;
+}) {
+  const info = SCAN_STATUS_MAP[scanResult.status];
+  return (
+    <Card padding="md">
+      <div className="flex items-start gap-4">
+        <span
+          className={`material-symbols-outlined text-3xl ${
+            scanResult.status === "valid"
+              ? "text-success-default"
+              : scanResult.status === "already_checked_in" || scanResult.status === "expired"
+                ? "text-warning-default"
+                : "text-destructive-default"
+          }`}
+        >
+          {info.icon}
+        </span>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <Badge variant={info.variant}>{info.label}</Badge>
+            <button
+              onClick={clearResult}
+              className="ml-auto text-text-tertiary hover:text-text-primary transition-colors cursor-pointer"
+              aria-label="Tutup hasil scan"
+            >
+              <span className="material-symbols-outlined text-lg">close</span>
+            </button>
+          </div>
+          <dl className="space-y-2 text-sm">
+            <ScanDetail label="ID Tiket" value={scanResult.ticket_id} mono />
+            {scanResult.event_name && <ScanDetail label="Event" value={scanResult.event_name} />}
+            {scanResult.ticket_name && <ScanDetail label="Tiket" value={scanResult.ticket_name} />}
+            {scanResult.buyer_name && <ScanDetail label="Pembeli" value={scanResult.buyer_name} />}
+            {scanResult.checked_in_at && (
+              <ScanDetail label="Check-in" value={new Date(scanResult.checked_in_at).toLocaleString("id-ID")} />
+            )}
+            {scanResult.message && <ScanDetail label="Info" value={scanResult.message} />}
+          </dl>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function ScanDetail({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex gap-2">
+      <dt className="text-text-tertiary w-24 shrink-0">{label}:</dt>
+      <dd className={`text-text-primary ${mono ? "font-mono" : ""}`}>{value}</dd>
+    </div>
+  );
+}
+
+function getScanBackgroundClass(status?: TicketScanResult["status"], scannerError?: string | null): string {
+  if (status === "valid") return "bg-green-50";
+  if (status === "already_checked_in" || status === "expired") return "bg-amber-50";
+  if (status === "invalid" || scannerError) return "bg-red-50";
+  return "bg-transparent";
 }

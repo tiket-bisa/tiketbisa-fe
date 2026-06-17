@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Card, Tabs } from "~/core/design-system/components";
 import { useAuth } from "~/core/auth";
 import { useApiQuery } from "~/core/api";
@@ -10,6 +10,7 @@ import {
 } from "~/core/api/services/ticket-category.api";
 import type { TicketDashboardSummary } from "~/core/types";
 import { ScanSection, QrGeneratorSection } from "./components";
+import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 
 const tabItems = [
   { value: "scan", label: "Scan Tiket" },
@@ -23,7 +24,7 @@ export default function TicketScanningPage() {
   const { user } = useAuth(); // <-- Added this to fix the missing user reference
 
   // Fetch ticket dashboard from API, filtered by partner's brand events
-  const { data: ticketDashboard, loading } = useApiQuery(
+  const { data: ticketDashboard, loading, refetch } = useApiQuery(
     async () => {
       // Resolve brand ID
       const brandsRes = await brandApi.getList({ limit: 100, offset: 0 });
@@ -62,6 +63,14 @@ export default function TicketScanningPage() {
   );
 
   const dashboard = ticketDashboard ?? [];
+
+  const handleRealtimeMessage = useCallback((message: RealtimeMessage) => {
+    if (message.type === "ticket.checked_in" || message.type === "event_ticket_dashboard.updated") {
+      void refetch();
+    }
+  }, [refetch]);
+
+  useRealtimeSubscription(user?.brand_id ? [`brand:${user.brand_id}`] : [], handleRealtimeMessage);
 
   return (
     <div className="space-y-6">

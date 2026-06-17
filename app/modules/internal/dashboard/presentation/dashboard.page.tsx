@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Card, Badge, SearchInput, Select, Button } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
@@ -8,6 +8,7 @@ import { transactionApi, mapTransactionApiToFe } from "~/core/api/services/trans
 import { useApiQuery } from "~/core/api";
 import { TransactionPaginationControls } from "~/modules/internal/common/presentation/transaction-pagination-controls";
 import { useDebouncedValue } from "~/modules/internal/common/presentation/use-debounced-value";
+import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 
 const STATUS_MAP = {
   paid: { label: "Lunas", variant: "success" as const },
@@ -53,7 +54,7 @@ export default function DashboardPage() {
   }, []);
 
   // Fetch real transaction list
-  const { data: transactionRes, loading: loadingTransactions } = useApiQuery(
+  const { data: transactionRes, loading: loadingTransactions, refetch: refetchTransactions } = useApiQuery(
     async () => {
       // Don't fetch if brand is not loaded yet
       if (!user?.brand_slug) return { transactions: [], totalCount: 0, totalPages: 1 };
@@ -84,6 +85,18 @@ export default function DashboardPage() {
     setPendingDetailId(id);
     navigate(`/internal-tb/partner/transactions/${id}`);
   };
+
+  const handleRealtimeMessage = useCallback((message: RealtimeMessage) => {
+    if (message.type === "dashboard_stats.updated" && message.payload) {
+      setStats(message.payload as DashboardStats);
+      setIsStatsLoading(false);
+    }
+    if (message.type === "transaction.updated") {
+      void refetchTransactions();
+    }
+  }, [refetchTransactions]);
+
+  useRealtimeSubscription(user?.brand_id ? [`brand:${user.brand_id}`] : [], handleRealtimeMessage);
 
   return (
     <div className="space-y-8">

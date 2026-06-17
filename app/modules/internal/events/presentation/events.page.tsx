@@ -256,9 +256,9 @@ export default function EventsPage() {
     }
   };
 
-  const navigateToEventAction = (id: string, action: "tickets" | "complimentary") => {
+  const navigateToEventAction = (id: string, action: "tickets" | "complimentary" | "dashboard") => {
     setPendingAction(`${action}-${id}`);
-    const suffix = action === "tickets" ? "tickets/new" : "complimentary/new";
+    const suffix = action === "tickets" ? "tickets/new" : action === "complimentary" ? "complimentary/new" : "tickets";
     navigate(`/internal-tb/partner/events/${id}/${suffix}`);
   };
 
@@ -526,8 +526,18 @@ export default function EventsPage() {
                 </div>
                 <Badge variant={status.variant}>{status.label}</Badge>
               </div>
-              <div className="mt-4 flex justify-end border-t border-border-subtle pt-3">
-                <div className="flex flex-wrap gap-2">
+              <div className="mt-4 space-y-3 border-t border-border-subtle pt-3">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => navigateToEventAction(evt.id, "dashboard")}
+                  isLoading={pendingAction === `dashboard-${evt.id}`}
+                  className="flex w-full items-center justify-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-sm">query_stats</span>
+                  Kelola Tiket & Penjualan
+                </Button>
+                <div className="flex flex-wrap justify-end gap-2">
                   <Button
                     variant="secondary"
                     size="sm"
@@ -546,7 +556,7 @@ export default function EventsPage() {
                     className="flex items-center gap-1"
                   >
                     <span className="material-symbols-outlined text-sm">redeem</span>
-                    Tiket Gratis
+                    Tiket Complimentary
                   </Button>
                   <Button
                     variant="ghost"

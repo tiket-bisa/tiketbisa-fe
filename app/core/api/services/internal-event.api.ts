@@ -40,6 +40,11 @@ export interface InternalEventListParams {
   sortBy?: string;
 }
 
+export interface EventTicketDashboardParams {
+  limit?: number;
+  offset?: number;
+}
+
 export interface EventBannerUploadResponse {
   bannerUrl: string;
 }
@@ -68,6 +73,124 @@ export interface EventImageListResponse {
   images: EventImageApiData[];
 }
 
+export interface EventTicketCategorySummary {
+  id: string;
+  eventId: string;
+  name: string;
+  description?: string | null;
+  categoryCode?: string | null;
+  totalTicket: number;
+  issuedTicket: number;
+  checkedInTicket: number;
+  remainingTicket: number;
+  soldTicket: number;
+  price: number;
+}
+
+export interface IssuedTicketSummary {
+  id: string;
+  ticketCategoryId: string;
+  categoryName: string;
+  categoryCode?: string | null;
+  ticketTransactionId?: string | null;
+  codeHash?: string | null;
+  codeType?: string | null;
+  status: string;
+  checkInTime?: string | null;
+  ticketEventNumber?: number | null;
+  customerName?: string | null;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
+  transactionStatus?: string | null;
+  paymentMethod?: string | null;
+  created?: string | null;
+}
+
+interface EventTicketCategoryApiData extends Record<string, unknown> {
+  id?: string;
+  eventId?: string;
+  event_id?: string;
+  name?: string;
+  description?: string | null;
+  categoryCode?: string | null;
+  category_code?: string | null;
+  totalTicket?: number;
+  total_ticket?: number;
+  issuedTicket?: number;
+  issued_ticket?: number;
+  checkedInTicket?: number;
+  checked_in_ticket?: number;
+  remainingTicket?: number;
+  remaining_ticket?: number;
+  soldTicket?: number;
+  sold_ticket?: number;
+  price?: number;
+}
+
+interface IssuedTicketApiData extends Record<string, unknown> {
+  id?: string;
+  ticketCategoryId?: string;
+  ticket_category_id?: string;
+  categoryName?: string;
+  category_name?: string;
+  categoryCode?: string | null;
+  category_code?: string | null;
+  ticketTransactionId?: string | null;
+  ticket_transaction_id?: string | null;
+  codeHash?: string | null;
+  code_hash?: string | null;
+  codeType?: string | null;
+  code_type?: string | null;
+  status?: string;
+  checkInTime?: string | null;
+  check_in_time?: string | null;
+  ticketEventNumber?: number | null;
+  ticket_event_number?: number | null;
+  customerName?: string | null;
+  customer_name?: string | null;
+  customerEmail?: string | null;
+  customer_email?: string | null;
+  customerPhone?: string | null;
+  customer_phone?: string | null;
+  transactionStatus?: string | null;
+  transaction_status?: string | null;
+  paymentMethod?: string | null;
+  payment_method?: string | null;
+  created?: string | null;
+}
+
+interface EventTicketDashboardApiData {
+  event: InternalEventApiData;
+  categories?: EventTicketCategoryApiData[];
+  issuedTickets?: IssuedTicketApiData[];
+  issued_tickets?: IssuedTicketApiData[];
+  totalCount?: number;
+  total_count?: number;
+  limit?: number;
+  offset?: number;
+  totalPages?: number;
+  total_pages?: number;
+  currentPage?: number;
+  current_page?: number;
+  hasNextPage?: boolean;
+  has_next_page?: boolean;
+  hasPreviousPage?: boolean;
+  has_previous_page?: boolean;
+}
+
+export interface EventTicketDashboard {
+  event: InternalEventApiData;
+  categories: EventTicketCategorySummary[];
+  issuedTickets: IssuedTicketSummary[];
+  totalCount: number;
+  limit: number;
+  offset: number;
+  totalPages: number;
+  currentPage: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
 function buildQuery(params?: InternalEventListParams): string {
   if (!params) return "";
   const qs = new URLSearchParams();
@@ -79,6 +202,15 @@ function buildQuery(params?: InternalEventListParams): string {
   if (params.isPublished != null) qs.set("isPublished", String(params.isPublished));
   if (params.city) qs.set("city", params.city);
   if (params.sortBy) qs.set("sortBy", params.sortBy);
+  const str = qs.toString();
+  return str ? `?${str}` : "";
+}
+
+function buildTicketDashboardQuery(params?: EventTicketDashboardParams): string {
+  if (!params) return "";
+  const qs = new URLSearchParams();
+  if (params.limit != null) qs.set("limit", String(params.limit));
+  if (params.offset != null) qs.set("offset", String(params.offset));
   const str = qs.toString();
   return str ? `?${str}` : "";
 }
@@ -109,6 +241,43 @@ function normalizeEventImage(api: EventImageApiData): EventImageData {
     imageUrl: String(api.imageUrl ?? api.image_url ?? ""),
     sortOrder: Number(api.sortOrder ?? api.sort_order ?? 0),
     isCover: Boolean(api.isCover ?? api.is_cover),
+  };
+}
+
+function normalizeEventTicketCategory(api: EventTicketCategoryApiData): EventTicketCategorySummary {
+  return {
+    id: String(api.id ?? ""),
+    eventId: String(api.eventId ?? api.event_id ?? ""),
+    name: String(api.name ?? ""),
+    description: (api.description ?? null) as string | null,
+    categoryCode: (api.categoryCode ?? api.category_code ?? null) as string | null,
+    totalTicket: Number(api.totalTicket ?? api.total_ticket ?? 0),
+    issuedTicket: Number(api.issuedTicket ?? api.issued_ticket ?? 0),
+    checkedInTicket: Number(api.checkedInTicket ?? api.checked_in_ticket ?? 0),
+    remainingTicket: Number(api.remainingTicket ?? api.remaining_ticket ?? 0),
+    soldTicket: Number(api.soldTicket ?? api.sold_ticket ?? api.issuedTicket ?? api.issued_ticket ?? 0),
+    price: Number(api.price ?? 0),
+  };
+}
+
+function normalizeIssuedTicket(api: IssuedTicketApiData): IssuedTicketSummary {
+  return {
+    id: String(api.id ?? ""),
+    ticketCategoryId: String(api.ticketCategoryId ?? api.ticket_category_id ?? ""),
+    categoryName: String(api.categoryName ?? api.category_name ?? ""),
+    categoryCode: (api.categoryCode ?? api.category_code ?? null) as string | null,
+    ticketTransactionId: (api.ticketTransactionId ?? api.ticket_transaction_id ?? null) as string | null,
+    codeHash: (api.codeHash ?? api.code_hash ?? null) as string | null,
+    codeType: (api.codeType ?? api.code_type ?? null) as string | null,
+    status: String(api.status ?? ""),
+    checkInTime: (api.checkInTime ?? api.check_in_time ?? null) as string | null,
+    ticketEventNumber: (api.ticketEventNumber ?? api.ticket_event_number ?? null) as number | null,
+    customerName: (api.customerName ?? api.customer_name ?? null) as string | null,
+    customerEmail: (api.customerEmail ?? api.customer_email ?? null) as string | null,
+    customerPhone: (api.customerPhone ?? api.customer_phone ?? null) as string | null,
+    transactionStatus: (api.transactionStatus ?? api.transaction_status ?? null) as string | null,
+    paymentMethod: (api.paymentMethod ?? api.payment_method ?? null) as string | null,
+    created: (api.created ?? null) as string | null,
   };
 }
 
@@ -179,6 +348,29 @@ export const internalEventApi = {
 
   deleteImage: (eventId: string, imageId: string) =>
     internalHttpClient.delete<null>(`/event/${eventId}/images/${imageId}`),
+
+  getTicketDashboard: async (eventId: string, params?: EventTicketDashboardParams) => {
+    const response = await internalHttpClient.get<EventTicketDashboardApiData>(
+      `/event/${eventId}/tickets/dashboard${buildTicketDashboardQuery(params)}`,
+    );
+    return {
+      ...response,
+      data: response.data
+        ? {
+            event: normalizeEvent(response.data.event as InternalEventApiData & Record<string, unknown>),
+            categories: (response.data.categories ?? []).map(normalizeEventTicketCategory),
+            issuedTickets: (response.data.issuedTickets ?? response.data.issued_tickets ?? []).map(normalizeIssuedTicket),
+            totalCount: Number(response.data.totalCount ?? response.data.total_count ?? 0),
+            limit: Number(response.data.limit ?? params?.limit ?? 50),
+            offset: Number(response.data.offset ?? params?.offset ?? 0),
+            totalPages: Number(response.data.totalPages ?? response.data.total_pages ?? 1),
+            currentPage: Number(response.data.currentPage ?? response.data.current_page ?? 1),
+            hasNextPage: Boolean(response.data.hasNextPage ?? response.data.has_next_page),
+            hasPreviousPage: Boolean(response.data.hasPreviousPage ?? response.data.has_previous_page),
+          }
+        : response.data,
+    };
+  },
 };
 
 export function mapInternalEventToSummary(

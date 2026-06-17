@@ -19,7 +19,7 @@ export function EventImageCarousel({ images, eventName }: EventImageCarouselProp
         <img
           src={activeImage}
           alt={eventName}
-          className="w-full aspect-video object-cover"
+          className="w-full aspect-video bg-surface-alt object-contain md:object-cover"
         />
         {gallery.length > 1 && (
           <>

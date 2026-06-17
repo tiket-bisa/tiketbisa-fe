@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useCallback, useState } from "react";
 import { Card, Tabs, Badge } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
 import { useApiQuery } from "~/core/api";
@@ -7,10 +7,11 @@ import { brandApi, mapBrandApiToFe } from "~/core/api/services/brand.api";
 import { ticketCategoryApi, aggregateTicketDashboard } from "~/core/api/services/ticket-category.api";
 import type { TicketDashboardSummary } from "~/core/types";
 import { ScanSection, QrGeneratorSection } from "~/modules/internal/ticket-scanning/presentation/components";
+import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 
 /** Admin — Ticket Scanning with real ticket-category API */
 export default function AdminScanPage() {
-  const { data: ticketDashboard, loading, error } = useApiQuery(
+  const { data: ticketDashboard, loading, error, refetch } = useApiQuery(
     async () => {
       // 1. Fetch brands
       const brandsRes = await brandApi.getList({ limit: 100, offset: 0 });
@@ -45,6 +46,14 @@ export default function AdminScanPage() {
     },
     [],
   );
+
+  const handleRealtimeMessage = useCallback((message: RealtimeMessage) => {
+    if (message.type === "ticket.checked_in" || message.type === "event_ticket_dashboard.updated") {
+      void refetch();
+    }
+  }, [refetch]);
+
+  useRealtimeSubscription(["admin"], handleRealtimeMessage);
 
   const dashboard = ticketDashboard ?? [];
 
