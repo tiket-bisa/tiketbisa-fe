@@ -1,5 +1,6 @@
 import { Card, Button } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils/currency";
+import { validateManualTransferProofFile } from "../../../infrastructure/order.api";
 import type { OrderResponse } from "../../../domain/checkout.types";
 import type { Event } from "../../../../event/domain/event.entity";
 import { CountdownTimer } from "../shared/countdown-timer";
@@ -33,6 +34,20 @@ export function PaymentInstruction({
     Number(order.totalAmount) > 0
       ? Number(order.totalAmount)
       : Number(fallbackTotalAmount || 0);
+
+  const handleProofFileChange = (file: File | null) => {
+    if (!file) {
+      onProofFileChange?.(null);
+      return;
+    }
+    const validationError = validateManualTransferProofFile(file);
+    if (validationError) {
+      alert(validationError);
+      onProofFileChange?.(null);
+      return;
+    }
+    onProofFileChange?.(file);
+  };
   
   const deadline = new Date(order.expiryTime).toLocaleTimeString('id-ID', { 
     hour: '2-digit', 
@@ -250,15 +265,21 @@ export function PaymentInstruction({
                 <input
                   type="file"
                   className="hidden"
-                  accept="image/*,application/pdf"
-                  onChange={(event) => onProofFileChange?.(event.target.files?.[0] ?? null)}
+                  accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    handleProofFileChange(file);
+                    if (file && validateManualTransferProofFile(file)) {
+                      event.currentTarget.value = "";
+                    }
+                  }}
                 />
                 <div className="text-center space-y-2">
                   <p className="text-sm font-bold text-text-secondary">
                     {proofFile ? "File dipilih" : "Pilih file bukti transfer (JPG/PNG/PDF)"}
                   </p>
                   <p className="text-xs text-text-secondary">
-                    {proofFile ? proofFile.name : "Klik untuk unggah file"}
+                    {proofFile ? proofFile.name : "PDF, JPG, atau PNG. Maksimal 10MB."}
                   </p>
                 </div>
               </label>
