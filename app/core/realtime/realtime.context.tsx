@@ -20,7 +20,7 @@ interface RealtimeContextValue {
 const RealtimeContext = createContext<RealtimeContextValue | null>(null);
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const [status, setStatus] = useState<RealtimeConnectionStatus>("idle");
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
@@ -28,6 +28,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   const scopeCountsRef = useRef(new Map<string, number>());
   const authenticatedRef = useRef(false);
   const shouldReconnectRef = useRef(true);
+  const reconnectAttemptRef = useRef(0);
 
   const send = useCallback((payload: unknown) => {
     const socket = socketRef.current;
@@ -45,6 +46,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   }, [send]);
 
   useEffect(() => {
+    if (isLoading) {
+      setStatus("idle");
+      return;
+    }
+
     if (!user?.email || !user.internal_token) {
       setStatus("idle");
       return;
@@ -59,6 +65,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       socketRef.current = socket;
 
       socket.onopen = () => {
+        reconnectAttemptRef.current = 0;
         send({
           type: "auth",
           email: user.email,
@@ -80,14 +87,23 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         }
       };
 
-      socket.onclose = () => {
+      socket.onclose = (event) => {
         authenticatedRef.current = false;
         if (!shouldReconnectRef.current) {
           setStatus("disconnected");
           return;
         }
+
+        if (event.code === 1008) {
+          shouldReconnectRef.current = false;
+          setStatus("disconnected");
+          return;
+        }
+
         setStatus("reconnecting");
-        reconnectTimerRef.current = window.setTimeout(connect, 2500);
+        const reconnectDelay = Math.min(30000, 2500 * 2 ** reconnectAttemptRef.current);
+        reconnectAttemptRef.current += 1;
+        reconnectTimerRef.current = window.setTimeout(connect, reconnectDelay);
       };
 
       socket.onerror = () => {
@@ -106,7 +122,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       socketRef.current?.close();
       socketRef.current = null;
     };
-  }, [send, sendSubscriptions, user?.email, user?.internal_token]);
+  }, [isLoading, send, sendSubscriptions, user?.email, user?.internal_token]);
 
   const subscribe = useCallback((scopes: string[], handler: RealtimeMessageHandler) => {
     const normalizedScopes = Array.from(new Set(scopes.map((scope) => scope.trim()).filter(Boolean)));
