@@ -8,6 +8,14 @@ import { usePaymentSelection } from "./use-payment-selection";
 import type { BuyerInfo, OrderSummary, PaymentMethod, OrderResponse } from "../../domain/checkout.types";
 import type { EventSummary } from "~/core/types";
 
+const CHECKOUT_DEADLINE_STORAGE_KEY = "tiketbisa_checkout_deadline";
+const CHECKOUT_STORAGE_KEYS = [
+  CHECKOUT_DEADLINE_STORAGE_KEY,
+  "tiketbisa_buyer_info",
+  "tiketbisa_payment_selection",
+  "tiketbisa_checkout_summary",
+];
+
 export function useCheckoutSteps(
   event: EventSummary, 
   buyerInfo: BuyerInfo, 
@@ -45,6 +53,81 @@ export function useCheckoutSteps(
     setMethodId(methodId);
   }, [setMethodId]);
 
+  const clearCheckoutStorage = useCallback(() => {
+    CHECKOUT_STORAGE_KEYS.forEach((key) => sessionStorage.removeItem(key));
+  }, []);
+
+  const expireCheckoutSession = useCallback((showMessage = true) => {
+    clearCheckoutStorage();
+    setLockId(null);
+    setManualTransferProofFile(null);
+    setIsManualTransferPending(false);
+    if (showMessage) {
+      alert("Sesi checkout kamu sudah kedaluwarsa. Silakan pilih tiket ulang.");
+    }
+    navigate(`/event/${params.eventId ?? event.id}`);
+  }, [clearCheckoutStorage, event.id, navigate, params.eventId]);
+
+  const setDeadlineFromRemainingSeconds = useCallback((remainingSeconds: number) => {
+    if (remainingSeconds > 0) {
+      sessionStorage.setItem(
+        CHECKOUT_DEADLINE_STORAGE_KEY,
+        String(Date.now() + remainingSeconds * 1000),
+      );
+    }
+  }, []);
+
+  const getActiveLockId = useCallback(() => (
+    lockId || searchParams.get("lockId") || searchParams.get("orderId")
+  ), [lockId, searchParams]);
+
+  const getCheckoutLockRemainingSeconds = useCallback(async (activeLockId: string) => {
+    const categoryIds = summary.items
+      .map((item: any) => String(item.ticketId || item.id || ""))
+      .filter(Boolean);
+
+    if (categoryIds.length === 0) {
+      return 0;
+    }
+
+    const ttls = await Promise.all(
+      categoryIds.map((categoryId) =>
+        orderApi.getTicketLockTtl(event.id, categoryId, activeLockId)
+      ),
+    );
+
+    return Math.min(...ttls);
+  }, [event.id, summary.items]);
+
+  const ensureCheckoutSessionActive = useCallback(async () => {
+    const activeLockId = getActiveLockId();
+    if (currentStep <= 1 || currentStep >= 5) {
+      return true;
+    }
+    if (!activeLockId) {
+      expireCheckoutSession(true);
+      return false;
+    }
+
+    const remainingSeconds = currentStep >= 4
+      ? await orderApi.getTempTransactionTtl(activeLockId)
+      : await getCheckoutLockRemainingSeconds(activeLockId);
+
+    if (remainingSeconds <= 0) {
+      expireCheckoutSession(true);
+      return false;
+    }
+
+    setDeadlineFromRemainingSeconds(remainingSeconds);
+    return true;
+  }, [
+    currentStep,
+    expireCheckoutSession,
+    getActiveLockId,
+    getCheckoutLockRemainingSeconds,
+    setDeadlineFromRemainingSeconds,
+  ]);
+
   /**
    * Phase 1: Ticket Locking (DDD - Intent Acquisition)
    * Ensures tickets are reserved before user spends too much time on the form.
@@ -63,7 +146,7 @@ export function useCheckoutSteps(
       }, { replace: true });
       
       // Store deadline in session for UI timer sync (epoch milliseconds)
-      sessionStorage.setItem("tiketbisa_checkout_deadline", String(lock.expiresAt));
+      sessionStorage.setItem(CHECKOUT_DEADLINE_STORAGE_KEY, String(lock.expiresAt));
     } catch (error) {
       console.error("Failed to acquire initial ticket lock", error);
     } finally {
@@ -80,9 +163,33 @@ export function useCheckoutSteps(
 
   useEffect(() => {
     if (summary.items.length === 0 && currentStep <= 3) {
-      sessionStorage.removeItem("tiketbisa_checkout_deadline");
+      sessionStorage.removeItem(CHECKOUT_DEADLINE_STORAGE_KEY);
     }
   }, [summary.items.length, currentStep]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const validateSession = async () => {
+      if (currentStep <= 1 || currentStep >= 5) {
+        return;
+      }
+      try {
+        const active = await ensureCheckoutSessionActive();
+        if (!active || cancelled) {
+          return;
+        }
+      } catch (error) {
+        console.warn("Failed validating checkout session TTL", error);
+      }
+    };
+
+    void validateSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentStep, ensureCheckoutSessionActive]);
 
   const handleNext = useCallback(async () => {
     switch (currentStep) {
@@ -99,9 +206,10 @@ export function useCheckoutSteps(
 
           if (!activeLockId) {
              setIsActionLoading(true);
-             try {
+           try {
                const lock = await orderApi.acquireLock(event.id, summary);
                setLockId(lock.userId);
+               sessionStorage.setItem(CHECKOUT_DEADLINE_STORAGE_KEY, String(lock.expiresAt));
                setSearchParams({ ...Object.fromEntries(searchParams), step: "2", lockId: lock.userId });
              } catch (e: any) {
                alert(e?.message || "Maaf, tiket tidak tersedia atau gagal dikunci. Silakan coba lagi.");
@@ -117,38 +225,50 @@ export function useCheckoutSteps(
         break;
       case 2:
         if (isStep2Valid) {
-          setSearchParams({ ...Object.fromEntries(searchParams), step: "3" });
+          if (await ensureCheckoutSessionActive()) {
+            setSearchParams({ ...Object.fromEntries(searchParams), step: "3" });
+          }
         }
         break;
       case 3:
-        if (selectedPaymentMethod && lockId) {
-          // DDD Phase 2: Store Identity on existing Lock
-          const result = await confirmOrder({
-            lockId: lockId,
-            eventId: event.id,
-            buyerInfo,
-            summary,
-            paymentMethod: selectedPaymentMethod
-          });
-          
-          if (result) {
-            setSearchParams({ 
-              ...Object.fromEntries(searchParams), 
-              step: "4", 
-              orderId: result.orderId,
-              lockId: lockId,
+        {
+          const activeLockId = getActiveLockId();
+          if (selectedPaymentMethod && activeLockId) {
+            if (!(await ensureCheckoutSessionActive())) {
+              return;
+            }
+            setLockId(activeLockId);
+            // DDD Phase 2: Store Identity on existing Lock
+            const result = await confirmOrder({
+              lockId: activeLockId,
+              eventId: event.id,
+              buyerInfo,
+              summary,
+              paymentMethod: selectedPaymentMethod
             });
+
+            if (result) {
+              setSearchParams({
+                ...Object.fromEntries(searchParams),
+                step: "4",
+                orderId: result.orderId,
+                lockId: activeLockId,
+              });
+            }
+          } else {
+            console.warn("Missing lockId or payment method for confirmation");
           }
-        } else {
-          console.warn("Missing lockId or payment method for confirmation");
+          break;
         }
-        break;
       case 4:
         setIsActionLoading(true);
         try {
           // DDD Phase 3: Finalize Transaction
           const activeLockId = lockId || searchParams.get("lockId") || searchParams.get("orderId");
           if (activeLockId) {
+            if (!(await ensureCheckoutSessionActive())) {
+              return;
+            }
             if (isManualTransferPayment) {
               if (!manualTransferProofFile) {
                 alert("Silakan unggah bukti transfer terlebih dahulu.");
@@ -187,7 +307,7 @@ export function useCheckoutSteps(
 
           if (message.includes("404") || message.toLowerCase().includes("expired") || message.toLowerCase().includes("not found")) {
             alert("Sesi transaksi kamu sudah tidak valid atau kedaluwarsa. Silakan checkout ulang.");
-            sessionStorage.removeItem("tiketbisa_checkout_deadline");
+            sessionStorage.removeItem(CHECKOUT_DEADLINE_STORAGE_KEY);
             navigate(`/event/${params.eventId}`);
           } else {
             alert(message);
@@ -197,40 +317,27 @@ export function useCheckoutSteps(
         }
         break;
       case 5:
-        sessionStorage.removeItem("tiketbisa_checkout_deadline");
-        sessionStorage.removeItem("tiketbisa_buyer_info");
-        sessionStorage.removeItem("tiketbisa_payment_selection");
-        sessionStorage.removeItem("tiketbisa_checkout_summary");
+        clearCheckoutStorage();
         navigate("/event");
         break;
     }
-  }, [currentStep, event.id, buyerInfo, summary, validateForm, searchParams, setSearchParams, confirmOrder, navigate, selectedPaymentMethod, isStep2Valid, lockId, isManualTransferPayment, manualTransferProofFile]);
+  }, [currentStep, event.id, buyerInfo, summary, validateForm, searchParams, setSearchParams, confirmOrder, navigate, selectedPaymentMethod, isStep2Valid, lockId, isManualTransferPayment, manualTransferProofFile, ensureCheckoutSessionActive, clearCheckoutStorage, params.eventId, getActiveLockId]);
 
   const handleBack = useCallback(() => {
     if (currentStep === 1) {
-      sessionStorage.removeItem("tiketbisa_checkout_deadline");
-      sessionStorage.removeItem("tiketbisa_buyer_info");
-      sessionStorage.removeItem("tiketbisa_payment_selection");
-      sessionStorage.removeItem("tiketbisa_checkout_summary");
+      clearCheckoutStorage();
       navigate(`/event/${params.eventId}`);
     } else if (currentStep === 5) {
-      sessionStorage.removeItem("tiketbisa_checkout_deadline");
-      sessionStorage.removeItem("tiketbisa_buyer_info");
-      sessionStorage.removeItem("tiketbisa_payment_selection");
-      sessionStorage.removeItem("tiketbisa_checkout_summary");
+      clearCheckoutStorage();
       navigate("/event");
     } else {
       navigate(-1);
     }
-  }, [currentStep, navigate, params.eventId]);
+  }, [clearCheckoutStorage, currentStep, navigate, params.eventId]);
 
   const handleExpire = useCallback(() => {
-    sessionStorage.removeItem("tiketbisa_checkout_deadline");
-    sessionStorage.removeItem("tiketbisa_buyer_info");
-    sessionStorage.removeItem("tiketbisa_payment_selection");
-    sessionStorage.removeItem("tiketbisa_checkout_summary");
-    navigate(`/event/${params.eventId}`);
-  }, [navigate, params.eventId]);
+    expireCheckoutSession(false);
+  }, [expireCheckoutSession]);
 
   return {
     currentStep,

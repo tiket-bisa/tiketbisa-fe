@@ -111,6 +111,11 @@ interface TransactionStatusFromApi {
   tickets?: TicketRequest[];
 }
 
+interface TtlResponse {
+  remainingSeconds?: number;
+  remaining_seconds?: number;
+}
+
 function getApiErrorMessage(response: unknown, fallback: string): string {
   const payload = response as any;
   if (payload?.error?.message) return String(payload.error.message);
@@ -319,6 +324,24 @@ export const orderApi = {
     } catch {
       return null;
     }
+  },
+
+  async getTempTransactionTtl(lockId: string): Promise<number> {
+    const response = await apiFetch<ApiResponse<TtlResponse>>(`/transaction/ttl/temp/${encodeURIComponent(lockId)}`);
+    if (!response.success || !response.data) {
+      return 0;
+    }
+    return Number(response.data.remainingSeconds ?? response.data.remaining_seconds ?? 0);
+  },
+
+  async getTicketLockTtl(eventId: string, categoryId: string, userId: string): Promise<number> {
+    const response = await apiFetch<ApiResponse<TtlResponse>>(
+      `/transaction/ttl/locks/${encodeURIComponent(eventId)}/${encodeURIComponent(categoryId)}/${encodeURIComponent(userId)}`,
+    );
+    if (!response.success || !response.data) {
+      return 0;
+    }
+    return Number(response.data.remainingSeconds ?? response.data.remaining_seconds ?? 0);
   },
 
   /**

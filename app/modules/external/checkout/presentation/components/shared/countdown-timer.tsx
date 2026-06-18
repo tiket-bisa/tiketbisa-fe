@@ -15,7 +15,6 @@ export function CountdownTimer({ initialMinutes = 15, onExpire, className = "" }
     if (typeof window === "undefined") return;
 
     let deadline = sessionStorage.getItem(STORAGE_KEY);
-    
     if (!deadline) {
       const newDeadline = Date.now() + initialMinutes * 60 * 1000;
       sessionStorage.setItem(STORAGE_KEY, newDeadline.toString());
@@ -23,33 +22,24 @@ export function CountdownTimer({ initialMinutes = 15, onExpire, className = "" }
     }
 
     const calculateTimeLeft = () => {
-      const difference = parseInt(deadline!) - Date.now();
+      const currentDeadline = sessionStorage.getItem(STORAGE_KEY) ?? deadline;
+      const difference = parseInt(currentDeadline, 10) - Date.now();
       return Math.max(0, Math.floor(difference / 1000));
     };
 
     setTimeLeft(calculateTimeLeft());
-  }, [initialMinutes]);
-
-  useEffect(() => {
-    if (timeLeft === null) return;
-    
-    if (timeLeft <= 0) {
-      onExpire?.();
-      return;
-    }
 
     const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev === null || prev <= 0) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
+      const nextTimeLeft = calculateTimeLeft();
+      setTimeLeft(nextTimeLeft);
+      if (nextTimeLeft <= 0) {
+        clearInterval(timer);
+        onExpire?.();
+      }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft, onExpire]);
+  }, [initialMinutes, onExpire]);
 
   if (timeLeft === null) return null;
 
