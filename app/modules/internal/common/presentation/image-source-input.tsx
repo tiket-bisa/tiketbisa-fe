@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, Input } from "~/core/design-system/components";
+import { toAbsoluteApiUrl } from "~/core/api";
 
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 
@@ -17,6 +18,20 @@ type CropState = {
   file: File;
   previewUrl: string;
 };
+
+function normalizeImageUrl(value: string): string {
+  if (!value) return "";
+  if (/^https?:\/\//i.test(value) || value.startsWith("data:") || value.startsWith("blob:")) {
+    return value;
+  }
+
+  const legacyLocalPathMatch = value.match(/\/(temp-(?:event-banners|brand-images)\/[^/]+)$/);
+  if (legacyLocalPathMatch) {
+    return toAbsoluteApiUrl(`/${legacyLocalPathMatch[1]}`);
+  }
+
+  return toAbsoluteApiUrl(value);
+}
 
 export async function fileToBase64(file: File): Promise<string> {
   return await new Promise<string>((resolve, reject) => {
@@ -48,6 +63,7 @@ export function ImageSourceInput({
   const [error, setError] = useState<string | null>(null);
   const [cropState, setCropState] = useState<CropState | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const previewUrl = normalizeImageUrl(value);
 
   const handleFile = async (file: File | null) => {
     setError(null);
@@ -135,7 +151,7 @@ export function ImageSourceInput({
 
       {value && (
         <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface-alt">
-          <img src={value} alt={`${label} preview`} className="h-32 w-full object-cover" />
+          <img src={previewUrl} alt={`${label} preview`} className="h-32 w-full object-cover" />
         </div>
       )}
       {error && <p className="text-xs text-destructive-text">{error}</p>}

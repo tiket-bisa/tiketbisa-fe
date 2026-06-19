@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button, Input } from "~/core/design-system/components";
+import { toAbsoluteApiUrl } from "~/core/api";
 import { internalEventApi, type EventImageData } from "~/core/api/services/internal-event.api";
 
 type EventGalleryManagerProps = {
@@ -10,6 +11,20 @@ type EventGalleryManagerProps = {
 };
 
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
+
+function normalizeImageUrl(value: string): string {
+  if (!value) return "";
+  if (/^https?:\/\//i.test(value) || value.startsWith("data:") || value.startsWith("blob:")) {
+    return value;
+  }
+
+  const legacyLocalPathMatch = value.match(/\/(temp-(?:event-banners|brand-images)\/[^/]+)$/);
+  if (legacyLocalPathMatch) {
+    return toAbsoluteApiUrl(`/${legacyLocalPathMatch[1]}`);
+  }
+
+  return toAbsoluteApiUrl(value);
+}
 
 export function EventGalleryManager({
   eventId,
@@ -211,7 +226,7 @@ export function EventGalleryManager({
           {sortedImages.map((image, index) => (
             <div key={image.id} className="overflow-hidden rounded-lg border border-border-subtle bg-surface-alt">
               <div className="relative aspect-video bg-surface-hover">
-                <img src={image.imageUrl} alt="Event gallery" className="h-full w-full object-cover" />
+                <img src={normalizeImageUrl(image.imageUrl)} alt="Event gallery" className="h-full w-full object-cover" />
                 {image.isCover && (
                   <span className="absolute left-2 top-2 rounded-full bg-brand-primary px-2 py-1 text-xs font-semibold text-white">
                     Cover

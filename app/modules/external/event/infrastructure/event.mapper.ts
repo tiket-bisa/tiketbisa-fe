@@ -1,5 +1,6 @@
 import type { Event } from "../domain/event.entity";
 import type { EventDto } from "./event.dto";
+import { normalizeImageUrl } from "~/core/api";
 
 /**
  * Maps a raw EventDto (from API) to the domain Event entity.
@@ -40,16 +41,20 @@ export function mapEventDtoToEntity(
   index: number,
   brandName?: string,
 ): Event {
+  const brandId = dto.brandId ?? dto.brand_id ?? "";
+  const startDate = dto.startDate ?? dto.start_date ?? "";
+  const bannerUrl = normalizeImageUrl(dto.bannerPath ?? dto.banner_path);
+
   return {
     id: dto.id,
     name: dto.name,
-    brandId: dto.brandId,
-    brand: brandName || BRAND_NAME_MAP[dto.brandId] || dto.brandId || "Unknown Brand",
+    brandId,
+    brand: brandName || BRAND_NAME_MAP[brandId] || brandId || "Unknown Brand",
     description: dto.description || "",
-    imageUrl: dto.bannerPath || placeholderImages[index % placeholderImages.length],
-    date: formatEventDate(dto.startDate),
+    imageUrl: bannerUrl || placeholderImages[index % placeholderImages.length],
+    date: formatEventDate(startDate),
     location: dto.city || dto.location || "Online",
-    minPrice: dto.minPrice ?? undefined,
+    minPrice: dto.minPrice ?? dto.min_price ?? undefined,
     // Tickets are not yet supported by the backend in the list response
     tickets: [],
   };

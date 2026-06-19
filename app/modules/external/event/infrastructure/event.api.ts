@@ -1,4 +1,4 @@
-import { apiFetch } from "~/core/api";
+import { apiFetch, normalizeImageUrl } from "~/core/api";
 import type { PaginatedApiResponse, ApiResponse } from "~/core/api";
 import type { Event } from "../domain/event.entity";
 import type { EventRepository } from "../domain/event.repository";
@@ -73,7 +73,7 @@ function normalizeEventImages(images: EventImageDto[] | undefined, fallbackImage
       return Number(bCover) - Number(aCover)
         || Number(a.sortOrder ?? a.sort_order ?? 0) - Number(b.sortOrder ?? b.sort_order ?? 0);
     })
-    .map((image) => String(image.imageUrl ?? image.image_url ?? ""))
+    .map((image) => normalizeImageUrl(image.imageUrl ?? image.image_url))
     .filter(Boolean);
   if (urls.length > 0) return urls;
   return fallbackImageUrl ? [fallbackImageUrl] : [];
@@ -99,7 +99,8 @@ export const eventApi: EventRepository = {
 
     const mappedEvents = await Promise.all(
       response.data.events.map(async (dto, idx) => {
-        const mapped = mapEventDtoToEntity(dto, idx, brandNameMap.get(dto.brandId));
+        const brandId = dto.brandId ?? dto.brand_id ?? "";
+        const mapped = mapEventDtoToEntity(dto, idx, brandNameMap.get(brandId));
 
         if (mapped.minPrice !== undefined && mapped.minPrice !== null) {
           return mapped;
@@ -145,17 +146,18 @@ export const eventApi: EventRepository = {
 
     if (!eventResponse.data) return null;
 
-    const brandName = await getBrandNameById(eventResponse.data.brandId);
+    const brandName = await getBrandNameById(eventResponse.data.brandId ?? eventResponse.data.brand_id);
     const baseEvent = mapEventDtoToEntity(eventResponse.data, 0, brandName);
     const galleryImages = normalizeEventImages(imagesResponse?.data?.images, baseEvent.imageUrl);
+    const termsText = eventResponse.data.termAndCondition ?? eventResponse.data.term_and_condition;
 
     return {
       ...baseEvent,
       imageUrl: galleryImages[0] ?? baseEvent.imageUrl,
       galleryImages,
       time: "19:00 - Selesai",
-      terms: eventResponse.data.termAndCondition
-        ? eventResponse.data.termAndCondition.split("\n")
+      terms: termsText
+        ? termsText.split("\n")
         : [
             "Tiket yang sudah dibeli tidak dapat dikembalikan.",
             "Pengunjung wajib membawa kartu identitas asli.",

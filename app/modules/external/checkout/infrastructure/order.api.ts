@@ -30,6 +30,29 @@ interface CompleteTransactionPayload {
   paymentProofFileName: string;
 }
 
+const MAX_PAYMENT_PROOF_SIZE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_PAYMENT_PROOF_MIME_TYPES = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+]);
+
+export function validateManualTransferProofFile(file: File): string | null {
+  const mimeType = file.type.toLowerCase();
+  const extensionAllowed = /\.(pdf|jpe?g|png)$/i.test(file.name);
+  const hasStrictMimeType = Boolean(mimeType) && mimeType !== "application/octet-stream";
+  if (hasStrictMimeType && !ALLOWED_PAYMENT_PROOF_MIME_TYPES.has(mimeType)) {
+    return "Format file tidak didukung. Harap unggah file PDF, JPG, atau PNG.";
+  }
+  if (!hasStrictMimeType && !extensionAllowed) {
+    return "Format file tidak didukung. Harap unggah file PDF, JPG, atau PNG.";
+  }
+  if (file.size > MAX_PAYMENT_PROOF_SIZE_BYTES) {
+    return "Ukuran bukti pembayaran maksimal 10MB.";
+  }
+  return null;
+}
+
 export interface TicketIssued {
   ticketId: string;
   code: string;
@@ -86,6 +109,11 @@ interface TransactionStatusFromApi {
   paymentDate?: string;
   paymentMethod?: string;
   tickets?: TicketRequest[];
+}
+
+interface TtlResponse {
+  remainingSeconds?: number;
+  remaining_seconds?: number;
 }
 
 function getApiErrorMessage(response: unknown, fallback: string): string {
@@ -266,6 +294,11 @@ export const orderApi = {
   },
 
   async submitManualTransferProof(lockId: string, file: File): Promise<void> {
+    const validationError = validateManualTransferProofFile(file);
+    if (validationError) {
+      throw new Error(validationError);
+    }
+
     const paymentProofBase64 = await convertFileToBase64(file);
     const payload: CompleteTransactionPayload = {
       paymentProofBase64,
@@ -291,6 +324,24 @@ export const orderApi = {
     } catch {
       return null;
     }
+  },
+
+  async getTempTransactionTtl(lockId: string): Promise<number> {
+    const response = await apiFetch<ApiResponse<TtlResponse>>(`/transaction/ttl/temp/${encodeURIComponent(lockId)}`);
+    if (!response.success || !response.data) {
+      return 0;
+    }
+    return Number(response.data.remainingSeconds ?? response.data.remaining_seconds ?? 0);
+  },
+
+  async getTicketLockTtl(eventId: string, categoryId: string, userId: string): Promise<number> {
+    const response = await apiFetch<ApiResponse<TtlResponse>>(
+      `/transaction/ttl/locks/${encodeURIComponent(eventId)}/${encodeURIComponent(categoryId)}/${encodeURIComponent(userId)}`,
+    );
+    if (!response.success || !response.data) {
+      return 0;
+    }
+    return Number(response.data.remainingSeconds ?? response.data.remaining_seconds ?? 0);
   },
 
   /**

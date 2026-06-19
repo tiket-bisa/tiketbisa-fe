@@ -1,5 +1,6 @@
 import type { Brand } from "../domain/brand.entity";
 import type { BrandDto } from "./brand.dto";
+import { normalizeImageUrl } from "~/core/api";
 
 /**
  * Maps a raw BrandDto (from API) to the domain Brand entity.
@@ -32,12 +33,15 @@ function formatJoinedDate(timestamp: number): string {
 }
 
 export function mapBrandDtoToEntity(dto: BrandDto): Brand {
+  const logoUrl = normalizeImageUrl(dto.logoPath ?? dto.logo_path);
+  const bannerUrl = normalizeImageUrl(dto.bannerPath ?? dto.banner_path);
+
   return {
     id: dto.id,
     name: dto.name,
     slug: dto.id, // Using ID as slug since backend doesn't have a slug field yet
-    logoUrl: dto.logoPath || `https://ui-avatars.com/api/?name=${encodeURIComponent(dto.name)}&background=random`,
-    bannerUrl: dto.bannerPath || `https://picsum.photos/seed/${dto.id}/1200/400`,
+    logoUrl: logoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(dto.name)}&background=random`,
+    bannerUrl: bannerUrl || `https://picsum.photos/seed/${dto.id}/1200/400`,
     description: dto.description || `Ini adalah halaman official dari ${dto.name}.`,
     // Fallbacks for fields not currently returned by backend
     category: generateFallbackCategory(dto.id),
