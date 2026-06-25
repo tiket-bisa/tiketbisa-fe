@@ -1,10 +1,12 @@
 import { Button } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
+import { MAX_TICKETS_PER_TRANSACTION } from "~/shared/constants/transaction";
 import type { Event } from "../../domain/event.entity";
 
 interface EventDetailSidebarProps {
   event: Event;
   totalPrice?: number;
+  totalItems?: number;
   onCheckout?: () => void;
 }
 
@@ -14,6 +16,7 @@ interface EventDetailSidebarProps {
 export function EventDetailSidebar({
   event,
   totalPrice = 0,
+  totalItems = 0,
   onCheckout,
 }: EventDetailSidebarProps) {
   const hasSelectedTickets = totalPrice > 0;
@@ -52,10 +55,16 @@ export function EventDetailSidebar({
 
         <div className="pt-6 border-t border-border-default">
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
-            <PriceDisplay
-              isTotal={hasSelectedTickets}
-              amount={hasSelectedTickets ? totalPrice : minPrice}
-            />
+            <div className="space-y-2">
+              <PriceDisplay
+                isTotal={hasSelectedTickets}
+                amount={hasSelectedTickets ? totalPrice : minPrice}
+              />
+              <p className="text-xs text-text-tertiary">
+                Maksimum {MAX_TICKETS_PER_TRANSACTION} tiket per transaksi
+                {hasSelectedTickets ? ` • ${totalItems} dipilih` : ""}
+              </p>
+            </div>
 
             {hasSelectedTickets && (
               <div className="hidden lg:block animate-in fade-in slide-in-from-right-4 duration-300">

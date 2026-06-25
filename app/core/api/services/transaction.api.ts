@@ -129,7 +129,7 @@ export const transactionApi = {
         const stored = localStorage.getItem("tiketbisa_auth");
         const session = stored ? JSON.parse(stored) : {};
         const headers: Record<string, string> = {
-            "x-tb-identifier": session.email || "",
+            "x-tb-identifier": session.identifier || session.email || "",
             "x-tb-internal-token": session.internal_token || "",
         };
         

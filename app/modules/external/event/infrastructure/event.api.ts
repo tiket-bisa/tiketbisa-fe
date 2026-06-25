@@ -32,6 +32,8 @@ interface BrandListResponseData {
 interface BrandDto {
   id: string;
   name: string;
+  adminFee?: number;
+  admin_fee?: number;
 }
 
 interface EventImageListResponseData {
@@ -54,14 +56,17 @@ async function getBrandNameMap(): Promise<Map<string, string>> {
   }
 }
 
-async function getBrandNameById(brandId: string | undefined): Promise<string | undefined> {
-  if (!brandId) return undefined;
+async function getBrandDetailsById(brandId: string | undefined): Promise<{ name?: string; adminFee: number }> {
+  if (!brandId) return { adminFee: 0 };
 
   try {
     const response = await apiFetch<ApiResponse<BrandDto>>(`/brand/${brandId}`);
-    return response.data?.name || undefined;
+    return {
+      name: response.data?.name || undefined,
+      adminFee: Number(response.data?.adminFee ?? response.data?.admin_fee ?? 0),
+    };
   } catch {
-    return undefined;
+    return { adminFee: 0 };
   }
 }
 
@@ -146,13 +151,14 @@ export const eventApi: EventRepository = {
 
     if (!eventResponse.data) return null;
 
-    const brandName = await getBrandNameById(eventResponse.data.brandId ?? eventResponse.data.brand_id);
-    const baseEvent = mapEventDtoToEntity(eventResponse.data, 0, brandName);
+    const brandDetails = await getBrandDetailsById(eventResponse.data.brandId ?? eventResponse.data.brand_id);
+    const baseEvent = mapEventDtoToEntity(eventResponse.data, 0, brandDetails.name);
     const galleryImages = normalizeEventImages(imagesResponse?.data?.images, baseEvent.imageUrl);
     const termsText = eventResponse.data.termAndCondition ?? eventResponse.data.term_and_condition;
 
     return {
       ...baseEvent,
+      brandAdminFee: brandDetails.adminFee,
       imageUrl: galleryImages[0] ?? baseEvent.imageUrl,
       galleryImages,
       time: "19:00 - Selesai",
