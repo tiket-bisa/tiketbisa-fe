@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { Card, Badge, Button } from "~/core/design-system/components";
+import { Card, Badge, Button, Select } from "~/core/design-system/components";
+import { useApiQuery } from "~/core/api";
+import { useAuth } from "~/core/auth";
+import { eventApi } from "~/core/api/services/event.api";
+import { ticketCategoryApi } from "~/core/api/services/ticket-category.api";
 import { useQrScanner } from "../hooks/use-qr-scanner";
 import { useCheckIn } from "../hooks/use-checkin";
 import type { TicketScanResult } from "~/core/types";
@@ -31,7 +35,34 @@ const SCAN_STATUS_MAP: Record<
 };
 
 export function ScanSection() {
+  const { user } = useAuth();
   const { scanResult, isLoading, handleScan, clearResult } = useCheckIn();
+  const [selectedEventId, setSelectedEventId] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const isScannerReady = Boolean(selectedEventId && selectedCategoryId);
+
+  const { data: events = [], loading: loadingEvents, error: eventError } = useApiQuery(
+    async () => {
+      const response = await eventApi.getList({
+        limit: 100,
+        offset: 0,
+        ...(user?.role === "partner" && user.brand_id ? { brandId: user.brand_id } : {}),
+      });
+
+      return response.success && response.data ? response.data.events ?? [] : [];
+    },
+    [user?.role, user?.brand_id],
+  );
+
+  const { data: categories = [], loading: loadingCategories, error: categoryError } = useApiQuery(
+    async () => {
+      if (!selectedEventId) return [];
+      const response = await ticketCategoryApi.getByEvent(selectedEventId);
+      return response.success && response.data ? response.data : [];
+    },
+    [selectedEventId],
+  );
+
   const {
     cameras,
     error,
@@ -46,19 +77,95 @@ export function ScanSection() {
     switchCamera,
     toggleTorch,
     scannerElementId,
-  } = useQrScanner({ onScanSuccess: handleScan, disabled: isLoading });
+  } = useQrScanner({
+    onScanSuccess: (decodedText) => handleScan(decodedText, {
+      eventId: selectedEventId,
+      ticketCategoryId: selectedCategoryId,
+    }),
+    disabled: isLoading || !isScannerReady,
+  });
   const [manualCode, setManualCode] = useState("");
   const backgroundClass = getScanBackgroundClass(scanResult?.status, error);
+  const selectionError = eventError || categoryError;
 
   const handleManualSubmit = () => {
     const code = manualCode.trim();
-    if (!code) return;
-    handleScan(code);
+    if (!code || !isScannerReady) return;
+    handleScan(code, {
+      eventId: selectedEventId,
+      ticketCategoryId: selectedCategoryId,
+    });
     setManualCode("");
+  };
+
+  const handleEventChange = async (eventId: string) => {
+    setSelectedEventId(eventId);
+    setSelectedCategoryId("");
+    clearResult();
+    if (isScanning) {
+      await stopScanning();
+    }
+  };
+
+  const handleCategoryChange = async (categoryId: string) => {
+    setSelectedCategoryId(categoryId);
+    clearResult();
+    if (isScanning) {
+      await stopScanning();
+    }
   };
 
   return (
     <div className={`space-y-6 rounded-2xl p-3 transition-colors duration-300 ${backgroundClass}`}>
+      <Card padding="md">
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-text-primary font-semibold">Pilih Area Scan</h3>
+            <p className="text-text-tertiary text-sm mt-1">
+              Scanner hanya akan menerima tiket dari event dan kategori yang dipilih.
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Select
+              label="Event"
+              value={selectedEventId}
+              onChange={(e) => handleEventChange(e.target.value)}
+              disabled={loadingEvents || isLoading}
+              placeholder={loadingEvents ? "Memuat event..." : "Pilih event"}
+              options={(events ?? []).map((event) => ({
+                value: event.id,
+                label: event.name,
+              }))}
+            />
+            <Select
+              label="Kategori tiket"
+              value={selectedCategoryId}
+              onChange={(e) => handleCategoryChange(e.target.value)}
+              disabled={!selectedEventId || loadingCategories || isLoading}
+              placeholder={
+                !selectedEventId
+                  ? "Pilih event dulu"
+                  : loadingCategories
+                    ? "Memuat kategori..."
+                    : "Pilih kategori"
+              }
+              options={(categories ?? []).map((category) => ({
+                value: category.id,
+                label: category.name,
+              }))}
+            />
+          </div>
+          {selectionError && (
+            <p className="text-destructive-text text-sm">{selectionError}</p>
+          )}
+          {!isScannerReady && (
+            <p className="text-warning-text text-sm">
+              Pilih event dan kategori tiket sebelum mengaktifkan kamera, upload gambar, atau input manual.
+            </p>
+          )}
+        </div>
+      </Card>
+
       {/* Scan Result */}
       {scanResult && (
         <ScanResultCard scanResult={scanResult} clearResult={clearResult} />
@@ -109,7 +216,7 @@ export function ScanSection() {
 
           <div className="flex gap-3">
             {!isScanning ? (
-              <Button variant="primary" onClick={() => startScanning()} disabled={isLoading}>
+              <Button variant="primary" onClick={() => startScanning()} disabled={isLoading || !isScannerReady}>
                 <span className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-sm">
                     videocam
@@ -147,7 +254,7 @@ export function ScanSection() {
             type="file"
             accept="image/png,image/jpeg,image/jpg,image/webp"
             className="sr-only"
-            disabled={isLoading || isFileScanning}
+            disabled={isLoading || isFileScanning || !isScannerReady}
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) scanImageFile(file);
@@ -172,13 +279,13 @@ export function ScanSection() {
             onChange={(e) => setManualCode(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
             placeholder="Masukkan kode tiket (contoh: TKB...)"
-            disabled={isLoading}
+            disabled={isLoading || !isScannerReady}
             className="flex-1 rounded-lg border border-border-default bg-surface-alt px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-brand-primary"
           />
           <Button
             variant="primary"
             onClick={handleManualSubmit}
-            disabled={!manualCode.trim() || isLoading}
+            disabled={!manualCode.trim() || isLoading || !isScannerReady}
           >
             {isLoading ? "Memproses..." : "Check In"}
           </Button>

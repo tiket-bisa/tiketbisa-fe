@@ -6,6 +6,11 @@ import {
 } from "../../infrastructure/checkin.api";
 import { useAuth } from "~/core/auth";
 
+export interface CheckInContext {
+  eventId: string;
+  ticketCategoryId: string;
+}
+
 export function useCheckIn() {
   const { user } = useAuth();
   const [scanResult, setScanResult] = useState<TicketScanResult | null>(null);
@@ -13,10 +18,19 @@ export function useCheckIn() {
   const isLoadingRef = useRef(false);
 
   const handleScan = useCallback(
-    async (decodedText: string) => {
+    async (decodedText: string, context: CheckInContext) => {
       if (isLoadingRef.current) return;
       const normalizedCode = decodedText.trim();
       if (!normalizedCode) return;
+      if (!context.eventId || !context.ticketCategoryId) {
+        setScanResult({
+          ticket_id: normalizedCode.substring(0, 20),
+          status: "invalid",
+          message: "Pilih event dan kategori tiket sebelum scan.",
+        });
+        return;
+      }
+
       isLoadingRef.current = true;
       setIsLoading(true);
 
@@ -27,12 +41,17 @@ export function useCheckIn() {
           code_hash: normalizedCode,
           code_type: codeType,
           verify_by: user?.email ?? "unknown",
+          event_id: context.eventId,
+          ticket_category_id: context.ticketCategoryId,
         });
 
         if (response.success) {
           const data = response.data as CheckInResponse;
           setScanResult({
-            ticket_id: data.ticketId ?? data.id ?? normalizedCode.substring(0, 20),
+            ticket_id: data.ticket_id ?? data.ticketId ?? data.id ?? normalizedCode.substring(0, 20),
+            event_name: data.event_name ?? data.eventName,
+            ticket_name: data.ticket_category_name ?? data.ticketCategoryName,
+            buyer_name: data.buyer_name ?? data.buyerName,
             status: "valid",
             checked_in_at: data.checkInTime ?? data.check_in_time,
             message: data.message,
