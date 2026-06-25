@@ -7,11 +7,11 @@ interface EventDetailHeaderProps {
 
 export function EventDetailHeader({ event }: EventDetailHeaderProps) {
   return (
-    <header className="relative w-full h-[300px] md:h-[450px] overflow-hidden">
+    <header className="relative w-full h-[300px] bg-text-primary md:h-[450px] overflow-hidden">
       <img
         src={event.imageUrl}
         alt={`${event.name} banner`}
-        className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 hover:scale-105"
+        className="absolute inset-0 h-full w-full object-cover md:object-contain"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/20" />
       <div className="relative z-10 mx-auto max-w-7xl h-full flex flex-col justify-end px-4 pb-12 sm:px-6 lg:px-8">
