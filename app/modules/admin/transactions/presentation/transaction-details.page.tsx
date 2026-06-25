@@ -5,6 +5,7 @@ import { formatIDR } from "~/core/utils";
 import { useApiQuery } from "~/core/api";
 import { transactionApi } from "~/core/api/services/transaction.api";
 import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
+import { TicketDeliveryActions } from "~/modules/internal/ticket-delivery/presentation/ticket-delivery-actions";
 
 const STATUS_MAP: Record<string, { label: string; variant: "success" | "warning" | "destructive" | "default" }> = {
   WAITING_PAYMENT: { label: "Menunggu Pembayaran", variant: "warning" },
@@ -87,6 +88,7 @@ export default function AdminTransactionDetailsPage() {
   const backendStatus = tx.status ?? "WAITING_PAYMENT";
   const status = STATUS_MAP[backendStatus] ?? { label: backendStatus, variant: "default" as const };
   const isManualPendingApproval = tx.paymentMethod === "MANUAL_TRANSFER" && backendStatus === "WAITING_APPROVAL";
+  const ticketCount = detail.ticketDetails.reduce((sum, item) => sum + (item.ticketCount ?? 0), 0);
 
   const handleReview = async (action: "APPROVE" | "REJECT") => {
     if (!id) return;
@@ -281,6 +283,26 @@ export default function AdminTransactionDetailsPage() {
             </div>
           </Card>
         )}
+
+        <Card padding="md" className="lg:col-span-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-text-primary font-semibold flex items-center gap-2">
+                <span className="material-symbols-outlined text-brand-primary">mark_email_read</span>
+                Pengiriman Tiket
+              </h2>
+              <p className="mt-1 text-sm text-text-tertiary">
+                Download semua tiket transaksi atau kirim ulang ke email.
+              </p>
+            </div>
+            <TicketDeliveryActions
+              transactionId={tx.id}
+              customerName={tx.customerName}
+              customerEmail={tx.customerEmail}
+              ticketCount={ticketCount}
+            />
+          </div>
+        </Card>
 
         <Card padding="md" className="lg:col-span-2">
           <h2 className="text-text-primary font-semibold mb-4 flex items-center gap-2">

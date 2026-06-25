@@ -55,6 +55,20 @@ export interface PaymentProofResponse {
     signedUrl?: string;
 }
 
+export type TicketEmailDeliveryMode = "ORIGINAL_CUSTOMER_EMAIL" | "CUSTOM_EMAIL";
+
+export interface TicketEmailDeliveryRequest {
+    deliveryMode: TicketEmailDeliveryMode;
+    email?: string;
+}
+
+export interface TicketEmailDeliveryResponse {
+    transactionId: string;
+    recipientEmail: string;
+    ticketCount: number;
+    queued: boolean;
+}
+
 export interface TransactionListResponse {
     transactions: TransactionApiData[];
     totalCount?: number;
@@ -98,6 +112,12 @@ export interface ManualGenerateTicketsRequest {
     }>;
 }
 
+type BlobDownloadResult = {
+    success: boolean;
+    data: { fileName: string; mimeType: string; blob: Blob } | null;
+    error: string | null;
+};
+
 function buildQuery(params?: TransactionListParams): string {
     if (!params) return "";
     const qs = new URLSearchParams();
@@ -109,6 +129,33 @@ function buildQuery(params?: TransactionListParams): string {
     if (params.customerName) qs.set("customerName", params.customerName);
     const str = qs.toString();
     return str ? `?${str}` : "";
+}
+
+async function downloadInternalBlob(path: string, fallbackFileName: string): Promise<BlobDownloadResult> {
+    const stored = localStorage.getItem("tiketbisa_auth");
+    const session = stored ? JSON.parse(stored) : {};
+    const headers: Record<string, string> = {
+        "x-tb-identifier": session.email || "",
+        "x-tb-internal-token": session.internal_token || "",
+    };
+
+    try {
+        const response = await fetch(toAbsoluteApiUrl(path), { headers });
+
+        if (!response.ok) {
+            return { success: false, data: null, error: `HTTP ${response.status}` };
+        }
+
+        const contentDisposition = response.headers.get("Content-Disposition") || "";
+        const fileNameMatch = contentDisposition.match(/filename="?([^";]+)"?/);
+        const fileName = fileNameMatch ? fileNameMatch[1] : fallbackFileName;
+        const mimeType = response.headers.get("Content-Type") || "application/octet-stream";
+        const blob = await response.blob();
+
+        return { success: true, data: { fileName, mimeType, blob }, error: null };
+    } catch (e) {
+        return { success: false, data: null, error: e instanceof Error ? e.message : "Download failed" };
+    }
 }
 
 export const transactionApi = {
@@ -125,35 +172,16 @@ export const transactionApi = {
         internalHttpClient.get<PaymentProofResponse>(`/transaction/detail/${id}/payment-proof`),
 
     /** Download payment proof as blob */
-    downloadPaymentProof: async (id: string): Promise<{ success: boolean; data: { fileName: string; mimeType: string; blob: Blob } | null; error: string | null }> => {
-        const stored = localStorage.getItem("tiketbisa_auth");
-        const session = stored ? JSON.parse(stored) : {};
-        const headers: Record<string, string> = {
-            "x-tb-identifier": session.email || "",
-            "x-tb-internal-token": session.internal_token || "",
-        };
-        
-        try {
-            const url = toAbsoluteApiUrl(`/internal-tb/transaction/detail/${id}/payment-proof/download`);
-            
-            const response = await fetch(url, { headers });
-            
-            if (!response.ok) {
-                return { success: false, data: null, error: `HTTP ${response.status}` };
-            }
-            
-            const contentDisposition = response.headers.get("Content-Disposition") || "";
-            const fileNameMatch = contentDisposition.match(/filename="?([^";]+)"?/);
-            const fileName = fileNameMatch ? fileNameMatch[1] : `payment-proof-${id}`;
-            const mimeType = response.headers.get("Content-Type") || "application/octet-stream";
-            
-            const blob = await response.blob();
-            
-            return { success: true, data: { fileName, mimeType, blob }, error: null };
-        } catch (e) {
-            return { success: false, data: null, error: e instanceof Error ? e.message : "Download failed" };
-        }
-    },
+    downloadPaymentProof: (id: string): Promise<BlobDownloadResult> =>
+        downloadInternalBlob(`/internal-tb/transaction/detail/${id}/payment-proof/download`, `payment-proof-${id}`),
+
+    /** Send all tickets for a transaction to original or custom recipient */
+    sendTicketEmail: (id: string, request: TicketEmailDeliveryRequest) =>
+        internalHttpClient.post<TicketEmailDeliveryResponse>(`/transaction/detail/${id}/tickets/email`, request),
+
+    /** Download all tickets for a transaction as ZIP */
+    downloadTickets: (id: string): Promise<BlobDownloadResult> =>
+        downloadInternalBlob(`/internal-tb/transaction/detail/${id}/tickets/download`, `tickets-${id}.zip`),
 
     /** Review manual transfer transaction */
     reviewManualTransfer: (id: string, request: ManualTransferReviewRequest) =>
