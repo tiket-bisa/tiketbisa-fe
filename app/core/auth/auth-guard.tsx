@@ -6,6 +6,12 @@ interface AuthGuardProps {
   requiredRole?: AuthRole;
 }
 
+function getRoleHomePath(role: AuthRole): string {
+  if (role === "admin") return "/internal-tb/admin";
+  if (role === "partner") return "/internal-tb/partner";
+  return "/internal-tb/scanner";
+}
+
 export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
   const { user, isLoading } = useAuth();
 
@@ -24,8 +30,7 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
 
   // Role mismatch: redirect to the correct dashboard
   if (requiredRole && user.role !== requiredRole) {
-    const redirectPath = user.role === "admin" ? "/internal-tb/admin" : "/internal-tb/partner";
-    return <Navigate to={redirectPath} replace />;
+    return <Navigate to={getRoleHomePath(user.role)} replace />;
   }
 
   return <>{children}</>;

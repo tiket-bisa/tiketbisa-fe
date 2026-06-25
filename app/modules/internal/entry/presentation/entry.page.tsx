@@ -3,12 +3,15 @@ import { Navigate } from "react-router";
 import { Button } from "~/core/design-system/components";
 import { AuthProvider, useAuth } from "~/core/auth";
 import { requestGoogleAuthorizationCode } from "~/core/auth/google-oauth.client";
-import { requestInternalGoogleToken } from "~/core/auth/internal-auth.api";
+import { requestInternalGoogleToken, requestScannerToken } from "~/core/auth/internal-auth.api";
 
 function InternalEntryContent() {
-  const { user, isLoading, loginWithOAuth } = useAuth();
+  const { user, isLoading, loginWithOAuth, loginWithScanner } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isScannerSubmitting, setIsScannerSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scannerUsername, setScannerUsername] = useState("");
+  const [scannerPassword, setScannerPassword] = useState("");
 
   if (isLoading) {
     return (
@@ -19,7 +22,12 @@ function InternalEntryContent() {
   }
 
   if (user) {
-    return <Navigate to={user.role === "admin" ? "/internal-tb/admin" : "/internal-tb/partner"} replace />;
+    return (
+      <Navigate
+        to={user.role === "admin" ? "/internal-tb/admin" : user.role === "partner" ? "/internal-tb/partner" : "/internal-tb/scanner"}
+        replace
+      />
+    );
   }
 
   const handleLogin = async () => {
@@ -35,6 +43,20 @@ function InternalEntryContent() {
       setError(e instanceof Error ? e.message : "Gagal login dengan Google");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleScannerLogin = async () => {
+    setIsScannerSubmitting(true);
+    setError(null);
+
+    try {
+      const tokenData = await requestScannerToken(scannerUsername, scannerPassword);
+      loginWithScanner(tokenData);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Gagal login scanner");
+    } finally {
+      setIsScannerSubmitting(false);
     }
   };
 
@@ -86,6 +108,55 @@ function InternalEntryContent() {
               </svg>
               {isSubmitting ? "Memproses..." : "Sign in with Google"}
             </Button>
+
+            <div className="relative py-2">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border-default" />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-white px-3 text-xs font-semibold uppercase tracking-[0.24em] text-text-tertiary">
+                  Scanner
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-left">
+              <div className="space-y-1.5">
+                <label htmlFor="scanner-username" className="text-xs font-semibold uppercase tracking-[0.16em] text-text-tertiary">
+                  Username
+                </label>
+                <input
+                  id="scanner-username"
+                  type="text"
+                  value={scannerUsername}
+                  onChange={(event) => setScannerUsername(event.target.value)}
+                  className="h-11 w-full rounded-xl border border-border-default bg-surface-hover px-4 text-sm text-text-primary outline-none transition-colors focus:border-brand-primary"
+                  placeholder="scanner username"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="scanner-password" className="text-xs font-semibold uppercase tracking-[0.16em] text-text-tertiary">
+                  Password
+                </label>
+                <input
+                  id="scanner-password"
+                  type="password"
+                  value={scannerPassword}
+                  onChange={(event) => setScannerPassword(event.target.value)}
+                  className="h-11 w-full rounded-xl border border-border-default bg-surface-hover px-4 text-sm text-text-primary outline-none transition-colors focus:border-brand-primary"
+                  placeholder="••••••••"
+                />
+              </div>
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                onClick={handleScannerLogin}
+                disabled={isScannerSubmitting || !scannerUsername.trim() || !scannerPassword}
+              >
+                {isScannerSubmitting ? "Memproses..." : "Login Scanner"}
+              </Button>
+            </div>
 
             {error && <p className="text-sm text-destructive">{error}</p>}
           </div>

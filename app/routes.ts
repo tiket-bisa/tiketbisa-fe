@@ -43,6 +43,9 @@ export default [
   route("internal-tb/partner/login", "modules/internal/entry/presentation/login-redirect.page.tsx", {
     id: "internal-login-partner-redirect",
   }),
+  route("internal-tb/scanner/login", "modules/internal/entry/presentation/login-redirect.page.tsx", {
+    id: "internal-login-scanner-redirect",
+  }),
 
   // ─── Admin Layout (internal team — sees all brands) ───
   layout("layouts/admin.layout.tsx", [
@@ -129,6 +132,18 @@ export default [
     route(
       "internal-tb/partner/scan",
       "modules/internal/ticket-scanning/presentation/ticket-scanning.page.tsx",
+    ),
+  ]),
+
+  layout("layouts/scanner.layout.tsx", [
+    route(
+      "internal-tb/scanner",
+      "modules/internal/scanner/presentation/scanner-dashboard.page.tsx",
+      { index: true },
+    ),
+    route(
+      "internal-tb/scanner/scan",
+      "modules/internal/scanner/presentation/scanner-scan.page.tsx",
     ),
   ]),
 ] satisfies RouteConfig;
