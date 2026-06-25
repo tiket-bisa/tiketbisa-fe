@@ -47,12 +47,13 @@ export function useCheckIn() {
 
         if (response.success) {
           const data = response.data as CheckInResponse;
+          const scanStatus = data.scan_status ?? data.scanStatus ?? "valid";
           setScanResult({
             ticket_id: data.ticket_id ?? data.ticketId ?? data.id ?? normalizedCode.substring(0, 20),
             event_name: data.event_name ?? data.eventName,
             ticket_name: data.ticket_category_name ?? data.ticketCategoryName,
             buyer_name: data.buyer_name ?? data.buyerName,
-            status: "valid",
+            status: scanStatus,
             checked_in_at: data.checkInTime ?? data.check_in_time,
             message: data.message,
           });

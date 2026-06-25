@@ -331,7 +331,7 @@ function ScanResultCard({
           <dl className="space-y-2 text-sm">
             <ScanDetail label="ID Tiket" value={scanResult.ticket_id} mono />
             {scanResult.event_name && <ScanDetail label="Event" value={scanResult.event_name} />}
-            {scanResult.ticket_name && <ScanDetail label="Tiket" value={scanResult.ticket_name} />}
+            {scanResult.ticket_name && <ScanDetail label="Kategori" value={scanResult.ticket_name} />}
             {scanResult.buyer_name && <ScanDetail label="Pembeli" value={scanResult.buyer_name} />}
             {scanResult.checked_in_at && (
               <ScanDetail label="Check-in" value={new Date(scanResult.checked_in_at).toLocaleString("id-ID")} />

@@ -24,6 +24,8 @@ export interface CheckInResponse {
   buyer_name?: string;
   checkInTime?: string;
   check_in_time?: string;
+  scanStatus?: "valid" | "already_checked_in" | "expired" | "invalid";
+  scan_status?: "valid" | "already_checked_in" | "expired" | "invalid";
   message?: string;
 }
 
