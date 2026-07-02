@@ -31,6 +31,10 @@ export default function AdminBrandsPage() {
     logoPath: "",
     bannerPath: "",
     description: "",
+    adminFee: "",
+    category: "",
+    subCategory: "",
+    sponsorPath: "",
   });
 
   // Fetch brands from real API
@@ -76,7 +80,7 @@ export default function AdminBrandsPage() {
     setEditingBrand(null);
     setFormError(null);
     setFormSuccess(null);
-    setFormData({ name: "", logoPath: "", bannerPath: "", description: "" });
+    setFormData({ name: "", logoPath: "", bannerPath: "", description: "", adminFee: "", category: "", subCategory: "", sponsorPath: "" });
   };
 
   const startCreate = () => {
@@ -84,7 +88,7 @@ export default function AdminBrandsPage() {
     setEditingBrand(null);
     setFormError(null);
     setFormSuccess(null);
-    setFormData({ name: "", logoPath: "", bannerPath: "", description: "" });
+    setFormData({ name: "", logoPath: "", bannerPath: "", description: "", adminFee: "", category: "", subCategory: "", sponsorPath: "" });
   };
 
   const startEdit = (id: string) => {
@@ -99,6 +103,10 @@ export default function AdminBrandsPage() {
       logoPath: brand.logoPath ?? "",
       bannerPath: brand.bannerPath ?? "",
       description: brand.description ?? "",
+      adminFee: brand.adminFee != null ? String(brand.adminFee) : "",
+      category: brand.category ?? "",
+      subCategory: brand.subCategory ?? "",
+      sponsorPath: brand.sponsorPath ?? "",
     });
   };
 
@@ -126,6 +134,10 @@ export default function AdminBrandsPage() {
         logoPath: formData.logoPath.trim() || null,
         bannerPath: formData.bannerPath.trim() || null,
         description: formData.description.trim() || null,
+        adminFee: formData.adminFee.trim() === "" ? 0 : Number(formData.adminFee) || 0,
+        category: formData.category.trim() || null,
+        subCategory: formData.subCategory.trim() || null,
+        sponsorPath: formData.sponsorPath.trim() || null,
       };
 
       const result = formMode === "edit" && editingBrand
@@ -140,7 +152,7 @@ export default function AdminBrandsPage() {
       setFormSuccess(formMode === "edit" ? "Brand berhasil diperbarui." : "Brand berhasil dibuat.");
       await refetch();
       if (formMode === "create") {
-        setFormData({ name: "", logoPath: "", bannerPath: "", description: "" });
+        setFormData({ name: "", logoPath: "", bannerPath: "", description: "", adminFee: "", category: "", subCategory: "", sponsorPath: "" });
       }
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Koneksi bermasalah.");
@@ -270,6 +282,48 @@ export default function AdminBrandsPage() {
                 rows={4}
               />
             </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <Input
+                label="Biaya Layanan (Admin Fee)"
+                name="adminFee"
+                type="number"
+                min="0"
+                step="500"
+                value={formData.adminFee}
+                onChange={handleChange}
+                placeholder="0"
+                hint="Per tiket, dalam Rupiah."
+              />
+              <Select
+                label="Kategori"
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                placeholder="Pilih kategori"
+                options={[
+                  { value: "sepak_bola", label: "Sepak Bola" },
+                  { value: "musik", label: "Musik" },
+                  { value: "lari", label: "Lari" },
+                ]}
+              />
+              <Input
+                label="Sub Kategori"
+                name="subCategory"
+                value={formData.subCategory}
+                onChange={handleChange}
+                placeholder="Contoh: Liga 1"
+              />
+            </div>
+
+            <ImageSourceInput
+              label="Logo Sponsor (1 gambar berisi semua sponsor)"
+              value={formData.sponsorPath}
+              onChange={(value) => setFormData((prev) => ({ ...prev, sponsorPath: value }))}
+              uploadFile={(file) => uploadBrandImage(file, "BANNER")}
+              disabled={isSubmitting}
+              hint="Gabungkan semua logo sponsor ke dalam satu gambar."
+            />
 
             <div className="flex flex-wrap gap-2 justify-end">
               <Button type="button" variant="ghost" onClick={resetForm}>

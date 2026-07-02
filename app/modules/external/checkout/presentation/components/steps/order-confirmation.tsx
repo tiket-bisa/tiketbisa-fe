@@ -61,6 +61,7 @@ export function OrderConfirmation({
                 <SummaryRow label="Subtotal" value={formatIDR(summary.subtotal)} />
                 {summary.tax > 0 && <SummaryRow label="Pajak" value={formatIDR(summary.tax)} />}
                 {summary.serviceFee > 0 && <SummaryRow label="Biaya Layanan" value={formatIDR(summary.serviceFee)} />}
+                {summary.transactionFee > 0 && <SummaryRow label="Biaya Transaksi" value={formatIDR(summary.transactionFee)} />}
                 {summary.adminFee > 0 && <SummaryRow label="Biaya Admin" value={formatIDR(summary.adminFee)} />}
                 <div className="pt-6 border-t-2 border-dashed border-gray-200 mt-2 flex justify-between items-center">
                   <span className="font-black text-text-primary text-lg md:text-xl">Total Bayar</span>

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { Card } from "~/core/design-system/components";
 import { 
@@ -19,10 +19,11 @@ import {
    OrderSuccess,
    ManualTransferPending
  } from "./components";
-import { useOrderSummary } from "./hooks/use-order-summary";
+import { useOrderSummary, withTransactionFee } from "./hooks/use-order-summary";
 import { useCheckoutForm } from "./hooks/use-checkout-form";
 import { useCheckoutSteps } from "./hooks/use-checkout-steps";
 import { eventApi } from "../../event/infrastructure/event.api";
+import { brandApi } from "../../brand/infrastructure/brand.api";
 import { paymentApi } from "../infrastructure/payment.api";
 import { orderApi } from "../infrastructure/order.api";
 import type { Route } from "./+types/checkout.page";
@@ -32,22 +33,24 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   const step = parseInt(url.searchParams.get("step") || "1", 10);
   const orderId = url.searchParams.get("orderId");
 
-  const [event, paymentMethods, order] = await Promise.all([
-    eventApi.getEventById(params.eventId),
+  const event = await eventApi.getEventById(params.eventId);
+  if (!event) throw new Response("Not Found", { status: 404 });
+
+  const [paymentMethods, order, brand] = await Promise.all([
     paymentApi.getPaymentMethods(),
-    (step === 4 || step === 5) && orderId ? orderApi.getOrderById(orderId) : Promise.resolve(null)
+    (step === 4 || step === 5) && orderId ? orderApi.getOrderById(orderId) : Promise.resolve(null),
+    event.brandId ? brandApi.getBrandBySlug(event.brandId) : Promise.resolve(null),
   ]);
 
-  if (!event) throw new Response("Not Found", { status: 404 });
-  return { event, paymentMethods, order };
+  return { event, paymentMethods, order, adminFee: brand?.adminFee ?? 0 };
 }
 
 export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
-  const { event, paymentMethods, order } = loaderData;
+  const { event, paymentMethods, order, adminFee } = loaderData;
   const [searchParams] = useSearchParams();
-  
+
   // Application/Domain hooks
-  const summary = useOrderSummary(event, searchParams);
+  const summary = useOrderSummary(event, searchParams, adminFee);
   const { buyerInfo, errors, validate, handleInputChange } = useCheckoutForm();
   
   // Steps orchestration hook (now managing payment state too)
@@ -68,6 +71,12 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
     setAgreedToTerms,
     setAgreedToPrivacy
   } = useCheckoutSteps(event, buyerInfo, summary, validate, paymentMethods, order);
+
+  // Add "Biaya Transaksi" once a payment method is chosen (display total).
+  const displaySummary = useMemo(
+    () => withTransactionFee(summary, selectedPaymentMethod),
+    [summary, selectedPaymentMethod],
+  );
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -125,7 +134,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
           {currentStep === 3 && (
             <OrderConfirmation
               buyerInfo={buyerInfo}
-              summary={summary}
+              summary={displaySummary}
               paymentMethod={selectedPaymentMethod}
               onNext={() => handleNext()}
               onBack={handleBack}
@@ -140,7 +149,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
               fallbackTotalAmount={
                 completedOrder?.totalPrice && completedOrder.totalPrice > 0
                   ? completedOrder.totalPrice
-                  : summary.totalPrice
+                  : displaySummary.totalPrice
               }
               onAction={() => handleNext()}
               proofFile={manualTransferProofFile}
@@ -154,7 +163,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
           {/* Mobile Specific Sections */}
           {currentStep < 3 && (
             <div className="lg:hidden space-y-8">
-              <OrderSummaryCard summary={summary} />
+              <OrderSummaryCard summary={displaySummary} />
               {currentStep === 2 && (
                 <Card className="p-6 bg-white border-gray-100 shadow-sm rounded-3xl">
                   <PromoSection />
@@ -177,9 +186,9 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
         {currentStep < 3 && (
           <aside className="lg:col-span-4 lg:sticky lg:top-28 hidden lg:block animate-in fade-in slide-in-from-right-8 duration-700 delay-300 overflow-hidden">
             <div className="space-y-6 pb-12">
-              <CheckoutSidebar 
-                summary={summary} 
-                onNext={() => handleNext()} 
+              <CheckoutSidebar
+                summary={displaySummary}
+                onNext={() => handleNext()}
                 onBack={handleBack}
                 step={currentStep}
                 agreedToTerms={paymentSelection.agreedToTerms}
@@ -196,7 +205,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
 
       {/* Shared Sticky Bar (Mobile Only) */}
       <CheckoutStickyBar
-        summary={summary}
+        summary={displaySummary}
         currentStep={displayStep}
         onNext={() => handleNext()}
         onBack={handleBack}

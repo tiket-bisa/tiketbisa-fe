@@ -16,7 +16,10 @@ export interface OrderItem {
 export interface OrderSummary {
   subtotal: number;
   adminFee: number;
+  /** "Biaya Layanan" = brand.admin_fee x jumlah tiket. */
   serviceFee: number;
+  /** "Biaya Transaksi" (payment gateway): QRIS 3% / VA Rp5.000. */
+  transactionFee: number;
   tax: number;
   totalPrice: number;
   items: OrderItem[];

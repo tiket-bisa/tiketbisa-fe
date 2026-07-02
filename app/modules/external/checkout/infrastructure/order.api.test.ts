@@ -16,6 +16,7 @@ describe("orderApi", () => {
     subtotal: 100000,
     adminFee: 5000,
     serviceFee: 10000,
+    transactionFee: 0,
     tax: 10000,
     totalPrice: 125000,
     items: [{ ticketId: "tc-001", ticketName: "Regular", quantity: 2, price: 50000 }],
