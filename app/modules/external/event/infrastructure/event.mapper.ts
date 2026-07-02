@@ -53,6 +53,9 @@ export function mapEventDtoToEntity(
     description: dto.description || "",
     imageUrl: bannerUrl || placeholderImages[index % placeholderImages.length],
     date: formatEventDate(startDate),
+    startDate: startDate || undefined,
+    endDate: dto.endDate ?? dto.end_date ?? undefined,
+    status: dto.status ?? undefined,
     location: dto.city || dto.location || "Online",
     minPrice: dto.minPrice ?? dto.min_price ?? undefined,
     // Tickets are not yet supported by the backend in the list response

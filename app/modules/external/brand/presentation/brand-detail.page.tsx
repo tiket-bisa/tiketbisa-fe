@@ -20,6 +20,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
   const activeTab = url.searchParams.get("tab") || "aktif";
   const sort = url.searchParams.get("sort") || "date_asc";
+  // "Event Lalu" tab shows ended events; "Event Aktif" shows ongoing/upcoming.
+  const status = activeTab === "lalu" ? "ENDED" : "ONGOING";
 
   const [brand, eventsResponse] = await Promise.all([
     brandApi.getBrandBySlug(slug),
@@ -28,6 +30,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
       offset,
       order_by: sort,
       brand_id: slug,
+      status,
     }),
   ]);
 

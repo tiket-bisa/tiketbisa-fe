@@ -15,6 +15,11 @@ export interface Event {
   imageUrl: string;
   galleryImages?: string[];
   date: string;
+  /** Raw ISO start/end dates from the backend (before display formatting). */
+  startDate?: string;
+  endDate?: string;
+  /** Event lifecycle status: "ONGOING" or "ENDED". */
+  status?: string;
   location: string;
   minPrice?: number;
   time?: string;

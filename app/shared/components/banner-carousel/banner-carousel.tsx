@@ -105,7 +105,7 @@ export function BannerCarousel({
                   <img
                     src={slide.imageUrl}
                     alt={slide.alt || "Banner"}
-                    className="block h-auto w-full rounded-2xl bg-white object-contain select-none transition-transform duration-700 md:aspect-[16/9] md:object-cover md:group-hover/slide:scale-105"
+                    className="mx-auto block h-auto w-full rounded-2xl bg-white object-contain select-none transition-transform duration-700 md:max-h-[440px] md:group-hover/slide:scale-105"
                     draggable={false}
                   />
 

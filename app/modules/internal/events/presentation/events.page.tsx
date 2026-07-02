@@ -392,15 +392,6 @@ export default function EventsPage() {
               onCoverChange={(imageUrl) => setFormData((prev) => ({ ...prev, bannerPath: imageUrl }))}
             />
 
-            <Input
-              label="Banner URL"
-              name="bannerPath"
-              value={formData.bannerPath}
-              onChange={handleChange}
-              placeholder="https://..."
-              hint="Opsional jika ingin pakai link gambar yang sudah ada."
-            />
-
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Select
                 label="Status"

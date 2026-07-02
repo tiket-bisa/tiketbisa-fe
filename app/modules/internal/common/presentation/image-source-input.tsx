@@ -62,8 +62,18 @@ export function ImageSourceInput({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cropState, setCropState] = useState<CropState | null>(null);
+  // Local object URL of the freshly-picked file so the preview shows immediately,
+  // without depending on the uploaded file being served back over HTTP.
+  const [localPreview, setLocalPreview] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const previewUrl = normalizeImageUrl(value);
+  const previewSrc = localPreview ?? previewUrl;
+
+  useEffect(() => {
+    return () => {
+      if (localPreview) URL.revokeObjectURL(localPreview);
+    };
+  }, [localPreview]);
 
   const handleFile = async (file: File | null) => {
     setError(null);
@@ -86,11 +96,15 @@ export function ImageSourceInput({
   const uploadAndSet = async (file: File) => {
     setIsUploading(true);
     setError(null);
+    const objectUrl = URL.createObjectURL(file);
+    setLocalPreview(objectUrl);
     try {
       const imageUrl = await uploadFile(file);
       onChange(imageUrl);
       if (inputRef.current) inputRef.current.value = "";
     } catch (err) {
+      URL.revokeObjectURL(objectUrl);
+      setLocalPreview(null);
       setError(err instanceof Error ? err.message : "Gagal mengunggah gambar.");
     } finally {
       setIsUploading(false);
@@ -128,7 +142,10 @@ export function ImageSourceInput({
       {mode === "link" ? (
         <Input
           value={value}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(event) => {
+            setLocalPreview(null);
+            onChange(event.target.value);
+          }}
           placeholder="https://.../image.jpg"
           disabled={disabled || isUploading}
           hint={hint}
@@ -149,9 +166,9 @@ export function ImageSourceInput({
         </div>
       )}
 
-      {value && (
+      {(value || localPreview) && (
         <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface-alt">
-          <img src={previewUrl} alt={`${label} preview`} className="h-32 w-full object-cover" />
+          <img src={previewSrc} alt={`${label} preview`} className="h-32 w-full object-cover" />
         </div>
       )}
       {error && <p className="text-xs text-destructive-text">{error}</p>}

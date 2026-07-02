@@ -31,6 +31,8 @@ export async function loader({ request }: Route.LoaderArgs) {
     time_range: sp.get("time") ?? undefined,
     price_range: sp.get("price") ?? undefined,
     search: sp.get("q") ?? undefined,
+    // Public "Upcoming Events" listing must never show ended events.
+    status: "ONGOING",
   };
 
   const response = await eventApi.getEvents(params);

@@ -40,14 +40,17 @@ export const landingApi: LandingRepository = {
         offset: 0,
         category: params.partnerCategory 
       }),
-      eventApi.getEvents({ 
-        limit: 4, 
+      eventApi.getEvents({
+        limit: 8,
         offset: 0,
-        order_by: "date_asc" 
+        order_by: "start_date:ASC",
+        status: "ONGOING",
       }),
       eventApi.getEvents({
         limit: 8,
         offset: 0,
+        order_by: "start_date:ASC",
+        status: "ONGOING",
         time_range: params.eventFilters?.time,
         city: params.eventFilters?.city,
         category: params.eventFilters?.category,

@@ -38,6 +38,23 @@ interface EventImageListResponseData {
   images: EventImageDto[];
 }
 
+// Backend expects `sortBy=<column>:<ASC|DESC>` with a whitelisted column.
+// Translate the UI-friendly sort tokens into that format.
+const SORT_BY_MAP: Record<string, string> = {
+  date_asc: "start_date:ASC",
+  date_desc: "start_date:DESC",
+  name_asc: "name:ASC",
+  name_desc: "name:DESC",
+};
+
+function toSortByParam(orderBy?: string): string | undefined {
+  if (!orderBy) return undefined;
+  if (SORT_BY_MAP[orderBy]) return SORT_BY_MAP[orderBy];
+  // Already in the backend "column:DIR" form — pass through.
+  if (/^[a-z_]+:(ASC|DESC)$/i.test(orderBy)) return orderBy;
+  return undefined;
+}
+
 async function getBrandNameMap(): Promise<Map<string, string>> {
   try {
     const response = await apiFetch<ApiResponse<BrandListResponseData>>(
@@ -86,6 +103,10 @@ export const eventApi: EventRepository = {
     const queryParams = new URLSearchParams();
     if (params.search) queryParams.append("name", params.search);
     if (params.city) queryParams.append("city", params.city);
+    if (params.brand_id) queryParams.append("brandId", params.brand_id);
+    if (params.status) queryParams.append("status", params.status);
+    const sortBy = toSortByParam(params.order_by);
+    if (sortBy) queryParams.append("sortBy", sortBy);
     queryParams.append("limit", params.limit.toString());
     queryParams.append("offset", params.offset.toString());
     queryParams.append("isPublished", "true");
