@@ -63,6 +63,9 @@ export function OrderConfirmation({
                 {summary.serviceFee > 0 && <SummaryRow label="Biaya Layanan" value={formatIDR(summary.serviceFee)} />}
                 {summary.transactionFee > 0 && <SummaryRow label="Biaya Transaksi" value={formatIDR(summary.transactionFee)} />}
                 {summary.adminFee > 0 && <SummaryRow label="Biaya Admin" value={formatIDR(summary.adminFee)} />}
+                {summary.discount > 0 && (
+                  <SummaryRow label="Diskon" value={`-${formatIDR(summary.discount)}`} valueClassName="text-destructive-text" />
+                )}
                 <div className="pt-6 border-t-2 border-dashed border-gray-200 mt-2 flex justify-between items-center">
                   <span className="font-black text-text-primary text-lg md:text-xl">Total Bayar</span>
                   <span className="font-black text-brand-primary text-2xl md:text-3xl">{formatIDR(summary.totalPrice)}</span>
@@ -129,11 +132,19 @@ function InfoItem({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SummaryRow({ label, value }: { label: string; value: string }) {
+function SummaryRow({
+  label,
+  value,
+  valueClassName = "text-text-primary",
+}: {
+  label: string;
+  value: string;
+  valueClassName?: string;
+}) {
   return (
     <div className="flex justify-between items-center">
       <span className="text-sm font-medium text-text-secondary">{label}</span>
-      <span className="text-base font-bold text-text-primary">{value}</span>
+      <span className={`text-base font-bold ${valueClassName}`}>{value}</span>
     </div>
   );
 }

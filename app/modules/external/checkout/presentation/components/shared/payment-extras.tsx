@@ -1,16 +1,90 @@
+import { useState } from "react";
 import { Link } from "react-router";
+import { Input, Button } from "~/core/design-system/components";
+import { formatIDR } from "~/core/utils/currency";
+import { promoApi } from "../../../infrastructure/promo.api";
+import type { AppliedPromo } from "../../../domain/checkout.types";
 
-export function PromoSection() {
+export interface PromoSectionProps {
+  eventId: string;
+  appliedPromo?: AppliedPromo | null;
+  onApply: (promo: AppliedPromo) => void;
+  onRemove: () => void;
+}
+
+export function PromoSection({ eventId, appliedPromo, onApply, onRemove }: PromoSectionProps) {
+  const [code, setCode] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleApply = async () => {
+    const trimmedCode = code.trim();
+    if (!trimmedCode) return;
+
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await promoApi.applyPromo(trimmedCode, eventId);
+      onApply({ promoId: result.promoId, code: trimmedCode, discount: result.discount });
+      setCode("");
+    } catch (err: any) {
+      setError(err?.message || "Kode promo tidak valid");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (appliedPromo) {
+    return (
+      <div className="mb-8 p-4 rounded-2xl border-2 border-success-text/20 bg-success-text/5 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <svg className="h-5 w-5 text-success-text flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          <span className="text-sm font-bold text-success-text">
+            Kode promo berhasil diterapkan: -{formatIDR(appliedPromo.discount)}
+          </span>
+        </div>
+        <button
+          onClick={onRemove}
+          className="text-xs font-black text-text-tertiary hover:text-destructive-text uppercase tracking-widest transition-colors flex-shrink-0"
+        >
+          Hapus
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="mb-8">
-      <button className="w-full py-4 px-6 border-2 border-dashed border-brand-primary/20 rounded-2xl bg-brand-primary/[0.02] flex items-center justify-center gap-3 group hover:border-brand-primary/40 transition-all">
-        <svg className="h-5 w-5 text-brand-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-        </svg>
-        <span className="text-sm font-black text-brand-primary/60 group-hover:text-brand-primary transition-colors">
-          Lebih hemat pakai promo
-        </span>
-      </button>
+    <div className="mb-8 space-y-2">
+      <div className="flex items-stretch gap-3">
+        <div className="flex-1">
+          <Input
+            placeholder="Masukkan kode promo"
+            value={code}
+            onChange={(e) => {
+              setCode(e.target.value);
+              if (error) setError(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void handleApply();
+              }
+            }}
+            disabled={isLoading}
+          />
+        </div>
+        <Button
+          onClick={handleApply}
+          isLoading={isLoading}
+          disabled={!code.trim()}
+          className="px-6 rounded-lg"
+        >
+          Terapkan
+        </Button>
+      </div>
+      {error && <p className="text-xs font-bold text-destructive-text">{error}</p>}
     </div>
   );
 }

@@ -23,7 +23,11 @@ export function calculateTransactionFee(
   return 0;
 }
 
-/** Re-derive totals once a payment method is chosen (adds "Biaya Transaksi"). */
+/**
+ * Re-derive totals once a payment method is chosen (adds "Biaya Transaksi").
+ * Transaction fee is always computed on the pre-discount base (subtotal + serviceFee),
+ * per the backend contract — the promo discount must not shrink the fee base.
+ */
 export function withTransactionFee(
   summary: OrderSummary,
   method: PaymentMethod | null | undefined,
@@ -32,10 +36,11 @@ export function withTransactionFee(
     method,
     summary.subtotal + summary.serviceFee,
   );
+  const discount = Math.max(0, Math.round(summary.discount || 0));
   return {
     ...summary,
     transactionFee,
-    totalPrice: summary.subtotal + summary.serviceFee + transactionFee,
+    totalPrice: summary.subtotal + summary.serviceFee + transactionFee - discount,
   };
 }
 
@@ -43,6 +48,7 @@ export function useOrderSummary(
   event: Event,
   searchParams: URLSearchParams,
   adminFeePerTicket = 0,
+  discount = 0,
 ) {
   const summary = useMemo<OrderSummary>(() => {
     const items: OrderItem[] = [];
@@ -72,6 +78,7 @@ export function useOrderSummary(
     // Biaya Layanan = brand.admin_fee x jumlah tiket.
     const perTicketFee = Math.max(0, Math.round(adminFeePerTicket));
     const serviceFee = perTicketFee * totalQuantity;
+    const appliedDiscount = Math.max(0, Math.round(discount || 0));
 
     return {
       subtotal,
@@ -79,10 +86,11 @@ export function useOrderSummary(
       serviceFee,
       transactionFee: 0,
       tax: 0,
-      totalPrice: subtotal + serviceFee,
+      discount: appliedDiscount,
+      totalPrice: subtotal + serviceFee - appliedDiscount,
       items,
     };
-  }, [event.tickets, searchParams, adminFeePerTicket]);
+  }, [event.tickets, searchParams, adminFeePerTicket, discount]);
 
   if (typeof window !== "undefined") {
     sessionStorage.setItem("tiketbisa_checkout_summary", JSON.stringify(summary));
