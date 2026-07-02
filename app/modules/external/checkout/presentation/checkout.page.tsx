@@ -22,6 +22,7 @@ import {
 import { useOrderSummary, withTransactionFee } from "./hooks/use-order-summary";
 import { useCheckoutForm } from "./hooks/use-checkout-form";
 import { useCheckoutSteps } from "./hooks/use-checkout-steps";
+import { usePaymentSelection } from "./hooks/use-payment-selection";
 import { eventApi } from "../../event/infrastructure/event.api";
 import { brandApi } from "../../brand/infrastructure/brand.api";
 import { paymentApi } from "../infrastructure/payment.api";
@@ -50,17 +51,20 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
   const [searchParams] = useSearchParams();
 
   // Application/Domain hooks
-  const summary = useOrderSummary(event, searchParams, adminFee);
+  const paymentSelectionState = usePaymentSelection();
+  const discount = paymentSelectionState.selection.appliedPromo?.discount ?? 0;
+  const summary = useOrderSummary(event, searchParams, adminFee, discount);
   const { buyerInfo, errors, validate, handleInputChange } = useCheckoutForm();
-  
+
   // Steps orchestration hook (now managing payment state too)
-  const { 
-    currentStep, 
-    isActionLoading, 
-    completedOrder, 
-    handleNext, 
-    handleBack, 
+  const {
+    currentStep,
+    isActionLoading,
+    completedOrder,
+    handleNext,
+    handleBack,
     handleExpire,
+    handlePaymentConfirmed,
     paymentSelection,
     selectedPaymentMethod,
     isManualTransferPending,
@@ -69,8 +73,10 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
     isStep2Valid,
     handlePaymentMethodSelect,
     setAgreedToTerms,
-    setAgreedToPrivacy
-  } = useCheckoutSteps(event, buyerInfo, summary, validate, paymentMethods, order);
+    setAgreedToPrivacy,
+    applyPromo,
+    removePromo
+  } = useCheckoutSteps(event, buyerInfo, summary, validate, paymentMethods, order, paymentSelectionState);
 
   // Add "Biaya Transaksi" once a payment method is chosen (display total).
   const displaySummary = useMemo(
@@ -157,6 +163,8 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
               onBack={handleBack}
               onExpire={handleExpire}
               isLoading={isActionLoading}
+              transactionId={searchParams.get("orderId") ?? searchParams.get("lockId")}
+              onPaymentCompleted={handlePaymentConfirmed}
             />
           )}
 
@@ -166,7 +174,12 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
               <OrderSummaryCard summary={displaySummary} />
               {currentStep === 2 && (
                 <Card className="p-6 bg-white border-gray-100 shadow-sm rounded-3xl">
-                  <PromoSection />
+                  <PromoSection
+                    eventId={event.id}
+                    appliedPromo={paymentSelection.appliedPromo}
+                    onApply={applyPromo}
+                    onRemove={removePromo}
+                  />
                   <PaymentConsent
                     agreedToTerms={paymentSelection.agreedToTerms}
                     agreedToPrivacy={paymentSelection.agreedToPrivacy}
@@ -196,6 +209,10 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
                 onToggleTerms={setAgreedToTerms}
                 onTogglePrivacy={setAgreedToPrivacy}
                 isMethodSelected={!!paymentSelection.methodId}
+                eventId={event.id}
+                appliedPromo={paymentSelection.appliedPromo}
+                onApplyPromo={applyPromo}
+                onRemovePromo={removePromo}
               />
               {currentStep === 1 && <PaymentPartners />}
             </div>

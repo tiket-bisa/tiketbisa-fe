@@ -21,6 +21,8 @@ export interface OrderSummary {
   /** "Biaya Transaksi" (payment gateway): QRIS 3% / VA Rp5.000. */
   transactionFee: number;
   tax: number;
+  /** Promo discount applied client-side for display only; backend recomputes authoritatively. */
+  discount: number;
   totalPrice: number;
   items: OrderItem[];
 }
@@ -34,14 +36,24 @@ export interface PaymentMethod {
   category: PaymentCategory;
 }
 
+export interface AppliedPromo {
+  promoId: string;
+  code: string;
+  discount: number;
+}
+
 export interface PaymentSelection {
   methodId: string | null;
   agreedToTerms: boolean;
   agreedToPrivacy: boolean;
   promoCode?: string;
+  appliedPromo?: AppliedPromo | null;
 }
 
 export type OrderStatus = "PENDING" | "PAID" | "EXPIRED" | "CANCELLED";
+
+/** Gateway payment status as reported by FLIP (VA/QRIS), threaded through completion + status polling. */
+export type GatewayStatus = "PENDING" | "SUCCESSFUL" | "EXPIRED" | "FAILED";
 
 export interface OrderResponse {
   orderId: string;
@@ -50,6 +62,11 @@ export interface OrderResponse {
   paymentMethod: PaymentMethod;
   expiryTime: string;
   paymentInstructions?: string;
-  virtualAccount?: string;
+  virtualAccount?: string | null;
   qrCodeUrl?: string;
+  /** Raw QRIS payload from the gateway (may be a scannable string or a deep-link URL). */
+  qrPayload?: string | null;
+  gatewayStatus?: GatewayStatus | null;
+  /** ISO timestamp for when the gateway-issued VA/QRIS bill expires. */
+  gatewayExpiry?: string | null;
 }

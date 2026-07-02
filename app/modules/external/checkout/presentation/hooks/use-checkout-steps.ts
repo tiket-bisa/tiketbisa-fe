@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate, useParams } from "react-router";
 import { orderApi } from "../../infrastructure/order.api";
 import type { CompleteOrderResponse } from "../../infrastructure/order.api";
 import { useOrderConfirmation } from "./use-order-confirmation";
-import { usePaymentSelection } from "./use-payment-selection";
+import type { usePaymentSelection } from "./use-payment-selection";
 
 import type { BuyerInfo, OrderSummary, PaymentMethod, OrderResponse } from "../../domain/checkout.types";
 import type { EventSummary } from "~/core/types";
@@ -17,27 +17,28 @@ const CHECKOUT_STORAGE_KEYS = [
 ];
 
 export function useCheckoutSteps(
-  event: EventSummary, 
-  buyerInfo: BuyerInfo, 
-  summary: OrderSummary, 
+  event: EventSummary,
+  buyerInfo: BuyerInfo,
+  summary: OrderSummary,
   validateForm: () => boolean,
   paymentMethods: PaymentMethod[],
-  existingOrder?: OrderResponse | null
+  existingOrder: OrderResponse | null | undefined,
+  paymentSelectionState: ReturnType<typeof usePaymentSelection>
 ) {
   const navigate = useNavigate();
   const params = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentStep = parseInt(searchParams.get("step") || "1", 10);
-  
+
   // State for Backend Session Management
   const [lockId, setLockId] = useState<string | null>(searchParams.get("lockId"));
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<CompleteOrderResponse | null>(null);
   const [manualTransferProofFile, setManualTransferProofFile] = useState<File | null>(null);
   const [isManualTransferPending, setIsManualTransferPending] = useState(searchParams.get("manualPending") === "1");
-  
+
   const { confirmOrder, isLoading: isConfirming } = useOrderConfirmation();
-  const { selection, setMethodId, setAgreedToTerms, setAgreedToPrivacy } = usePaymentSelection();
+  const { selection, setMethodId, setAgreedToTerms, setAgreedToPrivacy, applyPromo, removePromo } = paymentSelectionState;
 
   const selectedPaymentMethod = useMemo(() => 
     paymentMethods.find(m => m.id === selection.methodId),
@@ -244,7 +245,8 @@ export function useCheckoutSteps(
               eventId: event.id,
               buyerInfo,
               summary,
-              paymentMethod: selectedPaymentMethod
+              paymentMethod: selectedPaymentMethod,
+              promoCode: selection.appliedPromo?.code,
             });
 
             if (result) {
@@ -339,6 +341,40 @@ export function useCheckoutSteps(
     expireCheckoutSession(false);
   }, [expireCheckoutSession]);
 
+  /**
+   * Called when the gateway (FLIP) reports the VA/QRIS payment as completed —
+   * either via realtime push or the status polling fallback on step 4.
+   * Mirrors the manual "Bayar Sekarang" completion path in `handleNext` (case 4),
+   * but is triggered automatically instead of by a user click.
+   */
+  const handlePaymentConfirmed = useCallback(async () => {
+    if (currentStep !== 4 || isManualTransferPayment) return;
+
+    const activeLockId = lockId || searchParams.get("lockId") || searchParams.get("orderId");
+    if (!activeLockId) return;
+
+    setIsActionLoading(true);
+    try {
+      const result = await orderApi.executeOrder(activeLockId, summary.totalPrice);
+      setCompletedOrder(result);
+      setIsManualTransferPending(false);
+
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set("step", "5");
+      nextParams.set("lockId", activeLockId);
+      nextParams.set("orderId", activeLockId);
+      nextParams.delete("manualPending");
+      setSearchParams(nextParams);
+    } catch (error) {
+      // The payment already succeeded at the gateway; a transient error finalizing
+      // locally shouldn't alarm the buyer. The regular poll/realtime loop or the
+      // manual "Bayar Sekarang" button remains available as a fallback.
+      console.error("Failed to auto-finalize completed payment", error);
+    } finally {
+      setIsActionLoading(false);
+    }
+  }, [currentStep, isManualTransferPayment, lockId, searchParams, summary.totalPrice, setSearchParams]);
+
   return {
     currentStep,
     isActionLoading: isActionLoading || isConfirming,
@@ -349,6 +385,7 @@ export function useCheckoutSteps(
     handleNext,
     handleBack,
     handleExpire,
+    handlePaymentConfirmed,
     paymentSelection: selection,
     selectedPaymentMethod,
     isStep2Valid,
@@ -356,6 +393,8 @@ export function useCheckoutSteps(
     setMethodId,
     setAgreedToTerms,
     setAgreedToPrivacy,
+    applyPromo,
+    removePromo,
     lockId // Exposed for debugging or extended logic
   };
 }
