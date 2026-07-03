@@ -10,6 +10,7 @@ import {
 import { formatIDR } from "~/core/utils";
 import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 import { GenerateWristbandModal } from "./generate-wristband-modal";
+import { TicketDeliveryActions } from "~/modules/internal/ticket-delivery/presentation/ticket-delivery-actions";
 
 const statusOptions = [
   { value: "all", label: "Semua Status" },
@@ -259,7 +260,7 @@ export default function EventTicketDashboardPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1040px] text-sm">
+          <table className="w-full min-w-[1160px] text-sm">
             <thead>
               <tr className="border-b border-border-subtle text-left text-text-tertiary">
                 <th className="px-3 py-2 font-medium">Tiket</th>
@@ -269,11 +270,20 @@ export default function EventTicketDashboardPage() {
                 <th className="px-3 py-2 font-medium">Payment</th>
                 <th className="px-3 py-2 font-medium">Status</th>
                 <th className="px-3 py-2 font-medium">Check In</th>
+                <th className="px-3 py-2 font-medium">Aksi</th>
               </tr>
             </thead>
             <tbody>
               {filteredIssuedTickets.map((ticket) => (
-                <IssuedTicketRow key={ticket.id} ticket={ticket} />
+                <IssuedTicketRow
+                  key={ticket.id}
+                  ticket={ticket}
+                  transactionTicketCount={
+                    ticket.ticketTransactionId
+                      ? (data.issuedTickets ?? []).filter((item) => item.ticketTransactionId === ticket.ticketTransactionId).length
+                      : 0
+                  }
+                />
               ))}
             </tbody>
           </table>
@@ -325,7 +335,13 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
   );
 }
 
-function IssuedTicketRow({ ticket }: { ticket: IssuedTicketSummary }) {
+function IssuedTicketRow({
+  ticket,
+  transactionTicketCount,
+}: {
+  ticket: IssuedTicketSummary;
+  transactionTicketCount: number;
+}) {
   const status = statusMap[ticket.status] ?? { label: ticket.status || "-", variant: "default" as const };
   return (
     <tr className="border-b border-border-subtle last:border-0">
@@ -352,6 +368,15 @@ function IssuedTicketRow({ ticket }: { ticket: IssuedTicketSummary }) {
         <Badge variant={status.variant}>{status.label}</Badge>
       </td>
       <td className="px-3 py-3 text-text-secondary">{formatDateTime(ticket.checkInTime)}</td>
+      <td className="px-3 py-3">
+        <TicketDeliveryActions
+          transactionId={ticket.ticketTransactionId}
+          customerName={ticket.customerName}
+          customerEmail={ticket.customerEmail}
+          ticketCount={transactionTicketCount}
+          buttonLabel="Tiket"
+        />
+      </td>
     </tr>
   );
 }

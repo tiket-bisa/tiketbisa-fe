@@ -71,7 +71,7 @@ export function BannerCarousel({
       aria-label="Promotional Banners"
     >
       <div 
-        className="relative w-full overflow-visible px-4 md:px-12 lg:px-24" 
+        className="relative w-full overflow-visible px-4 md:px-12 xl:px-48"
       >
         {/* Main Slider Track */}
         <ul 
@@ -96,12 +96,12 @@ export function BannerCarousel({
                 className={`flex-none rounded-2xl overflow-hidden transition-all duration-500 ease-out ${
                   isMobile
                     ? `w-full ${isActive ? "opacity-100" : "opacity-0 absolute pointer-events-none"}`
-                    : `w-full mr-4 ${isActive ? "opacity-100 scale-100 shadow-xl" : "opacity-40 scale-[0.92] blur-[1px]"}`
+                    : `w-full mr-4 aspect-[531/160] ${isActive ? "opacity-100 scale-100 shadow-xl" : "opacity-40 scale-[0.92] blur-[1px]"}`
                 }`}
                 role="group"
                 aria-roledescription="slide"
               >
-                <div className="relative w-full overflow-hidden rounded-2xl group/slide md:h-full md:overflow-visible md:rounded-none">
+                <div className="relative w-full overflow-hidden rounded-2xl group/slide md:h-full">
                   <img
                     src={slide.imageUrl}
                     alt={slide.alt || "Banner"}
@@ -117,7 +117,7 @@ export function BannerCarousel({
         </ul>
 
         {/* Global Navigation Buttons — Visible only on Hover */}
-        <div className="absolute inset-y-0 left-2 right-2 md:left-[8.5rem] md:right-[8.5rem] flex items-center justify-between pointer-events-none z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <div className="absolute inset-y-0 left-2 right-2 md:left-[8.5rem] md:right-[8.5rem] xl:left-[8.5rem] xl:right-[8.5rem] flex items-center justify-between pointer-events-none z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <button
             type="button"
             onClick={prev}

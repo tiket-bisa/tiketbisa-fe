@@ -34,12 +34,12 @@ export default function LandingPage({ loaderData }: Route.ComponentProps) {
   return (
     <div className="flex flex-col pb-20 animate-in fade-in duration-700">
       {/* 1. Hero Section */}
-      <section className="w-full pt-2 pb-4 md:pt-6 md:pb-12">
+      <section className="w-full pt-1 pb-1 md:pt-2 md:pb-3">
         <BannerCarousel slides={banners} />
       </section>
 
       {/* 2. Partner Section */}
-      <section className="w-full py-4 md:py-16">
+      <section className="w-full py-1 md:py-4">
         <PartnerSection
           brands={partners}
           activeCategory={partnerCategory}
