@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
-import { Card, Tabs } from "~/core/design-system/components";
+import { Link } from "react-router";
+import { Card, Tabs, Button } from "~/core/design-system/components";
 import { useAuth } from "~/core/auth";
 import { useApiQuery } from "~/core/api";
 import { eventApi } from "~/core/api/services/event.api";
@@ -74,11 +75,18 @@ export default function TicketScanningPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-text-primary text-2xl font-bold">Scan Tiket</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-text-primary text-2xl font-bold">Scan Tiket</h1>
+        <Link to="/internal-tb/partner/partner-tickets">
+          <Button variant="secondary" size="sm">
+            Impor Tiket Partner
+          </Button>
+        </Link>
+      </div>
 
       <Tabs items={tabItems} value={tab} onChange={setTab} />
 
-      {tab === "scan" && <ScanSection />}
+      {tab === "scan" && <ScanSection brandSlug={user?.brand_slug} />}
       {tab === "generate" && <QrGeneratorSection />}
       {tab === "dashboard" && (
         <DashboardSection dashboard={dashboard} loading={loading} />

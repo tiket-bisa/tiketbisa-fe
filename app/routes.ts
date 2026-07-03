@@ -131,4 +131,17 @@ export default [
       "modules/internal/ticket-scanning/presentation/ticket-scanning.page.tsx",
     ),
   ]),
+
+  // ─── Scanner Layout (locked-down: only beranda + scan) ───
+  layout("layouts/scanner.layout.tsx", [
+    route(
+      "internal-tb/scanner",
+      "modules/internal/scanner-dashboard/presentation/scanner-dashboard.page.tsx",
+      { index: true },
+    ),
+    route(
+      "internal-tb/scanner/scan",
+      "modules/internal/scanner-scan/presentation/scanner-scan.page.tsx",
+    ),
+  ]),
 ] satisfies RouteConfig;

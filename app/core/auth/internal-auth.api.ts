@@ -3,7 +3,7 @@ import type { ApiResponse } from "~/core/api";
 
 export interface InternalTokenResponseData {
   idToken: string;
-  role: "admin" | "partner";
+  role: "admin" | "partner" | "scanner";
   brandSlug?: string | null;
   brandName?: string | null;
   brandId?: string | null;
@@ -40,7 +40,7 @@ function normalizeInternalTokenResponse(
   data: RawInternalTokenResponseData,
 ): InternalTokenResponseData {
   const role = data.role?.trim().toLowerCase();
-  if (role !== "admin" && role !== "partner") {
+  if (role !== "admin" && role !== "partner" && role !== "scanner") {
     throw new Error("Token response missing valid role");
   }
 
@@ -114,14 +114,47 @@ export async function getMe(): Promise<Omit<InternalTokenResponseData, "idToken"
   }
 
   const role = response.data.role?.trim().toLowerCase();
-  if (role !== "admin" && role !== "partner") {
+  if (role !== "admin" && role !== "partner" && role !== "scanner") {
     throw new Error("Invalid role received");
   }
 
   return {
-    role: role as "admin" | "partner",
+    role: role as "admin" | "partner" | "scanner",
     brandSlug: response.data.brandSlug ?? response.data.brand_slug ?? null,
     brandName: response.data.brandName ?? response.data.brand_name ?? null,
     brandId: response.data.brandId ?? response.data.brand_id ?? null,
   };
+}
+
+export interface ScannerLoginCredentials {
+  username: string;
+  password: string;
+}
+
+/**
+ * Scanner login — username/password auth for on-the-ground ticket scanners.
+ * Public endpoint (no auth headers needed). Returns the same token shape as
+ * the Google OAuth flow, treated identically once logged in.
+ */
+export async function requestScannerLogin(
+  credentials: ScannerLoginCredentials,
+): Promise<InternalTokenResponseData> {
+  const response = await apiFetch<ApiResponse<RawInternalTokenResponseData>>(
+    "/internal-tb/token/scanner-login",
+    {
+      method: "POST",
+      body: JSON.stringify(credentials),
+    },
+  );
+
+  if (!response.success) {
+    const message = getErrorMessage(response.error);
+    throw new Error(message ?? "Username atau password salah");
+  }
+
+  if (!response.data) {
+    throw new Error("Username atau password salah");
+  }
+
+  return normalizeInternalTokenResponse(response.data);
 }

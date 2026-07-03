@@ -26,13 +26,21 @@ export interface PartnerUser extends BaseAuthUser {
   brand_name: string;
 }
 
-export type AuthUser = AdminUser | PartnerUser;
+export interface ScannerUser extends BaseAuthUser {
+  role: "scanner";
+  brand_id?: string;
+  brand_slug?: string;
+  brand_name?: string;
+}
+
+export type AuthUser = AdminUser | PartnerUser | ScannerUser;
 export type AuthRole = AuthUser["role"];
 
 interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
   loginWithOAuth: (payload: InternalTokenResponseData) => void;
+  loginScanner: (payload: InternalTokenResponseData, username: string) => void;
   logout: () => void;
 }
 
@@ -98,6 +106,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             if (refreshed.role === "admin") {
               return { ...baseUser, role: "admin" };
+            }
+
+            if (refreshed.role === "scanner") {
+              return {
+                ...baseUser,
+                role: "scanner",
+                brand_id: refreshed.brandId ?? currentUser.brand_id ?? undefined,
+                brand_slug: refreshed.brandSlug ?? currentUser.brand_slug ?? undefined,
+                brand_name: refreshed.brandName ?? currentUser.brand_name ?? undefined,
+              };
             }
 
             const brandId = refreshed.brandId ?? currentUser.brand_id ?? "";
@@ -217,13 +235,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(partnerUser));
   }, []);
 
+  const loginScanner = useCallback((payload: InternalTokenResponseData, username: string) => {
+    if (payload.role !== "scanner") {
+      throw new Error("Unexpected role in scanner login response");
+    }
+
+    const scannerUser: AuthUser = {
+      email: username,
+      name: payload.brandName || username,
+      role: "scanner",
+      internal_token: payload.idToken,
+      brand_id: payload.brandId ?? undefined,
+      brand_slug: payload.brandSlug ?? undefined,
+      brand_name: payload.brandName ?? undefined,
+    };
+
+    setUser(scannerUser);
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(scannerUser));
+  }, []);
+
   const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem(AUTH_STORAGE_KEY);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, loginWithOAuth, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, loginWithOAuth, loginScanner, logout }}>
       {children}
     </AuthContext.Provider>
   );

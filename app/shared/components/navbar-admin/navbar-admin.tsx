@@ -7,6 +7,10 @@ export interface NavbarAdminProps {
   onLogout?: () => void;
   onScanTicket?: () => void;
   className?: string;
+  /** "admin" (default) shows full nav links. "scanner" strips nav links down to just the badge + scan action. */
+  variant?: "admin" | "scanner";
+  /** Badge label shown next to the logo. Defaults based on variant. */
+  badgeLabel?: string;
 }
 
 const navLinks: readonly { to: string; label: string; exact?: boolean }[] = [
@@ -21,9 +25,14 @@ export function NavbarAdmin({
   onLogout,
   onScanTicket,
   className = "",
+  variant = "admin",
+  badgeLabel,
 }: NavbarAdminProps) {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isScanner = variant === "scanner";
+  const homePath = isScanner ? "/internal-tb/scanner" : "/internal-tb/admin";
+  const links = isScanner ? [] : navLinks;
 
   const toggleMobileMenu = () => setMobileMenuOpen((prev) => !prev);
   const closeMobileMenu = () => setMobileMenuOpen(false);
@@ -35,7 +44,7 @@ export function NavbarAdmin({
       <nav className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link
-          to="/internal-tb/admin"
+          to={homePath}
           className="shrink-0"
           aria-label="Tiketbisa admin"
         >
@@ -46,34 +55,36 @@ export function NavbarAdmin({
           />
         </Link>
 
-        {/* Admin badge */}
+        {/* Role badge */}
         <span className="hidden sm:inline-flex items-center rounded-md bg-brand-primary-subtle px-2 py-0.5 text-xs font-medium text-brand-primary">
-          Admin
+          {badgeLabel ?? (isScanner ? "Scanner" : "Admin")}
         </span>
 
         {/* Nav links */}
-        <ul className="hidden md:flex items-center gap-1">
-          {navLinks.map((link) => {
-            const isActive = link.exact
-              ? location.pathname === link.to
-              : location.pathname.startsWith(link.to);
-            return (
-              <li key={link.to}>
-                <Link
-                  to={link.to}
-                  className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                    isActive
-                      ? "text-brand-primary"
-                      : "text-text-secondary hover:text-text-primary hover:bg-surface-hover"
-                  }`}
-                  aria-current={isActive ? "page" : undefined}
-                >
-                  {link.label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        {links.length > 0 && (
+          <ul className="hidden md:flex items-center gap-1">
+            {links.map((link) => {
+              const isActive = link.exact
+                ? location.pathname === link.to
+                : location.pathname.startsWith(link.to);
+              return (
+                <li key={link.to}>
+                  <Link
+                    to={link.to}
+                    className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      isActive
+                        ? "text-brand-primary"
+                        : "text-text-secondary hover:text-text-primary hover:bg-surface-hover"
+                    }`}
+                    aria-current={isActive ? "page" : undefined}
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
         {/* Right section */}
         <div className="ml-auto flex items-center gap-3">
@@ -135,7 +146,7 @@ export function NavbarAdmin({
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-border-default bg-surface-primary animate-in slide-in-from-top-2 duration-200">
           <div className="px-4 py-4 space-y-2">
-            {navLinks.map((link) => {
+            {links.map((link) => {
               const isActive = link.exact
                 ? location.pathname === link.to
                 : location.pathname.startsWith(link.to);
@@ -155,12 +166,14 @@ export function NavbarAdmin({
               );
             })}
 
-            <div className="border-t border-border-subtle my-2" />
+            {links.length > 0 && <div className="border-t border-border-subtle my-2" />}
 
             {userEmail && (
               <div className="px-3 py-2">
                 <p className="text-xs text-text-tertiary truncate">{userEmail}</p>
-                <p className="text-xs text-text-secondary font-medium mt-0.5">Admin</p>
+                <p className="text-xs text-text-secondary font-medium mt-0.5">
+                  {badgeLabel ?? (isScanner ? "Scanner" : "Admin")}
+                </p>
               </div>
             )}
 

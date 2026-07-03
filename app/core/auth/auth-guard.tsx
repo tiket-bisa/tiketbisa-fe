@@ -24,7 +24,12 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
 
   // Role mismatch: redirect to the correct dashboard
   if (requiredRole && user.role !== requiredRole) {
-    const redirectPath = user.role === "admin" ? "/internal-tb/admin" : "/internal-tb/partner";
+    const redirectPath =
+      user.role === "admin"
+        ? "/internal-tb/admin"
+        : user.role === "partner"
+          ? "/internal-tb/partner"
+          : "/internal-tb/scanner";
     return <Navigate to={redirectPath} replace />;
   }
 
