@@ -148,7 +148,8 @@ export function buildValidateFailure(
     if (normalizedMessage.includes("already")) {
       status = "ALREADY_CHECKED_IN";
       fallbackMessage = "Tiket ini sudah pernah di-scan.";
-    } else if (normalizedMessage.includes("category")) {
+    } else if (normalizedMessage.includes("category") || normalizedMessage.includes("kategori")) {
+      // Backend's category-mismatch message is Indonesian ("Kategori tidak sesuai...").
       status = "WRONG_CATEGORY";
       fallbackMessage = "Tiket ini tidak sesuai dengan kategori yang dipilih.";
     }
