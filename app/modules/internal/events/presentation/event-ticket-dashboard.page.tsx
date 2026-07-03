@@ -9,6 +9,7 @@ import {
 } from "~/core/api/services/internal-event.api";
 import { formatIDR } from "~/core/utils";
 import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
+import { GenerateWristbandModal } from "./generate-wristband-modal";
 
 const statusOptions = [
   { value: "all", label: "Semua Status" },
@@ -39,6 +40,7 @@ export default function EventTicketDashboardPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [liveData, setLiveData] = useState<EventTicketDashboard | null>(null);
   const [issuedTicketOffset, setIssuedTicketOffset] = useState(0);
+  const [isWristbandModalOpen, setIsWristbandModalOpen] = useState(false);
 
   const { data: fetchedData, loading, error, refetch } = useApiQuery(
     async () => {
@@ -171,8 +173,20 @@ export default function EventTicketDashboardPage() {
           <Button type="button" variant="secondary" onClick={() => navigate(`${basePath}/events/${eventId}/complimentary/new`)}>
             Tiket Complimentary
           </Button>
+          <Button type="button" variant="secondary" onClick={() => setIsWristbandModalOpen(true)}>
+            Generate Gelang
+          </Button>
         </div>
       </div>
+
+      {isWristbandModalOpen && eventId && (
+        <GenerateWristbandModal
+          eventId={eventId}
+          eventName={data.event.name}
+          categories={data.categories}
+          onClose={() => setIsWristbandModalOpen(false)}
+        />
+      )}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <SummaryCard label="Kuota" value={totalTicket} />

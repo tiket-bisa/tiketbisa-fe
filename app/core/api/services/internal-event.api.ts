@@ -297,6 +297,27 @@ function formatTime(value?: string | null): string | undefined {
   return `${hours}:${minutes} WIB`;
 }
 
+export type WristbandStatusFilter = "ISSUED" | "CHECKED_IN" | "ALL_TICKET";
+
+export interface WristbandCategoryInput {
+  categoryId: string;
+  color: string;
+  categoryNameOverride?: string;
+  gate?: string;
+}
+
+export interface WristbandGenerateRequest {
+  statusFilter: WristbandStatusFilter;
+  recipientEmail: string;
+  bannerBase64: string;
+  categories: WristbandCategoryInput[];
+}
+
+export interface WristbandGenerateResponse {
+  accepted?: boolean;
+  message?: string;
+}
+
 export const internalEventApi = {
   getList: (params?: InternalEventListParams) =>
     internalHttpClient.get<InternalEventListResponse>(`/event${buildQuery(params)}`),
@@ -348,6 +369,9 @@ export const internalEventApi = {
 
   deleteImage: (eventId: string, imageId: string) =>
     internalHttpClient.delete<null>(`/event/${eventId}/images/${imageId}`),
+
+  generateWristbands: (eventId: string, data: WristbandGenerateRequest) =>
+    internalHttpClient.post<WristbandGenerateResponse>(`/event/${eventId}/wristbands`, data),
 
   getTicketDashboard: async (eventId: string, params?: EventTicketDashboardParams) => {
     const response = await internalHttpClient.get<EventTicketDashboardApiData>(
