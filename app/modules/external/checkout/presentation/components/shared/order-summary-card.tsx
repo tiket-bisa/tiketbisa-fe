@@ -60,13 +60,6 @@ export function OrderSummaryCard({ summary, className = "" }: OrderSummaryCardPr
           </div>
         )}
 
-        {summary.transactionFee > 0 && (
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-medium text-text-secondary">Biaya Transaksi</span>
-            <span className="text-sm font-bold text-text-primary">{formatIDR(summary.transactionFee)}</span>
-          </div>
-        )}
-
         {summary.discount > 0 && (
           <div className="flex justify-between items-center">
             <span className="text-sm font-medium text-text-secondary">Diskon</span>
