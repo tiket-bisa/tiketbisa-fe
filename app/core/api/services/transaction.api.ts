@@ -31,6 +31,17 @@ export interface TransactionApiData {
     verifiedBy?: string | null;
 }
 
+export interface IssuedTicketDetail {
+    id: string;
+    ticketCategoryId?: string;
+    ticketTransactionId?: string;
+    codeType?: string;
+    status?: string;
+    ticketEventNumber?: number;
+    holderName?: string | null;
+    holderIdentityNumber?: string | null;
+}
+
 export interface TransactionTicketDetail {
     category: {
         id: string;
@@ -38,7 +49,7 @@ export interface TransactionTicketDetail {
         name: string;
         price: number;
     };
-    issuedTickets: any[];
+    issuedTickets: IssuedTicketDetail[];
     ticketCount: number;
     subtotalPrice: number;
 }
@@ -149,6 +160,37 @@ export const transactionApi = {
             
             const blob = await response.blob();
             
+            return { success: true, data: { fileName, mimeType, blob }, error: null };
+        } catch (e) {
+            return { success: false, data: null, error: e instanceof Error ? e.message : "Download failed" };
+        }
+    },
+
+    /** Download a single issued ticket's PDF as a blob (internal-auth required, needs custom headers) */
+    downloadTicketPdf: async (ticketId: string): Promise<{ success: boolean; data: { fileName: string; mimeType: string; blob: Blob } | null; error: string | null }> => {
+        const stored = localStorage.getItem("tiketbisa_auth");
+        const session = stored ? JSON.parse(stored) : {};
+        const headers: Record<string, string> = {
+            "x-tb-identifier": session.email || "",
+            "x-tb-internal-token": session.internal_token || "",
+        };
+
+        try {
+            const url = toAbsoluteApiUrl(`/internal-tb/transaction/ticket/${ticketId}/download`);
+
+            const response = await fetch(url, { headers });
+
+            if (!response.ok) {
+                return { success: false, data: null, error: `HTTP ${response.status}` };
+            }
+
+            const contentDisposition = response.headers.get("Content-Disposition") || "";
+            const fileNameMatch = contentDisposition.match(/filename="?([^";]+)"?/);
+            const fileName = fileNameMatch ? fileNameMatch[1] : `ticket-${ticketId}.pdf`;
+            const mimeType = response.headers.get("Content-Type") || "application/pdf";
+
+            const blob = await response.blob();
+
             return { success: true, data: { fileName, mimeType, blob }, error: null };
         } catch (e) {
             return { success: false, data: null, error: e instanceof Error ? e.message : "Download failed" };

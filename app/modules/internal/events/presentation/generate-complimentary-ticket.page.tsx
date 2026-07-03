@@ -2,11 +2,15 @@ import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Button, Card, Select } from "~/core/design-system/components";
 import { ticketCategoryApi, mapTicketCategoryToFe } from "~/core/api/services/ticket-category.api";
-import { transactionApi } from "~/core/api/services/transaction.api";
+import { transactionApi, type IssuedTicketDetail } from "~/core/api/services/transaction.api";
 import { internalEventApi, normalizeInternalEvent } from "~/core/api/services/internal-event.api";
 import { useApiQuery } from "~/core/api";
 import { useAuth } from "~/core/auth";
 import { formatIDR } from "~/core/utils";
+
+interface GeneratedTicketRow extends IssuedTicketDetail {
+  categoryName: string;
+}
 
 export default function GenerateComplimentaryTicketPage() {
   const { eventId } = useParams();
@@ -15,6 +19,9 @@ export default function GenerateComplimentaryTicketPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [generatedTickets, setGeneratedTickets] = useState<GeneratedTicketRow[]>([]);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     customerName: "",
     customerEmail: "",
@@ -88,6 +95,8 @@ export default function GenerateComplimentaryTicketPage() {
     setLoading(true);
     setErrorMsg(null);
     setSuccessMsg(null);
+    setGeneratedTickets([]);
+    setDownloadError(null);
 
     try {
       const res = await transactionApi.manualGenerateTickets({
@@ -109,6 +118,20 @@ export default function GenerateComplimentaryTicketPage() {
           customerPhone: "",
           quantity: "1",
         }));
+
+        const transactionId = res.data?.id;
+        if (transactionId) {
+          const detailRes = await transactionApi.getDetail(transactionId);
+          if (detailRes.success && detailRes.data) {
+            const rows: GeneratedTicketRow[] = detailRes.data.ticketDetails.flatMap((detail) =>
+              (detail.issuedTickets ?? []).map((ticket) => ({
+                ...ticket,
+                categoryName: detail.category?.name ?? "-",
+              })),
+            );
+            setGeneratedTickets(rows);
+          }
+        }
       } else {
         setErrorMsg(res.error || "Gagal membuat tiket complimentary.");
       }
@@ -116,6 +139,30 @@ export default function GenerateComplimentaryTicketPage() {
       setErrorMsg("Koneksi bermasalah.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownload = async (ticketId: string) => {
+    setDownloadingId(ticketId);
+    setDownloadError(null);
+    try {
+      const result = await transactionApi.downloadTicketPdf(ticketId);
+      if (!result.success || !result.data) {
+        setDownloadError(result.error || "Gagal mengunduh tiket.");
+        return;
+      }
+      const objectUrl = URL.createObjectURL(result.data.blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = result.data.fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      setDownloadError(err instanceof Error ? err.message : "Gagal mengunduh tiket.");
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -244,6 +291,51 @@ export default function GenerateComplimentaryTicketPage() {
           </div>
         </form>
       </Card>
+
+      {generatedTickets.length > 0 && (
+        <Card padding="lg">
+          <div className="space-y-3">
+            <div>
+              <h2 className="text-text-primary text-lg font-semibold">Tiket yang Berhasil Dibuat</h2>
+              <p className="text-text-tertiary text-sm mt-1">
+                Jika email pengiriman gagal, gunakan tombol unduh di bawah untuk mengambil PDF tiket secara manual.
+              </p>
+            </div>
+
+            {downloadError && (
+              <div className="bg-red-50 text-destructive-text p-3 rounded-md text-sm">
+                {downloadError}
+              </div>
+            )}
+
+            <div className="divide-y divide-border-subtle">
+              {generatedTickets.map((ticket) => (
+                <div
+                  key={ticket.id}
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-3"
+                >
+                  <div>
+                    <p className="text-text-primary text-sm font-medium">{ticket.categoryName}</p>
+                    <p className="text-text-tertiary text-xs">
+                      Ticket ID: {ticket.id}
+                      {ticket.ticketEventNumber != null ? ` · No. ${ticket.ticketEventNumber}` : ""}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    isLoading={downloadingId === ticket.id}
+                    onClick={() => handleDownload(ticket.id)}
+                  >
+                    Download PDF
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
