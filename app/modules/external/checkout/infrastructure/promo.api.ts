@@ -21,10 +21,15 @@ export const promoApi = {
    * uses this for display — the authoritative recalculation happens when
    * the order is stored/executed on the backend.
    */
-  async applyPromo(code: string, eventId: string): Promise<ApplyPromoResult> {
+  async applyPromo(
+    code: string,
+    eventId: string,
+    subtotal: number,
+    serviceFee: number,
+  ): Promise<ApplyPromoResult> {
     const response = await apiFetch<ApiResponse<ApplyPromoResult>>("/promo/apply", {
       method: "POST",
-      body: JSON.stringify({ code, eventId }),
+      body: JSON.stringify({ code, eventId, subtotal, serviceFee }),
     });
 
     if (!response.success || !response.data) {

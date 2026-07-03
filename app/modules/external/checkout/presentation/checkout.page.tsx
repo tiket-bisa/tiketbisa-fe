@@ -55,7 +55,27 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
   const paymentSelectionState = usePaymentSelection();
   const discount = paymentSelectionState.selection.appliedPromo?.discount ?? 0;
   const summary = useOrderSummary(event, searchParams, adminFee, discount);
-  const { buyerInfo, errors, validate, handleInputChange } = useCheckoutForm();
+  const {
+    buyerInfo,
+    errors,
+    validate,
+    handleInputChange,
+    holders,
+    holderErrors,
+    sameAsMain,
+    syncHolderCount,
+    handleHolderChange,
+    handleToggleSameAsMain,
+  } = useCheckoutForm();
+
+  const totalTicketQuantity = useMemo(
+    () => summary.items.reduce((sum, item) => sum + item.quantity, 0),
+    [summary.items],
+  );
+
+  useEffect(() => {
+    syncHolderCount(totalTicketQuantity);
+  }, [totalTicketQuantity, syncHolderCount]);
 
   // Steps orchestration hook (now managing payment state too)
   const {
@@ -77,7 +97,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
     setAgreedToPrivacy,
     applyPromo,
     removePromo
-  } = useCheckoutSteps(event, buyerInfo, summary, validate, paymentMethods, order, paymentSelectionState);
+  } = useCheckoutSteps(event, buyerInfo, summary, validate, paymentMethods, order, paymentSelectionState, holders);
 
   // Add "Biaya Transaksi" once a payment method is chosen (display total).
   const displaySummary = useMemo(
@@ -120,11 +140,22 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
           </div>
 
           {currentStep === 1 && (
-            <OrderDetailsForm 
-              data={buyerInfo} 
+            <OrderDetailsForm
+              data={buyerInfo}
               errors={errors}
-              onChange={handleInputChange} 
+              onChange={handleInputChange}
               className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100"
+              items={summary.items}
+              holders={holders}
+              holderErrors={holderErrors}
+              sameAsMain={sameAsMain}
+              onHolderChange={handleHolderChange}
+              onToggleSameAsMain={handleToggleSameAsMain}
+              ticketCapNotice={
+                totalTicketQuantity > MAX_TICKETS_PER_ORDER
+                  ? `Maksimal ${MAX_TICKETS_PER_ORDER} tiket per transaksi. Kurangi jumlah tiket sebelum melanjutkan.`
+                  : null
+              }
             />
           )}
 
@@ -177,6 +208,8 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
                 <Card className="p-6 bg-white border-gray-100 shadow-sm rounded-3xl">
                   <PromoSection
                     eventId={event.id}
+                    subtotal={summary.subtotal}
+                    serviceFee={summary.serviceFee}
                     appliedPromo={paymentSelection.appliedPromo}
                     onApply={applyPromo}
                     onRemove={removePromo}

@@ -215,26 +215,24 @@ export function useCheckoutSteps(
             return;
           }
 
-          // Reuse existing lock from state/query if present before trying to lock again
-          const activeLockId = lockId || searchParams.get("lockId");
-
-          if (!activeLockId) {
-             setIsActionLoading(true);
-           try {
-               const lock = await orderApi.acquireLock(event.id, summary, holders);
-               setLockId(lock.userId);
-               sessionStorage.setItem(CHECKOUT_DEADLINE_STORAGE_KEY, String(lock.expiresAt));
-               setSearchParams({ ...Object.fromEntries(searchParams), step: "2", lockId: lock.userId });
-             } catch (e: any) {
-               setBlockingError(e?.message || "Maaf, tiket tidak tersedia atau gagal dikunci. Silakan coba lagi.");
-                return;
-             } finally {
-               setIsActionLoading(false);
-             }
-           } else {
-            setLockId(activeLockId);
-            setSearchParams({ ...Object.fromEntries(searchParams), step: "2", lockId: activeLockId });
-           }
+          // Always (re-)acquire the lock here with the buyer's current holder data. The
+          // preliminary "intent" lock made on mount (see acquireInitialLock) has no holders
+          // yet - reusing that lockId as-is would carry an empty holders array all the way to
+          // the final commit and fail validation there. Re-locking (even if a lockId already
+          // exists) guarantees the lock Redis is holding always matches what the buyer just
+          // filled in on this step.
+          setIsActionLoading(true);
+          try {
+            const lock = await orderApi.acquireLock(event.id, summary, holders);
+            setLockId(lock.userId);
+            sessionStorage.setItem(CHECKOUT_DEADLINE_STORAGE_KEY, String(lock.expiresAt));
+            setSearchParams({ ...Object.fromEntries(searchParams), step: "2", lockId: lock.userId });
+          } catch (e: any) {
+            setBlockingError(e?.message || "Maaf, tiket tidak tersedia atau gagal dikunci. Silakan coba lagi.");
+            return;
+          } finally {
+            setIsActionLoading(false);
+          }
         }
         break;
       case 2:

@@ -56,6 +56,8 @@ export function CheckoutSidebar({
         {isStep2 && (
           <PromoSection
             eventId={eventId}
+            subtotal={summary.subtotal}
+            serviceFee={summary.serviceFee}
             appliedPromo={appliedPromo}
             onApply={onApplyPromo}
             onRemove={onRemovePromo}

@@ -7,12 +7,15 @@ import type { AppliedPromo } from "../../../domain/checkout.types";
 
 export interface PromoSectionProps {
   eventId: string;
+  /** Pre-discount base (subtotal + biaya layanan) the discount is computed against. */
+  subtotal: number;
+  serviceFee: number;
   appliedPromo?: AppliedPromo | null;
   onApply: (promo: AppliedPromo) => void;
   onRemove: () => void;
 }
 
-export function PromoSection({ eventId, appliedPromo, onApply, onRemove }: PromoSectionProps) {
+export function PromoSection({ eventId, subtotal, serviceFee, appliedPromo, onApply, onRemove }: PromoSectionProps) {
   const [code, setCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +27,7 @@ export function PromoSection({ eventId, appliedPromo, onApply, onRemove }: Promo
     setIsLoading(true);
     setError(null);
     try {
-      const result = await promoApi.applyPromo(trimmedCode, eventId);
+      const result = await promoApi.applyPromo(trimmedCode, eventId, subtotal, serviceFee);
       onApply({ promoId: result.promoId, code: trimmedCode, discount: result.discount });
       setCode("");
     } catch (err: any) {
