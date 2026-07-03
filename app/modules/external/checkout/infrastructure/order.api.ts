@@ -1,11 +1,13 @@
 import { apiFetch } from "~/core/api";
 import type { ApiResponse } from "~/core/api";
-import type { BuyerInfo, GatewayStatus, OrderResponse, OrderSummary, PaymentMethod } from "../domain/checkout.types";
+import type { BuyerInfo, GatewayStatus, OrderResponse, OrderSummary, PaymentMethod, TicketHolder } from "../domain/checkout.types";
 
 interface TicketRequest {
   categoryId: string;
   quantity: number;
   price?: number;
+  /** One entry per ticket in this category; length must equal `quantity`. */
+  holders?: TicketHolder[];
 }
 
 interface LockTicketRq {
@@ -197,14 +199,29 @@ function mapPaymentMethod(paymentMethodRaw: string | undefined): PaymentMethod {
 export const orderApi = {
   /**
    * Phase 1: Lock tickets (DDD - Acquire Lock)
-   * This should be called early in the checkout process
+   * This should be called early in the checkout process.
+   *
+   * `holders` is the flat, per-ticket list (one entry per ticket across all
+   * categories, in the same order as `summary.items`) collected on the buyer
+   * details step. It's optional because the very first lock (fired on mount,
+   * before the buyer has filled the form) has no holder data yet.
    */
-  async acquireLock(eventId: string, summary: OrderSummary): Promise<LockResponse> {
-    const tickets: TicketRequest[] = summary.items.map((item: any) => ({
-      categoryId: item.ticketId || item.id,
-      quantity: item.quantity,
-      price: item.price
-    }));
+  async acquireLock(eventId: string, summary: OrderSummary, holders?: TicketHolder[]): Promise<LockResponse> {
+    let holderCursor = 0;
+    const tickets: TicketRequest[] = summary.items.map((item: any) => {
+      const quantity = item.quantity;
+      const itemHolders = holders
+        ? holders.slice(holderCursor, holderCursor + quantity)
+        : undefined;
+      holderCursor += quantity;
+
+      return {
+        categoryId: item.ticketId || item.id,
+        quantity,
+        price: item.price,
+        ...(itemHolders && itemHolders.length === quantity ? { holders: itemHolders } : {}),
+      };
+    });
 
     const payload: LockTicketRq = {
       eventId,

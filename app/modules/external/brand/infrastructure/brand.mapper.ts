@@ -51,5 +51,7 @@ export function mapBrandDtoToEntity(dto: BrandDto): Brand {
     socialMedia: [],
     adminFee: Number(dto.adminFee ?? dto.admin_fee ?? 0) || 0,
     sponsorUrl: normalizeImageUrl(dto.sponsorPath ?? dto.sponsor_path) || undefined,
+    homeOnly: Boolean(dto.homeOnly ?? dto.home_only ?? false),
+    homeCity: dto.homeCity ?? dto.home_city ?? null,
   };
 }

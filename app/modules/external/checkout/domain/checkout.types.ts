@@ -6,12 +6,21 @@ export interface BuyerInfo {
   identityNumber: string;
 }
 
+/** Per-ticket holder identity (KTP/NIK only — distinct from the buyer's `BuyerInfo`). */
+export interface TicketHolder {
+  name: string;
+  identityNumber: string;
+}
+
 export interface OrderItem {
   ticketId: string;
   ticketName: string;
   price: number;
   quantity: number;
 }
+
+/** Business rule: an order may contain at most this many tickets total, across all categories. */
+export const MAX_TICKETS_PER_ORDER = 4;
 
 export interface OrderSummary {
   subtotal: number;

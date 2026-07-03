@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { Card } from "~/core/design-system/components";
+import { MAX_TICKETS_PER_ORDER } from "../domain/checkout.types";
 import { 
   OrderDetailsForm, 
   CheckoutSidebar, 
