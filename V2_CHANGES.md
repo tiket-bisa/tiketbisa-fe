@@ -147,3 +147,49 @@ show the "list of ticket holders with masked NIK" the original spec called for �
 never received a `holders` prop and doesn't render one. The buyer's own identity is still shown in
 full on that step, and the backend receives and validates the real per-ticket data correctly, so
 this is a display-only omission, not a data-correctness issue. Worth a follow-up pass.
+
+## Reconciliation with open team PRs (#39, #40)
+
+After the v2 feature work above, the two open frontend PRs targeting `dev` were pulled into `v2`
+and merged, preferring the PR implementation on any overlap (per product direction). These pair
+with the backend's PR #37/#38.
+
+- **PR #39 (scanner-access-pricing)** — adopted the team's checkout pricing refactor
+  (`checkout.pricing.ts` with `buildBaseOrderSummary`/`buildPaymentOrderSummary`,
+  `serviceFeePerTicket` + `transactionFeeDescription`, and the shared
+  `~/shared/constants/transaction` `MAX_TICKETS_PER_TRANSACTION`), and its scanner shell
+  (`ScannerNavbar`, `modules/internal/scanner/` pages, the entry-page scanner login form). My
+  promo discount, per-ticket holders (+ samakan-data), FLIP VA/QRIS wiring, and domicile handling
+  were re-applied on top: `OrderSummary` now carries both `serviceFeePerTicket` (PR) and `discount`
+  (mine); `buildPaymentOrderSummary` computes the transaction fee on the pre-discount base and
+  subtracts the promo discount from the final total. My superseded scanner modules
+  (`scanner-dashboard/`, `scanner-scan/`) and the duplicate scanner route block were removed.
+- **PR #40 (ticket-delivery-actions)** — adopted the team's `TicketDeliveryActions` (per-transaction
+  email + ZIP download) on the event ticket dashboard, alongside my Generate Gelang wristband modal
+  (both render there), plus PR #40's shared `downloadInternalBlob` helper (my `downloadTicketPdf`
+  and the payment-proof download were refactored onto it).
+
+### Bugs found in the incoming PRs while reconciling (fixed in the merge/fix commits)
+- `requestScannerToken` posted to `/internal-tb/token/scanner/login`, but the real backend route
+  (PR #37) is `/internal-tb/token/login`. Corrected, and removed my now-dead `requestScannerLogin`
+  (`/token/scanner-login`).
+- The admin brands access "Coba Lagi" button compared `accessState` to `"loading"` inside the
+  `"unavailable"` branch (impossible narrowing, TS2367) — removed the dead check.
+- PR #39's `use-ticket-selection.test.ts` was missing the `// @vitest-environment jsdom` pragma this
+  repo requires for `renderHook` tests — added it.
+- The auto-merge left **duplicate transaction-fee rows** in `order-summary-card.tsx` (PR #39's
+  "Biaya transaksi (payment gateway)" + my plainer "Biaya Transaksi"), so the fee showed twice —
+  removed the redundant one.
+
+### Verified after merge (live, against the merged backend)
+Checkout pricing shows the PR #39 breakdown ("5.000 x 2 tiket") AND my promo discount together with
+correct math (fee on pre-discount base, discount off the final total); per-ticket holder inputs +
+samakan-data still render and re-lock with holders on step 1; scanner username/password login hits
+`/token/login` and lands on the locked-down scanner beranda. `pnpm build` (client + SSR) passes;
+`pnpm typecheck` shows only the 1 pre-existing `EventSummary.status` error; `pnpm test` 22/22 pass.
+
+### PR strategy
+`v2` now contains the merged work of PRs #37–#40 plus all the Scope v2 features. Opening one PR per
+repo from `v2` → `dev` that **incorporates and supersedes** PRs #37–#40 — those can be closed once
+this merges (or merged first, in which case this PR's diff shrinks to just the net-new v2 work,
+since their commits are already in `v2`'s history).
