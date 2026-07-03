@@ -20,12 +20,12 @@ const vaMethod: PaymentMethod = {
 function buildSummary(overrides: Partial<OrderSummary> = {}): OrderSummary {
   return {
     subtotal: 100000,
-    adminFee: 0,
+    serviceFeePerTicket: 10000,
     serviceFee: 10000,
     transactionFee: 0,
-    tax: 0,
     discount: 0,
     totalPrice: 110000,
+    ticketCount: 1,
     items: [{ ticketId: "tc-001", ticketName: "Regular", quantity: 1, price: 100000 }],
     ...overrides,
   };

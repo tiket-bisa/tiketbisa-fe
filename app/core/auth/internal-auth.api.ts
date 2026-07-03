@@ -7,6 +7,7 @@ export interface InternalTokenResponseData {
   brandSlug?: string | null;
   brandName?: string | null;
   brandId?: string | null;
+  username?: string | null;
 }
 
 interface RawInternalTokenResponseData {
@@ -19,6 +20,7 @@ interface RawInternalTokenResponseData {
   brand_name?: string | null;
   brandId?: string | null;
   brand_id?: string | null;
+  username?: string | null;
 }
 
 function getErrorMessage(error: unknown): string | null {
@@ -55,6 +57,7 @@ function normalizeInternalTokenResponse(
     brandSlug: data.brandSlug ?? data.brand_slug ?? null,
     brandName: data.brandName ?? data.brand_name ?? null,
     brandId: data.brandId ?? data.brand_id ?? null,
+    username: data.username ?? null,
   };
 }
 
@@ -102,6 +105,33 @@ export async function refreshInternalToken(): Promise<InternalTokenResponseData>
   return normalizeInternalTokenResponse(response.data);
 }
 
+export async function requestScannerToken(
+  username: string,
+  password: string,
+): Promise<InternalTokenResponseData> {
+  const response = await apiFetch<ApiResponse<RawInternalTokenResponseData>>(
+    "/internal-tb/token/login",
+    {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    },
+  );
+
+  if (!response.success) {
+    const message = getErrorMessage(response.error);
+    if (response.status_code === 401 || response.status_code === 403) {
+      throw new Error(message ?? "Unauthorized");
+    }
+    throw new Error(message ?? "Failed to request scanner token");
+  }
+
+  if (!response.data) {
+    throw new Error("Unauthorized");
+  }
+
+  return normalizeInternalTokenResponse(response.data);
+}
+
 export async function getMe(): Promise<Omit<InternalTokenResponseData, "idToken">> {
   const response = await internalHttpClient.get<RawInternalTokenResponseData>("/user/me");
 
@@ -123,38 +153,7 @@ export async function getMe(): Promise<Omit<InternalTokenResponseData, "idToken"
     brandSlug: response.data.brandSlug ?? response.data.brand_slug ?? null,
     brandName: response.data.brandName ?? response.data.brand_name ?? null,
     brandId: response.data.brandId ?? response.data.brand_id ?? null,
+    username: response.data.username ?? null,
   };
 }
 
-export interface ScannerLoginCredentials {
-  username: string;
-  password: string;
-}
-
-/**
- * Scanner login — username/password auth for on-the-ground ticket scanners.
- * Public endpoint (no auth headers needed). Returns the same token shape as
- * the Google OAuth flow, treated identically once logged in.
- */
-export async function requestScannerLogin(
-  credentials: ScannerLoginCredentials,
-): Promise<InternalTokenResponseData> {
-  const response = await apiFetch<ApiResponse<RawInternalTokenResponseData>>(
-    "/internal-tb/token/scanner-login",
-    {
-      method: "POST",
-      body: JSON.stringify(credentials),
-    },
-  );
-
-  if (!response.success) {
-    const message = getErrorMessage(response.error);
-    throw new Error(message ?? "Username atau password salah");
-  }
-
-  if (!response.data) {
-    throw new Error("Username atau password salah");
-  }
-
-  return normalizeInternalTokenResponse(response.data);
-}

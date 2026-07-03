@@ -51,7 +51,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (!user?.email || !user.internal_token) {
+    if (!user?.identifier || !user.internal_token) {
       setStatus("idle");
       return;
     }
@@ -68,7 +68,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         reconnectAttemptRef.current = 0;
         send({
           type: "auth",
-          email: user.email,
+          email: user.identifier,
           internalToken: user.internal_token,
         });
       };
@@ -122,7 +122,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       socketRef.current?.close();
       socketRef.current = null;
     };
-  }, [isLoading, send, sendSubscriptions, user?.email, user?.internal_token]);
+  }, [isLoading, send, sendSubscriptions, user?.identifier, user?.internal_token]);
 
   const subscribe = useCallback((scopes: string[], handler: RealtimeMessageHandler) => {
     const normalizedScopes = Array.from(new Set(scopes.map((scope) => scope.trim()).filter(Boolean)));

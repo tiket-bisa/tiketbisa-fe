@@ -20,10 +20,11 @@ import {
    OrderSuccess,
    ManualTransferPending
  } from "./components";
-import { useOrderSummary, withTransactionFee } from "./hooks/use-order-summary";
+import { useOrderSummary } from "./hooks/use-order-summary";
 import { useCheckoutForm } from "./hooks/use-checkout-form";
 import { useCheckoutSteps } from "./hooks/use-checkout-steps";
 import { usePaymentSelection } from "./hooks/use-payment-selection";
+import { buildPaymentOrderSummary } from "../domain/checkout.pricing";
 import { eventApi } from "../../event/infrastructure/event.api";
 import { brandApi } from "../../brand/infrastructure/brand.api";
 import { paymentApi } from "../infrastructure/payment.api";
@@ -48,13 +49,13 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 }
 
 export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
-  const { event, paymentMethods, order, adminFee } = loaderData;
+  const { event, paymentMethods, order } = loaderData;
   const [searchParams] = useSearchParams();
 
   // Application/Domain hooks
   const paymentSelectionState = usePaymentSelection();
   const discount = paymentSelectionState.selection.appliedPromo?.discount ?? 0;
-  const summary = useOrderSummary(event, searchParams, adminFee, discount);
+  const summary = useOrderSummary(event, searchParams, discount);
   const {
     buyerInfo,
     errors,
@@ -100,10 +101,15 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
   } = useCheckoutSteps(event, buyerInfo, summary, validate, paymentMethods, order, paymentSelectionState, holders);
 
   // Add "Biaya Transaksi" once a payment method is chosen (display total).
-  const displaySummary = useMemo(
-    () => withTransactionFee(summary, selectedPaymentMethod),
-    [summary, selectedPaymentMethod],
+  const paymentSummary = useMemo(
+    () => buildPaymentOrderSummary(summary, selectedPaymentMethod ?? order?.paymentMethod ?? null),
+    [summary, selectedPaymentMethod, order?.paymentMethod],
   );
+  const activeSummary = currentStep >= 2 ? paymentSummary : summary;
+
+  useEffect(() => {
+    sessionStorage.setItem("tiketbisa_checkout_summary", JSON.stringify(activeSummary));
+  }, [activeSummary]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -172,7 +178,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
           {currentStep === 3 && (
             <OrderConfirmation
               buyerInfo={buyerInfo}
-              summary={displaySummary}
+              summary={activeSummary}
               paymentMethod={selectedPaymentMethod}
               onNext={() => handleNext()}
               onBack={handleBack}
@@ -181,13 +187,13 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
           )}
 
           {currentStep === 4 && order && (
-            <PaymentInstruction
+              <PaymentInstruction
               order={order}
               event={event}
               fallbackTotalAmount={
                 completedOrder?.totalPrice && completedOrder.totalPrice > 0
                   ? completedOrder.totalPrice
-                  : displaySummary.totalPrice
+                  : paymentSummary.totalPrice
               }
               onAction={() => handleNext()}
               proofFile={manualTransferProofFile}
@@ -203,7 +209,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
           {/* Mobile Specific Sections */}
           {currentStep < 3 && (
             <div className="lg:hidden space-y-8">
-              <OrderSummaryCard summary={displaySummary} />
+              <OrderSummaryCard summary={activeSummary} />
               {currentStep === 2 && (
                 <Card className="p-6 bg-white border-gray-100 shadow-sm rounded-3xl">
                   <PromoSection
@@ -234,7 +240,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
           <aside className="lg:col-span-4 lg:sticky lg:top-28 hidden lg:block animate-in fade-in slide-in-from-right-8 duration-700 delay-300 overflow-hidden">
             <div className="space-y-6 pb-12">
               <CheckoutSidebar
-                summary={displaySummary}
+                summary={activeSummary}
                 onNext={() => handleNext()}
                 onBack={handleBack}
                 step={currentStep}
@@ -256,7 +262,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
 
       {/* Shared Sticky Bar (Mobile Only) */}
       <CheckoutStickyBar
-        summary={displaySummary}
+        summary={activeSummary}
         currentStep={displayStep}
         onNext={() => handleNext()}
         onBack={handleBack}

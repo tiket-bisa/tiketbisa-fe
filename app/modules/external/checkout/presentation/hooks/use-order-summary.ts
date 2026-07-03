@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { OrderSummary, OrderItem, PaymentMethod } from "../../domain/checkout.types";
 import type { Event } from "../../../event/domain/event.entity";
+import { buildBaseOrderSummary } from "../../domain/checkout.pricing";
 
 const QRIS_FEE_RATE = 0.03;
 const VA_FEE_FLAT = 5000;
@@ -47,13 +48,10 @@ export function withTransactionFee(
 export function useOrderSummary(
   event: Event,
   searchParams: URLSearchParams,
-  adminFeePerTicket = 0,
   discount = 0,
 ) {
   const summary = useMemo<OrderSummary>(() => {
     const items: OrderItem[] = [];
-    let subtotal = 0;
-    let totalQuantity = 0;
 
     for (const [key, value] of searchParams.entries()) {
       const match = key.match(/^t\[(.+)\]$/);
@@ -69,32 +67,13 @@ export function useOrderSummary(
             price: ticket.price,
             quantity: quantity,
           });
-          subtotal += ticket.price * quantity;
-          totalQuantity += quantity;
         }
       }
     }
 
-    // Biaya Layanan = brand.admin_fee x jumlah tiket.
-    const perTicketFee = Math.max(0, Math.round(adminFeePerTicket));
-    const serviceFee = perTicketFee * totalQuantity;
-    const appliedDiscount = Math.max(0, Math.round(discount || 0));
-
-    return {
-      subtotal,
-      adminFee: 0,
-      serviceFee,
-      transactionFee: 0,
-      tax: 0,
-      discount: appliedDiscount,
-      totalPrice: subtotal + serviceFee - appliedDiscount,
-      items,
-    };
-  }, [event.tickets, searchParams, adminFeePerTicket, discount]);
-
-  if (typeof window !== "undefined") {
-    sessionStorage.setItem("tiketbisa_checkout_summary", JSON.stringify(summary));
-  }
+    // Biaya Layanan comes from event.brandAdminFee (per ticket); promo discount reduces total.
+    return buildBaseOrderSummary(event, items, discount);
+  }, [event, searchParams, discount]);
 
   return summary;
 }

@@ -1,13 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import type { EventTicket } from "~/modules/external/event/domain/event.entity";
-import { MAX_TICKETS_PER_ORDER } from "~/modules/external/checkout/domain/checkout.types";
-
-function totalItemsExcluding(quantities: Record<string, number>, excludeId: string): number {
-  return Object.entries(quantities).reduce(
-    (sum, [id, qty]) => (id === excludeId ? sum : sum + qty),
-    0,
-  );
-}
+import { MAX_TICKETS_PER_TRANSACTION } from "../constants/transaction";
 
 export function useTicketSelection(tickets: EventTicket[] = []) {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -21,16 +14,13 @@ export function useTicketSelection(tickets: EventTicket[] = []) {
     const ticket = ticketMap.get(id);
     if (!ticket || !ticket.available) return;
 
-    // Max quantity validation per user/order
-    const max = ticket.maxPerOrder ?? 10;
-    const requestedQty = Math.max(0, Math.min(qty, max));
-
-    // Defensive UX cap: total tickets across all categories may not exceed
-    // MAX_TICKETS_PER_ORDER (backend is authoritative; this just avoids a round-trip).
     setQuantities(prev => {
-      const otherCategoriesTotal = totalItemsExcluding(prev, id);
-      const remainingRoom = Math.max(0, MAX_TICKETS_PER_ORDER - otherCategoriesTotal);
-      const safeQty = Math.min(requestedQty, remainingRoom);
+      const currentQty = prev[id] ?? 0;
+      const totalSelected = Object.values(prev).reduce((sum, value) => sum + value, 0);
+      const remainingSlots = MAX_TICKETS_PER_TRANSACTION - (totalSelected - currentQty);
+      const perTicketMax = ticket.maxPerOrder ?? MAX_TICKETS_PER_TRANSACTION;
+      const maxAllowed = Math.max(0, Math.min(perTicketMax, remainingSlots));
+      const safeQty = Math.max(0, Math.min(qty, maxAllowed));
 
       if (safeQty === 0) {
         const { [id]: _, ...rest } = prev;
@@ -58,7 +48,7 @@ export function useTicketSelection(tickets: EventTicket[] = []) {
     [selectedTickets]
   );
 
-  const isAtMaxTickets = totalItems >= MAX_TICKETS_PER_ORDER;
+  const isAtMaxTickets = totalItems >= MAX_TICKETS_PER_TRANSACTION;
 
   return {
     quantities,
@@ -67,6 +57,6 @@ export function useTicketSelection(tickets: EventTicket[] = []) {
     totalItems,
     selectedTickets,
     isAtMaxTickets,
-    maxTicketsPerOrder: MAX_TICKETS_PER_ORDER,
+    maxTicketsPerTransaction: MAX_TICKETS_PER_TRANSACTION,
   };
 }

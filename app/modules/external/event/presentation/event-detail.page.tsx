@@ -1,5 +1,6 @@
 import { useSearchParams } from "react-router";
 import { StickyPriceBar } from "~/shared/components";
+import { MAX_TICKETS_PER_TRANSACTION } from "~/shared/constants/transaction";
 import { useTicketSelection } from "~/shared/hooks/use-ticket-selection";
 import { eventApi } from "../infrastructure/event.api";
 
@@ -36,7 +37,7 @@ export default function EventDetailPage({ loaderData }: Route.ComponentProps) {
   
   // Logic & State Hooks
   const activeTab = searchParams.get("tab") || "deskripsi";
-  const { quantities, updateQuantity, totalPrice } = useTicketSelection(event.tickets);
+  const { quantities, updateQuantity, totalPrice, totalItems } = useTicketSelection(event.tickets);
 
   const handleTabChange = (val: string) => {
     setSearchParams(prev => {
@@ -46,6 +47,11 @@ export default function EventDetailPage({ loaderData }: Route.ComponentProps) {
   };
 
   const handleCheckout = () => {
+    if (totalItems > MAX_TICKETS_PER_TRANSACTION) {
+      alert(`Maksimum ${MAX_TICKETS_PER_TRANSACTION} tiket per transaksi.`);
+      return;
+    }
+
     sessionStorage.removeItem("tiketbisa_checkout_deadline");
     sessionStorage.removeItem("tiketbisa_buyer_info");
     sessionStorage.removeItem("tiketbisa_payment_selection");
@@ -78,6 +84,7 @@ export default function EventDetailPage({ loaderData }: Route.ComponentProps) {
           <EventDetailSidebar 
             event={event} 
             totalPrice={totalPrice}
+            totalItems={totalItems}
             onCheckout={handleCheckout}
           />
         </div>

@@ -5,6 +5,7 @@ import { AUTH_STORAGE_KEY } from "./auth.constants";
 import { internalHttpClient } from "~/core/api";
 
 export interface BaseAuthUser {
+  identifier: string;
   email: string;
   name: string;
   picture?: string;
@@ -14,6 +15,7 @@ export interface BaseAuthUser {
 
 export interface AdminUser extends BaseAuthUser {
   role: "admin";
+  username?: undefined;
   brand_slug?: undefined;
   brand_name?: undefined;
   brand_id?: undefined;
@@ -21,6 +23,7 @@ export interface AdminUser extends BaseAuthUser {
 
 export interface PartnerUser extends BaseAuthUser {
   role: "partner";
+  username?: undefined;
   brand_id: string;
   brand_slug: string;
   brand_name: string;
@@ -28,9 +31,10 @@ export interface PartnerUser extends BaseAuthUser {
 
 export interface ScannerUser extends BaseAuthUser {
   role: "scanner";
-  brand_id?: string;
-  brand_slug?: string;
-  brand_name?: string;
+  username: string;
+  brand_id: string;
+  brand_slug: string;
+  brand_name: string;
 }
 
 export type AuthUser = AdminUser | PartnerUser | ScannerUser;
@@ -40,7 +44,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
   loginWithOAuth: (payload: InternalTokenResponseData) => void;
-  loginScanner: (payload: InternalTokenResponseData, username: string) => void;
+  loginWithScanner: (payload: InternalTokenResponseData) => void;
   logout: () => void;
 }
 
@@ -70,6 +74,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const buildUserFromPayload = useCallback(
+    (payload: InternalTokenResponseData, profile?: GoogleIdTokenPayload): AuthUser => {
+      const email = profile?.email ?? "";
+      const name = profile?.name ?? email ?? payload.username ?? payload.brandName ?? "Tiketbisa User";
+
+      if (payload.role === "admin") {
+        if (!email) {
+          throw new Error("ID token does not contain email");
+        }
+        return {
+          identifier: email,
+          email,
+          name,
+          picture: profile?.picture,
+          role: "admin",
+          internal_token: payload.idToken,
+        };
+      }
+
+      if (!payload.brandSlug || !payload.brandName || !payload.brandId) {
+        throw new Error("Account is missing brand details");
+      }
+
+      if (payload.role === "scanner") {
+        if (!payload.username) {
+          throw new Error("Scanner account is missing username");
+        }
+
+        return {
+          identifier: payload.username,
+          username: payload.username,
+          email: payload.username,
+          name: payload.brandName,
+          role: "scanner",
+          brand_id: payload.brandId,
+          brand_slug: payload.brandSlug,
+          brand_name: payload.brandName,
+          internal_token: payload.idToken,
+        };
+      }
+
+      if (!email) {
+        throw new Error("ID token does not contain email");
+      }
+
+      return {
+        identifier: email,
+        email,
+        name: payload.brandName || name,
+        picture: profile?.picture,
+        role: "partner",
+        brand_id: payload.brandId,
+        brand_slug: payload.brandSlug,
+        brand_name: payload.brandName,
+        internal_token: payload.idToken,
+      };
+    },
+    [],
+  );
+
   // Restore session on mount
   useEffect(() => {
     let isActive = true;
@@ -93,60 +157,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           };
 
-          const buildRefreshedUser = (
-            currentUser: AuthUser,
-            refreshed: InternalTokenResponseData,
-          ): AuthUser => {
-            const baseUser = {
-              email: currentUser.email,
-              name: currentUser.name,
-              picture: currentUser.picture,
-              internal_token: refreshed.idToken,
-            };
-
-            if (refreshed.role === "admin") {
-              return { ...baseUser, role: "admin" };
-            }
-
-            if (refreshed.role === "scanner") {
-              return {
-                ...baseUser,
-                role: "scanner",
-                brand_id: refreshed.brandId ?? currentUser.brand_id ?? undefined,
-                brand_slug: refreshed.brandSlug ?? currentUser.brand_slug ?? undefined,
-                brand_name: refreshed.brandName ?? currentUser.brand_name ?? undefined,
-              };
-            }
-
-            const brandId = refreshed.brandId ?? currentUser.brand_id ?? "";
-            const brandSlug = refreshed.brandSlug ?? currentUser.brand_slug ?? "";
-            const brandName = refreshed.brandName ?? currentUser.brand_name ?? currentUser.name;
-
-            if (!brandId || !brandSlug || !brandName) {
-              throw new Error("Partner account is missing brand details");
-            }
-
-            return {
-              ...baseUser,
-              role: "partner",
-              brand_id: brandId,
-              brand_slug: brandSlug,
-              brand_name: brandName,
-            };
-          };
-
           const refreshSession = async () => {
             const refreshed = await refreshInternalToken();
             if (!isActive) {
               return;
             }
 
-            const refreshedUser = buildRefreshedUser(parsed, refreshed);
+            const refreshedUser = buildUserFromPayload(
+              {
+                ...refreshed,
+                brandId: refreshed.brandId ?? parsed.brand_id ?? null,
+                brandSlug: refreshed.brandSlug ?? parsed.brand_slug ?? null,
+                brandName: refreshed.brandName ?? parsed.brand_name ?? parsed.name ?? null,
+                username: refreshed.username ?? parsed.username ?? null,
+              },
+              parsed.role === "scanner"
+                ? undefined
+                : {
+                    email: parsed.email,
+                    name: parsed.name,
+                    picture: parsed.picture,
+                  },
+            );
             applySession(refreshedUser);
           };
 
           // Invalidate legacy sessions that are missing the internal_token
-          if (!parsed.internal_token || (parsed.role === "partner" && !parsed.brand_id)) {
+          if (!parsed.internal_token || ((parsed.role === "partner" || parsed.role === "scanner") && !parsed.brand_id)) {
             try {
               await refreshSession();
             } catch {
@@ -188,71 +225,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [buildUserFromPayload]);
 
   const loginWithOAuth = useCallback((payload: InternalTokenResponseData) => {
     const profile = decodeJwtPayload(payload.idToken);
-    const email = profile.email ?? "";
-    const name = profile.name ?? email ?? "Tiketbisa User";
+    const nextUser = buildUserFromPayload(payload, profile);
+    setUser(nextUser);
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(nextUser));
+  }, [buildUserFromPayload]);
 
-    if (!email) {
-      throw new Error("ID token does not contain email");
-    }
-
-    if (payload.role === "admin") {
-      const adminUser: AuthUser = {
-        email,
-        name,
-        picture: profile.picture,
-        role: "admin",
-        internal_token: payload.idToken,
-      };
-      setUser(adminUser);
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(adminUser));
-      return;
-    }
-
-    if (!payload.brandSlug || !payload.brandName) {
-      throw new Error("Partner account is missing brand details");
-    }
-
-    const partnerUser: AuthUser = {
-      email,
-      name: payload.brandName || name,
-      picture: profile.picture,
-      role: "partner",
-      brand_id: payload.brandId || "",
-      brand_slug: payload.brandSlug,
-      brand_name: payload.brandName,
-      internal_token: payload.idToken,
-    };
-
-    if (!partnerUser.brand_id) {
-      throw new Error("Partner account is missing brand id");
-    }
-
-    setUser(partnerUser);
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(partnerUser));
-  }, []);
-
-  const loginScanner = useCallback((payload: InternalTokenResponseData, username: string) => {
-    if (payload.role !== "scanner") {
-      throw new Error("Unexpected role in scanner login response");
-    }
-
-    const scannerUser: AuthUser = {
-      email: username,
-      name: payload.brandName || username,
-      role: "scanner",
-      internal_token: payload.idToken,
-      brand_id: payload.brandId ?? undefined,
-      brand_slug: payload.brandSlug ?? undefined,
-      brand_name: payload.brandName ?? undefined,
-    };
-
-    setUser(scannerUser);
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(scannerUser));
-  }, []);
+  const loginWithScanner = useCallback((payload: InternalTokenResponseData) => {
+    const nextUser = buildUserFromPayload(payload);
+    setUser(nextUser);
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(nextUser));
+  }, [buildUserFromPayload]);
 
   const logout = useCallback(() => {
     setUser(null);
@@ -260,7 +246,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, loginWithOAuth, loginScanner, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, loginWithOAuth, loginWithScanner, logout }}>
       {children}
     </AuthContext.Provider>
   );

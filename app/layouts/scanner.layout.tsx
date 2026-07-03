@@ -2,15 +2,8 @@ import { Outlet, useNavigate } from "react-router";
 import { AuthProvider, useAuth } from "~/core/auth/auth.context";
 import { AuthGuard } from "~/core/auth/auth-guard";
 import { RealtimeProvider } from "~/core/realtime";
-import { NavbarAdmin } from "~/shared/components";
 import { RouteProgress } from "~/shared/components/route-progress";
-
-/**
- * Scanner Layout — locked-down shell for the "scanner" role (/internal-tb/scanner)
- *
- * Structure: AuthProvider → AuthGuard(requiredRole="scanner") → Header (stripped nav) → <Outlet /> → Footer
- * No Brand/Event/Analitik nav links — scanners only see a "Scan Tiket" action.
- */
+import { ScannerNavbar } from "~/shared/components/scanner-navbar/scanner-navbar";
 
 function ScannerShell() {
   const { user, logout } = useAuth();
@@ -28,9 +21,9 @@ function ScannerShell() {
   return (
     <div className="flex min-h-screen flex-col bg-surface-primary text-text-primary" data-theme="light">
       <RouteProgress />
-      <NavbarAdmin
-        variant="scanner"
-        userEmail={user?.email}
+      <ScannerNavbar
+        identifier={user?.identifier}
+        brandName={user?.brand_name}
         onLogout={handleLogout}
         onScanTicket={handleScanTicket}
       />

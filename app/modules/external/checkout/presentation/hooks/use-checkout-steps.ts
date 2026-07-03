@@ -4,6 +4,8 @@ import { orderApi } from "../../infrastructure/order.api";
 import type { CompleteOrderResponse } from "../../infrastructure/order.api";
 import { useOrderConfirmation } from "./use-order-confirmation";
 import type { usePaymentSelection } from "./use-payment-selection";
+import { buildPaymentOrderSummary } from "../../domain/checkout.pricing";
+import { MAX_TICKETS_PER_TRANSACTION } from "~/shared/constants/transaction";
 
 import type { BuyerInfo, OrderSummary, PaymentMethod, OrderResponse, TicketHolder } from "../../domain/checkout.types";
 import type { EventSummary } from "~/core/types";
@@ -21,7 +23,7 @@ const CHECKOUT_STORAGE_KEYS = [
 export function useCheckoutSteps(
   event: EventSummary,
   buyerInfo: BuyerInfo,
-  summary: OrderSummary,
+  baseSummary: OrderSummary,
   validateForm: () => boolean,
   paymentMethods: PaymentMethod[],
   existingOrder: OrderResponse | null | undefined,
@@ -57,10 +59,16 @@ export function useCheckoutSteps(
     [paymentMethods, selection.methodId]
   );
 
+  const paymentSummary = useMemo(
+    () => buildPaymentOrderSummary(baseSummary, selectedPaymentMethod ?? existingOrder?.paymentMethod ?? null),
+    [baseSummary, existingOrder?.paymentMethod, selectedPaymentMethod],
+  );
+
   const activePaymentMethod = selectedPaymentMethod ?? existingOrder?.paymentMethod ?? null;
   const isManualTransferPayment = activePaymentMethod?.id === "manual" || activePaymentMethod?.id === "manual_transfer";
 
   const isStep2Valid = !!(selection.methodId && selection.agreedToTerms && selection.agreedToPrivacy);
+  const exceedsTicketLimit = baseSummary.ticketCount > MAX_TICKETS_PER_TRANSACTION;
 
   const handlePaymentMethodSelect = useCallback((methodId: string) => {
     setMethodId(methodId);
@@ -69,6 +77,12 @@ export function useCheckoutSteps(
   const clearCheckoutStorage = useCallback(() => {
     CHECKOUT_STORAGE_KEYS.forEach((key) => sessionStorage.removeItem(key));
   }, []);
+
+  const redirectForTicketLimit = useCallback(() => {
+    clearCheckoutStorage();
+    alert(`Maksimum ${MAX_TICKETS_PER_TRANSACTION} tiket per transaksi.`);
+    navigate(`/event/${params.eventId ?? event.id}`);
+  }, [clearCheckoutStorage, event.id, navigate, params.eventId]);
 
   const expireCheckoutSession = useCallback((showMessage = true) => {
     clearCheckoutStorage();
@@ -95,7 +109,7 @@ export function useCheckoutSteps(
   ), [lockId, searchParams]);
 
   const getCheckoutLockRemainingSeconds = useCallback(async (activeLockId: string) => {
-    const categoryIds = summary.items
+    const categoryIds = baseSummary.items
       .map((item: any) => String(item.ticketId || item.id || ""))
       .filter(Boolean);
 
@@ -110,7 +124,7 @@ export function useCheckoutSteps(
     );
 
     return Math.min(...ttls);
-  }, [event.id, summary.items]);
+  }, [event.id, baseSummary.items]);
 
   const ensureCheckoutSessionActive = useCallback(async () => {
     const activeLockId = getActiveLockId();
@@ -147,10 +161,14 @@ export function useCheckoutSteps(
    */
   const acquireInitialLock = useCallback(async () => {
     if (lockId || currentStep > 1) return;
+    if (exceedsTicketLimit) {
+      redirectForTicketLimit();
+      return;
+    }
     
     setIsActionLoading(true);
     try {
-      const lock = await orderApi.acquireLock(event.id, summary);
+      const lock = await orderApi.acquireLock(event.id, baseSummary);
       setLockId(lock.userId);
       setSearchParams(prev => {
         const newParams = new URLSearchParams(prev);
@@ -165,7 +183,7 @@ export function useCheckoutSteps(
     } finally {
       setIsActionLoading(false);
     }
-  }, [lockId, currentStep, event.id, summary, setSearchParams]);
+  }, [lockId, currentStep, event.id, baseSummary, setSearchParams, exceedsTicketLimit, redirectForTicketLimit]);
 
   // Trigger lock on mount if on step 1
   useEffect(() => {
@@ -175,10 +193,16 @@ export function useCheckoutSteps(
   }, [currentStep, acquireInitialLock]);
 
   useEffect(() => {
-    if (summary.items.length === 0 && currentStep <= 3) {
+    if (baseSummary.items.length === 0 && currentStep <= 3) {
       sessionStorage.removeItem(CHECKOUT_DEADLINE_STORAGE_KEY);
     }
-  }, [summary.items.length, currentStep]);
+  }, [baseSummary.items.length, currentStep]);
+
+  useEffect(() => {
+    if (currentStep >= 2 && currentStep <= 4 && exceedsTicketLimit) {
+      redirectForTicketLimit();
+    }
+  }, [currentStep, exceedsTicketLimit, redirectForTicketLimit]);
 
   useEffect(() => {
     let cancelled = false;
@@ -209,9 +233,13 @@ export function useCheckoutSteps(
       case 1:
         setBlockingError(null);
         if (validateForm()) {
-          if (summary.items.length === 0) {
+          if (baseSummary.items.length === 0) {
             alert("Pilih tiket dulu sebelum lanjut ke pembayaran.");
             navigate(`/event/${event.id}`);
+            return;
+          }
+          if (exceedsTicketLimit) {
+            redirectForTicketLimit();
             return;
           }
 
@@ -223,7 +251,7 @@ export function useCheckoutSteps(
           // filled in on this step.
           setIsActionLoading(true);
           try {
-            const lock = await orderApi.acquireLock(event.id, summary, holders);
+            const lock = await orderApi.acquireLock(event.id, baseSummary, holders);
             setLockId(lock.userId);
             sessionStorage.setItem(CHECKOUT_DEADLINE_STORAGE_KEY, String(lock.expiresAt));
             setSearchParams({ ...Object.fromEntries(searchParams), step: "2", lockId: lock.userId });
@@ -256,7 +284,7 @@ export function useCheckoutSteps(
               lockId: activeLockId,
               eventId: event.id,
               buyerInfo,
-              summary,
+              summary: paymentSummary,
               paymentMethod: selectedPaymentMethod,
               promoCode: selection.appliedPromo?.code,
             });
@@ -295,7 +323,7 @@ export function useCheckoutSteps(
             } else {
               const result = await orderApi.executeOrder(
                 activeLockId,
-                summary.totalPrice,
+                paymentSummary.totalPrice,
               );
               setCompletedOrder(result);
               setIsManualTransferPending(false);
@@ -335,7 +363,7 @@ export function useCheckoutSteps(
         navigate("/event");
         break;
     }
-  }, [currentStep, event.id, buyerInfo, summary, validateForm, searchParams, setSearchParams, confirmOrder, navigate, selectedPaymentMethod, isStep2Valid, lockId, isManualTransferPayment, manualTransferProofFile, ensureCheckoutSessionActive, clearCheckoutStorage, params.eventId, getActiveLockId]);
+  }, [currentStep, event.id, buyerInfo, baseSummary, paymentSummary, validateForm, searchParams, setSearchParams, confirmOrder, navigate, selectedPaymentMethod, isStep2Valid, lockId, isManualTransferPayment, manualTransferProofFile, ensureCheckoutSessionActive, clearCheckoutStorage, params.eventId, getActiveLockId, exceedsTicketLimit, redirectForTicketLimit]);
 
   const handleBack = useCallback(() => {
     if (currentStep === 1) {
@@ -367,7 +395,7 @@ export function useCheckoutSteps(
 
     setIsActionLoading(true);
     try {
-      const result = await orderApi.executeOrder(activeLockId, summary.totalPrice);
+      const result = await orderApi.executeOrder(activeLockId, paymentSummary.totalPrice);
       setCompletedOrder(result);
       setIsManualTransferPending(false);
 
@@ -385,7 +413,7 @@ export function useCheckoutSteps(
     } finally {
       setIsActionLoading(false);
     }
-  }, [currentStep, isManualTransferPayment, lockId, searchParams, summary.totalPrice, setSearchParams]);
+  }, [currentStep, isManualTransferPayment, lockId, searchParams, paymentSummary.totalPrice, setSearchParams]);
 
   return {
     currentStep,

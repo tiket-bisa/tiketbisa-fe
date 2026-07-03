@@ -24,15 +24,17 @@ export const MAX_TICKETS_PER_ORDER = 4;
 
 export interface OrderSummary {
   subtotal: number;
-  adminFee: number;
-  /** "Biaya Layanan" = brand.admin_fee x jumlah tiket. */
+  /** "Biaya Layanan" per ticket = brand.admin_fee. */
+  serviceFeePerTicket: number;
+  /** "Biaya Layanan" total = serviceFeePerTicket x jumlah tiket. */
   serviceFee: number;
   /** "Biaya Transaksi" (payment gateway): QRIS 3% / VA Rp5.000. */
   transactionFee: number;
-  tax: number;
+  transactionFeeDescription?: string;
   /** Promo discount applied client-side for display only; backend recomputes authoritatively. */
   discount: number;
   totalPrice: number;
+  ticketCount: number;
   items: OrderItem[];
 }
 
