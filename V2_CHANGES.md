@@ -1,6 +1,6 @@
 # V2 Scope — Frontend Changes
 
-Committed to `v2` as 9 feature commits (+1 bugfix) on top of `37f51a6` (brand admin_fee/category/
+Committed to `v2` as 10 feature commits (+2 bugfixes) on top of `37f51a6` (brand admin_fee/category/
 sponsor + checkout biaya layanan/transaksi, the last item from the prior v2 session). Nothing has
 been pushed.
 
@@ -14,6 +14,7 @@ cc93088 feat: per-ticket holder name/NIK inputs with samakan-data toggle and dom
 f73efb3 feat: add wristband generator modal to event ticket dashboard
 a3cf81c feat: add full brand detail tab with edit for internal partner accounts
 b571c77 feat: add ticket PDF download option to manual generation flow
+0a7b3ea fix: wire per-ticket holder inputs and promo discount that were built but never connected
 ```
 
 ## What changed
@@ -106,3 +107,43 @@ a pre-existing Playwright/Vitest config clash, unrelated to this work and presen
 - FLIP integration was built and wired against a **mock gateway fallback** (no real sandbox
   credentials this session) — see the backend's `V2_CHANGES.md` for the exact env vars needed
   before this can be smoke-tested against real FLIP sandbox payments.
+
+## Found and fixed during local functional testing
+
+Ran `pnpm dev` against the live local backend and clicked through the actual checkout flow, brand
+tab, and scanner login in a browser (not just typecheck/unit tests). Found and fixed three real
+integration bugs (commit `0a7b3ea`) that unit tests couldn't have caught, because each component
+worked correctly in isolation — they just weren't wired to each other:
+
+1. **The entire per-ticket holder section never rendered.** `<OrderDetailsForm>` in
+   `checkout.page.tsx` was called without `items`/`holders`/`onHolderChange`/etc., so its
+   conditional render guard (`items.length > 0 && onHolderChange && ...`) was always false. The
+   component, the validation, the "samakan data" hook logic — all built correctly, just never
+   connected to the page. Every real checkout would have failed at the final commit step with a
+   backend validation error the buyer had no way to resolve, since they were never shown the
+   inputs. Wired `useCheckoutForm()`'s holder state/handlers into `OrderDetailsForm` and threaded
+   `holders` into `useCheckoutSteps`.
+2. **The promo discount always computed as Rp 0.** `promoApi.applyPromo(code, eventId)` never sent
+   `subtotal`/`serviceFee`, and the backend defaults those to zero when absent — so `/promo/apply`
+   always returned `success: true` with `discount: 0`. The UI showed a convincing "Kode promo
+   berhasil diterapkan: -Rp 0" with no error, which would have looked like a working feature in a
+   quick glance. Fixed by passing the actual `OrderSummary.subtotal`/`serviceFee` in the request.
+3. **The re-lock-with-holders on leaving step 1 was skipped whenever a lock already existed.**
+   The checkout already acquires a preliminary "intent" lock on mount (before the buyer has
+   entered anything) to reserve inventory quickly. `handleNext`'s step-1 handler treated any
+   existing `lockId` as "already locked, nothing to do" and skipped re-acquiring the lock with the
+   buyer's actual holder data — so the final purchase commit always saw an empty holders array
+   regardless of what the buyer typed. Now always re-locks (which the backend already supports
+   idempotently) when advancing from step 1.
+
+**Verified working end-to-end in a real browser** against the live local backend: full QRIS
+checkout including per-ticket holder inputs, "samakan data" toggle, promo code with correct
+discount math, QRIS mock QR rendering, order execution, webhook-driven completion, and ticket
+email delivery (checked via Mailhog); scanner username/password login landing on the correct
+locked-down shell with no nav links; scanner blocked from navigating directly to an admin route.
+
+**Known gap, not fixed (documented, not blocking)**: the step-3 order confirmation page doesn't
+show the "list of ticket holders with masked NIK" the original spec called for — `OrderConfirmation`
+never received a `holders` prop and doesn't render one. The buyer's own identity is still shown in
+full on that step, and the backend receives and validates the real per-ticket data correctly, so
+this is a display-only omission, not a data-correctness issue. Worth a follow-up pass.
