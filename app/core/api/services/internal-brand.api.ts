@@ -11,6 +11,8 @@ export interface InternalBrandApiData {
   category?: string | null;
   subCategory?: string | null;
   sponsorPath?: string | null;
+  homeOnly?: boolean | null;
+  homeCity?: string | null;
   created?: string | null;
   createBy?: string | null;
   lastUpdated?: string | null;
@@ -61,6 +63,8 @@ function normalizeBrand(api: InternalBrandApiData & Record<string, unknown>): In
     category: (api.category ?? null) as string | null,
     subCategory: (api.subCategory ?? api.sub_category ?? null) as string | null,
     sponsorPath: (api.sponsorPath ?? api.sponsor_path ?? null) as string | null,
+    homeOnly: Boolean(api.homeOnly ?? api.home_only ?? false),
+    homeCity: (api.homeCity ?? api.home_city ?? null) as string | null,
     created: (api.created ?? null) as string | null,
     createBy: (api.createBy ?? api.create_by ?? null) as string | null,
     lastUpdated: (api.lastUpdated ?? api.last_updated ?? null) as string | null,

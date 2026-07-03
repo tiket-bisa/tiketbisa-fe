@@ -35,6 +35,8 @@ export default function AdminBrandsPage() {
     category: "",
     subCategory: "",
     sponsorPath: "",
+    homeOnly: false,
+    homeCity: "",
   });
 
   // Fetch brands from real API
@@ -80,7 +82,7 @@ export default function AdminBrandsPage() {
     setEditingBrand(null);
     setFormError(null);
     setFormSuccess(null);
-    setFormData({ name: "", logoPath: "", bannerPath: "", description: "", adminFee: "", category: "", subCategory: "", sponsorPath: "" });
+    setFormData({ name: "", logoPath: "", bannerPath: "", description: "", adminFee: "", category: "", subCategory: "", sponsorPath: "", homeOnly: false, homeCity: "" });
   };
 
   const startCreate = () => {
@@ -88,7 +90,7 @@ export default function AdminBrandsPage() {
     setEditingBrand(null);
     setFormError(null);
     setFormSuccess(null);
-    setFormData({ name: "", logoPath: "", bannerPath: "", description: "", adminFee: "", category: "", subCategory: "", sponsorPath: "" });
+    setFormData({ name: "", logoPath: "", bannerPath: "", description: "", adminFee: "", category: "", subCategory: "", sponsorPath: "", homeOnly: false, homeCity: "" });
   };
 
   const startEdit = (id: string) => {
@@ -107,13 +109,19 @@ export default function AdminBrandsPage() {
       category: brand.category ?? "",
       subCategory: brand.subCategory ?? "",
       sponsorPath: brand.sponsorPath ?? "",
+      homeOnly: Boolean(brand.homeOnly),
+      homeCity: brand.homeCity ?? "",
     });
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+    if (type === "checkbox") {
+      setFormData((prev) => ({ ...prev, [name]: (e.target as HTMLInputElement).checked }));
+      return;
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -129,6 +137,7 @@ export default function AdminBrandsPage() {
 
     setIsSubmitting(true);
     try {
+      const isFootball = formData.category.trim() === "sepak_bola";
       const payload = {
         name: formData.name.trim(),
         logoPath: formData.logoPath.trim() || null,
@@ -138,6 +147,8 @@ export default function AdminBrandsPage() {
         category: formData.category.trim() || null,
         subCategory: formData.subCategory.trim() || null,
         sponsorPath: formData.sponsorPath.trim() || null,
+        homeOnly: isFootball ? formData.homeOnly : false,
+        homeCity: isFootball && formData.homeOnly ? formData.homeCity.trim() || null : null,
       };
 
       const result = formMode === "edit" && editingBrand
@@ -152,7 +163,7 @@ export default function AdminBrandsPage() {
       setFormSuccess(formMode === "edit" ? "Brand berhasil diperbarui." : "Brand berhasil dibuat.");
       await refetch();
       if (formMode === "create") {
-        setFormData({ name: "", logoPath: "", bannerPath: "", description: "", adminFee: "", category: "", subCategory: "", sponsorPath: "" });
+        setFormData({ name: "", logoPath: "", bannerPath: "", description: "", adminFee: "", category: "", subCategory: "", sponsorPath: "", homeOnly: false, homeCity: "" });
       }
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Koneksi bermasalah.");
@@ -324,6 +335,31 @@ export default function AdminBrandsPage() {
               disabled={isSubmitting}
               hint="Gabungkan semua logo sponsor ke dalam satu gambar."
             />
+
+            {formData.category.trim() === "sepak_bola" && (
+              <div className="space-y-3 rounded-lg border border-border-subtle p-4">
+                <label className="flex items-center gap-2 text-sm font-medium text-text-primary">
+                  <input
+                    type="checkbox"
+                    name="homeOnly"
+                    checked={formData.homeOnly}
+                    onChange={handleChange}
+                    className="h-4 w-4 rounded border-border-default accent-brand-primary"
+                  />
+                  Batasi pembelian untuk KTP berdomisili tertentu (Home Only)
+                </label>
+                {formData.homeOnly && (
+                  <Input
+                    label="Kota Domisili"
+                    name="homeCity"
+                    value={formData.homeCity}
+                    onChange={handleChange}
+                    placeholder="Contoh: Bandung"
+                    hint="Pembeli wajib memiliki KTP berdomisili kota ini."
+                  />
+                )}
+              </div>
+            )}
 
             <div className="flex flex-wrap gap-2 justify-end">
               <Button type="button" variant="ghost" onClick={resetForm}>
