@@ -31,6 +31,17 @@ export interface TransactionApiData {
     verifiedBy?: string | null;
 }
 
+export interface IssuedTicketDetail {
+    id: string;
+    ticketCategoryId?: string;
+    ticketTransactionId?: string;
+    codeType?: string;
+    status?: string;
+    ticketEventNumber?: number;
+    holderName?: string | null;
+    holderIdentityNumber?: string | null;
+}
+
 export interface TransactionTicketDetail {
     category: {
         id: string;
@@ -38,7 +49,7 @@ export interface TransactionTicketDetail {
         name: string;
         price: number;
     };
-    issuedTickets: any[];
+    issuedTickets: IssuedTicketDetail[];
     ticketCount: number;
     subtotalPrice: number;
 }
@@ -182,6 +193,10 @@ export const transactionApi = {
     /** Download all tickets for a transaction as ZIP */
     downloadTickets: (id: string): Promise<BlobDownloadResult> =>
         downloadInternalBlob(`/internal-tb/transaction/detail/${id}/tickets/download`, `tickets-${id}.zip`),
+
+    /** Download a single issued ticket's PDF as a blob (internal-auth required, needs custom headers) */
+    downloadTicketPdf: (ticketId: string): Promise<BlobDownloadResult> =>
+        downloadInternalBlob(`/internal-tb/transaction/ticket/${ticketId}/download`, `ticket-${ticketId}.pdf`),
 
     /** Review manual transfer transaction */
     reviewManualTransfer: (id: string, request: ManualTransferReviewRequest) =>

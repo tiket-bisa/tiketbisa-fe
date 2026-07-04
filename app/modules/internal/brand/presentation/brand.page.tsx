@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Card, Avatar, Button, Input } from "~/core/design-system/components";
+import { Card, Avatar, Button, Input, Select } from "~/core/design-system/components";
 import { useAuth } from "~/core/auth";
 import { useApiQuery } from "~/core/api";
 import {
@@ -19,6 +19,12 @@ export default function BrandPage() {
     logoPath: "",
     bannerPath: "",
     description: "",
+    adminFee: "",
+    category: "",
+    subCategory: "",
+    sponsorPath: "",
+    homeOnly: false,
+    homeCity: "",
   });
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
@@ -43,13 +49,23 @@ export default function BrandPage() {
       logoPath: brandRaw.logoPath ?? "",
       bannerPath: brandRaw.bannerPath ?? "",
       description: brandRaw.description ?? "",
+      adminFee: brandRaw.adminFee != null ? String(brandRaw.adminFee) : "",
+      category: brandRaw.category ?? "",
+      subCategory: brandRaw.subCategory ?? "",
+      sponsorPath: brandRaw.sponsorPath ?? "",
+      homeOnly: Boolean(brandRaw.homeOnly),
+      homeCity: brandRaw.homeCity ?? "",
     });
   }, [brandRaw]);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+    if (type === "checkbox") {
+      setFormData((prev) => ({ ...prev, [name]: (e.target as HTMLInputElement).checked }));
+      return;
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -66,11 +82,18 @@ export default function BrandPage() {
 
     setIsSubmitting(true);
     try {
+      const isFootball = formData.category.trim() === "sepak_bola";
       const payload: Partial<InternalBrandApiData> = {
         name: formData.name.trim(),
         logoPath: formData.logoPath.trim() || null,
         bannerPath: formData.bannerPath.trim() || null,
         description: formData.description.trim() || null,
+        adminFee: formData.adminFee.trim() === "" ? 0 : Number(formData.adminFee) || 0,
+        category: formData.category.trim() || null,
+        subCategory: formData.subCategory.trim() || null,
+        sponsorPath: formData.sponsorPath.trim() || null,
+        homeOnly: isFootball ? formData.homeOnly : false,
+        homeCity: isFootball && formData.homeOnly ? formData.homeCity.trim() || null : null,
       };
 
       const result = await internalBrandApi.update(brandRaw.id, payload);
@@ -121,6 +144,8 @@ export default function BrandPage() {
     );
   }
 
+  const isFootballCategory = formData.category.trim() === "sepak_bola";
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -141,6 +166,20 @@ export default function BrandPage() {
             <div className="flex flex-wrap gap-2 text-xs text-text-tertiary">
               <span className="bg-surface-hover px-2 py-1 rounded">ID: {brand.id}</span>
               <span className="bg-surface-hover px-2 py-1 rounded">Slug: {brand.slug}</span>
+              {brandRaw?.category && (
+                <span className="bg-surface-hover px-2 py-1 rounded">Kategori: {brandRaw.category}</span>
+              )}
+              {brandRaw?.subCategory && (
+                <span className="bg-surface-hover px-2 py-1 rounded">Sub: {brandRaw.subCategory}</span>
+              )}
+              {brandRaw?.adminFee != null && (
+                <span className="bg-surface-hover px-2 py-1 rounded">Biaya Layanan: Rp{brandRaw.adminFee}</span>
+              )}
+              {brandRaw?.homeOnly && (
+                <span className="bg-surface-hover px-2 py-1 rounded">
+                  Domisili: {brandRaw.homeCity || "-"}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -199,6 +238,73 @@ export default function BrandPage() {
                 rows={4}
               />
             </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <Input
+                label="Biaya Layanan (Admin Fee)"
+                name="adminFee"
+                type="number"
+                min="0"
+                step="500"
+                value={formData.adminFee}
+                onChange={handleChange}
+                placeholder="0"
+                hint="Per tiket, dalam Rupiah."
+              />
+              <Select
+                label="Kategori"
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                placeholder="Pilih kategori"
+                options={[
+                  { value: "sepak_bola", label: "Sepak Bola" },
+                  { value: "musik", label: "Musik" },
+                  { value: "lari", label: "Lari" },
+                ]}
+              />
+              <Input
+                label="Sub Kategori"
+                name="subCategory"
+                value={formData.subCategory}
+                onChange={handleChange}
+                placeholder="Contoh: Liga 1"
+              />
+            </div>
+
+            <ImageSourceInput
+              label="Logo Sponsor (1 gambar berisi semua sponsor)"
+              value={formData.sponsorPath}
+              onChange={(value) => setFormData((prev) => ({ ...prev, sponsorPath: value }))}
+              uploadFile={(file) => uploadBrandImage(file, "BANNER")}
+              disabled={isSubmitting}
+              hint="Gabungkan semua logo sponsor ke dalam satu gambar."
+            />
+
+            {isFootballCategory && (
+              <div className="space-y-3 rounded-lg border border-border-subtle p-4">
+                <label className="flex items-center gap-2 text-sm font-medium text-text-primary">
+                  <input
+                    type="checkbox"
+                    name="homeOnly"
+                    checked={formData.homeOnly}
+                    onChange={handleChange}
+                    className="h-4 w-4 rounded border-border-default accent-brand-primary"
+                  />
+                  Batasi pembelian untuk KTP berdomisili tertentu (Home Only)
+                </label>
+                {formData.homeOnly && (
+                  <Input
+                    label="Kota Domisili"
+                    name="homeCity"
+                    value={formData.homeCity}
+                    onChange={handleChange}
+                    placeholder="Contoh: Bandung"
+                    hint="Pembeli wajib memiliki KTP berdomisili kota ini."
+                  />
+                )}
+              </div>
+            )}
 
             <div className="flex justify-end">
               <Button type="submit" variant="primary" isLoading={isSubmitting}>
