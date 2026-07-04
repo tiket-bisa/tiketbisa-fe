@@ -659,7 +659,7 @@ export default function AdminBrandsPage() {
                           onClick={() => {
                             void loadAccessSummary();
                           }}
-                          disabled={!selectedAccessBrand || accessState === "loading"}
+                          disabled={!selectedAccessBrand}
                         >
                           Coba Lagi
                         </Button>
