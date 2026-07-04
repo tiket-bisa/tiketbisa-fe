@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate, useParams } from "react-router";
 import { orderApi } from "../../infrastructure/order.api";
 import type { CompleteOrderResponse } from "../../infrastructure/order.api";
 import { useOrderConfirmation } from "./use-order-confirmation";
-import { usePaymentSelection } from "./use-payment-selection";
+import type { usePaymentSelection } from "./use-payment-selection";
 import { buildPaymentOrderSummary } from "../../domain/checkout.pricing";
 import { MAX_TICKETS_PER_TRANSACTION } from "~/shared/constants/transaction";
 
@@ -21,8 +21,8 @@ const CHECKOUT_STORAGE_KEYS = [
 ];
 
 export function useCheckoutSteps(
-  event: EventSummary, 
-  buyerInfo: BuyerInfo, 
+  event: EventSummary,
+  buyerInfo: BuyerInfo,
   baseSummary: OrderSummary,
   validateForm: () => boolean,
   paymentMethods: PaymentMethod[],
@@ -34,7 +34,7 @@ export function useCheckoutSteps(
   const params = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentStep = parseInt(searchParams.get("step") || "1", 10);
-  
+
   // State for Backend Session Management
   const [lockId, setLockId] = useState<string | null>(searchParams.get("lockId"));
   const [isActionLoading, setIsActionLoading] = useState(false);
@@ -243,26 +243,24 @@ export function useCheckoutSteps(
             return;
           }
 
-          // Reuse existing lock from state/query if present before trying to lock again
-          const activeLockId = lockId || searchParams.get("lockId");
-
-          if (!activeLockId) {
-             setIsActionLoading(true);
-           try {
-               const lock = await orderApi.acquireLock(event.id, baseSummary, holders);
-               setLockId(lock.userId);
-               sessionStorage.setItem(CHECKOUT_DEADLINE_STORAGE_KEY, String(lock.expiresAt));
-               setSearchParams({ ...Object.fromEntries(searchParams), step: "2", lockId: lock.userId });
-             } catch (e: any) {
-               setBlockingError(e?.message || "Maaf, tiket tidak tersedia atau gagal dikunci. Silakan coba lagi.");
-                return;
-             } finally {
-               setIsActionLoading(false);
-             }
-           } else {
-            setLockId(activeLockId);
-            setSearchParams({ ...Object.fromEntries(searchParams), step: "2", lockId: activeLockId });
-           }
+          // Always (re-)acquire the lock here with the buyer's current holder data. The
+          // preliminary "intent" lock made on mount (see acquireInitialLock) has no holders
+          // yet - reusing that lockId as-is would carry an empty holders array all the way to
+          // the final commit and fail validation there. Re-locking (even if a lockId already
+          // exists) guarantees the lock Redis is holding always matches what the buyer just
+          // filled in on this step.
+          setIsActionLoading(true);
+          try {
+            const lock = await orderApi.acquireLock(event.id, baseSummary, holders);
+            setLockId(lock.userId);
+            sessionStorage.setItem(CHECKOUT_DEADLINE_STORAGE_KEY, String(lock.expiresAt));
+            setSearchParams({ ...Object.fromEntries(searchParams), step: "2", lockId: lock.userId });
+          } catch (e: any) {
+            setBlockingError(e?.message || "Maaf, tiket tidak tersedia atau gagal dikunci. Silakan coba lagi.");
+            return;
+          } finally {
+            setIsActionLoading(false);
+          }
         }
         break;
       case 2:
@@ -287,7 +285,8 @@ export function useCheckoutSteps(
               eventId: event.id,
               buyerInfo,
               summary: paymentSummary,
-              paymentMethod: selectedPaymentMethod
+              paymentMethod: selectedPaymentMethod,
+              promoCode: selection.appliedPromo?.code,
             });
 
             if (result) {
@@ -382,6 +381,40 @@ export function useCheckoutSteps(
     expireCheckoutSession(false);
   }, [expireCheckoutSession]);
 
+  /**
+   * Called when the gateway (FLIP) reports the VA/QRIS payment as completed —
+   * either via realtime push or the status polling fallback on step 4.
+   * Mirrors the manual "Bayar Sekarang" completion path in `handleNext` (case 4),
+   * but is triggered automatically instead of by a user click.
+   */
+  const handlePaymentConfirmed = useCallback(async () => {
+    if (currentStep !== 4 || isManualTransferPayment) return;
+
+    const activeLockId = lockId || searchParams.get("lockId") || searchParams.get("orderId");
+    if (!activeLockId) return;
+
+    setIsActionLoading(true);
+    try {
+      const result = await orderApi.executeOrder(activeLockId, paymentSummary.totalPrice);
+      setCompletedOrder(result);
+      setIsManualTransferPending(false);
+
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set("step", "5");
+      nextParams.set("lockId", activeLockId);
+      nextParams.set("orderId", activeLockId);
+      nextParams.delete("manualPending");
+      setSearchParams(nextParams);
+    } catch (error) {
+      // The payment already succeeded at the gateway; a transient error finalizing
+      // locally shouldn't alarm the buyer. The regular poll/realtime loop or the
+      // manual "Bayar Sekarang" button remains available as a fallback.
+      console.error("Failed to auto-finalize completed payment", error);
+    } finally {
+      setIsActionLoading(false);
+    }
+  }, [currentStep, isManualTransferPayment, lockId, searchParams, paymentSummary.totalPrice, setSearchParams]);
+
   return {
     currentStep,
     isActionLoading: isActionLoading || isConfirming,
@@ -392,6 +425,7 @@ export function useCheckoutSteps(
     handleNext,
     handleBack,
     handleExpire,
+    handlePaymentConfirmed,
     paymentSelection: selection,
     selectedPaymentMethod,
     isStep2Valid,

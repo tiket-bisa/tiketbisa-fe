@@ -1,6 +1,6 @@
 import { apiFetch } from "~/core/api";
 import type { ApiResponse } from "~/core/api";
-import type { BuyerInfo, OrderResponse, OrderSummary, PaymentMethod, TicketHolder } from "../domain/checkout.types";
+import type { BuyerInfo, GatewayStatus, OrderResponse, OrderSummary, PaymentMethod, TicketHolder } from "../domain/checkout.types";
 
 interface TicketRequest {
   categoryId: string;
@@ -24,6 +24,7 @@ interface StoreTempTransactionRq {
   source: string;
   paymentMethod: string;
   isComplimentary: boolean;
+  promoCode?: string;
 }
 
 interface CompleteTransactionPayload {
@@ -69,6 +70,19 @@ export interface CompleteOrderResponse {
   totalPrice: number;
   tickets: TicketIssued[];
   paymentDate: string;
+  /** Gateway (FLIP) VA/QRIS payload, present for non-manual-transfer payment methods. */
+  virtualAccount?: string | null;
+  qrPayload?: string | null;
+  gatewayStatus?: GatewayStatus | null;
+  gatewayExpiry?: string | null;
+}
+
+export interface TransactionStatusResult {
+  status: string;
+  gatewayStatus?: GatewayStatus | null;
+  virtualAccount?: string | null;
+  qrPayload?: string | null;
+  gatewayExpiry?: string | null;
 }
 
 export interface LockResponse {
@@ -111,6 +125,11 @@ interface TransactionStatusFromApi {
   paymentDate?: string;
   paymentMethod?: string;
   tickets?: TicketRequest[];
+  status?: string;
+  virtualAccount?: string | null;
+  qrPayload?: string | null;
+  gatewayStatus?: string | null;
+  gatewayExpiry?: string | null;
 }
 
 interface TtlResponse {
@@ -225,8 +244,8 @@ export const orderApi = {
    * Phase 2: Store temporary transaction with buyer info (DDD - Store Context)
    */
   async storeTempTransaction(
-    lockId: string, 
-    eventId: string, 
+    lockId: string,
+    eventId: string,
     buyerInfo: BuyerInfo,
     summary: OrderSummary,
     paymentMethod: PaymentMethod,
@@ -276,7 +295,12 @@ export const orderApi = {
   ): Promise<CompleteOrderResponse> {
     const transactionSnapshot = await this.getTransactionSnapshot(lockId);
 
-    const response = await apiFetch<ApiResponse<Record<string, TicketIssuedFromApi[]>>>(`/transaction/${lockId}/complete`, {
+    const response = await apiFetch<ApiResponse<Record<string, TicketIssuedFromApi[]> & {
+      virtualAccount?: string | null;
+      qrPayload?: string | null;
+      gatewayStatus?: string | null;
+      gatewayExpiry?: string | null;
+    }>>(`/transaction/${lockId}/complete`, {
       method: "POST"
     });
 
@@ -284,7 +308,9 @@ export const orderApi = {
       throw new Error(getApiErrorMessage(response, "Failed to complete transaction"));
     }
 
-    const normalizedTickets = Object.values(response.data)
+    const { virtualAccount, qrPayload, gatewayStatus, gatewayExpiry, ...ticketsByCategory } = response.data;
+
+    const normalizedTickets = Object.values(ticketsByCategory)
       .flat()
       .map((ticket) => ({
       ticketId: ticket.id,
@@ -309,6 +335,10 @@ export const orderApi = {
       totalPrice,
       paymentDate: transactionSnapshot?.paymentDate || new Date().toISOString(),
       tickets: normalizedTickets,
+      virtualAccount: virtualAccount ?? transactionSnapshot?.virtualAccount ?? null,
+      qrPayload: qrPayload ?? transactionSnapshot?.qrPayload ?? null,
+      gatewayStatus: (gatewayStatus ?? transactionSnapshot?.gatewayStatus ?? null) as GatewayStatus | null,
+      gatewayExpiry: gatewayExpiry ?? transactionSnapshot?.gatewayExpiry ?? null,
     };
   },
 
@@ -431,25 +461,52 @@ export const orderApi = {
         }
       }
 
+      const gatewayExpiry = data.gatewayExpiry as string | undefined;
+      const virtualAccount = (data.virtualAccount as string | null | undefined) ?? null;
+      const qrPayload = (data.qrPayload as string | null | undefined) ?? null;
+      const gatewayStatus = (data.gatewayStatus as GatewayStatus | null | undefined) ?? null;
+
       return {
         orderId: orderId,
         status: "PENDING",
         totalAmount,
         paymentMethod,
-        expiryTime: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        expiryTime: gatewayExpiry || new Date(Date.now() + 15 * 60 * 1000).toISOString(),
         paymentInstructions: paymentMethod.category === "BANK_TRANSFER"
           ? "Silakan transfer tepat sesuai nominal hingga 3 digit terakhir."
           : "Pindai kode QR menggunakan aplikasi pembayaran Anda.",
-        virtualAccount:
-          paymentMethod.category === "BANK_TRANSFER"
-            ? "123456789012345"
-            : undefined,
-        qrCodeUrl:
-          paymentMethod.category !== "BANK_TRANSFER"
-            ? "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=TIKETBISA_MOCK_QRIS"
-            : undefined,
+        virtualAccount,
+        qrPayload,
+        gatewayStatus,
+        gatewayExpiry: gatewayExpiry ?? null,
       };
     } catch (e) {
+      return null;
+    }
+  },
+
+  /**
+   * Poll the gateway/transaction status while on the payment-instruction step.
+   * Wraps the public transaction snapshot route (`GET /transaction/:id`), which
+   * carries the VA/QRIS gateway fields once FLIP has created the bill.
+   * NOTE: the contract also mentions `GET /transaction/status/:id`, but that path
+   * is currently only registered under the internal/authenticated route group on
+   * the backend; this wraps the public equivalent so it works for anonymous buyers.
+   */
+  async getTransactionStatus(transactionId: string): Promise<TransactionStatusResult | null> {
+    try {
+      const response = await apiFetch<ApiResponse<TransactionStatusFromApi>>(`/transaction/${transactionId}`);
+      if (!response.success || !response.data) return null;
+
+      const data = response.data;
+      return {
+        status: String(data.status || "WAITING_PAYMENT"),
+        gatewayStatus: (data.gatewayStatus as GatewayStatus | null | undefined) ?? null,
+        virtualAccount: data.virtualAccount ?? null,
+        qrPayload: data.qrPayload ?? null,
+        gatewayExpiry: data.gatewayExpiry ?? null,
+      };
+    } catch {
       return null;
     }
   }
