@@ -5,8 +5,8 @@ import { MAX_TICKETS_PER_TRANSACTION } from "../constants/transaction";
 export function useTicketSelection(tickets: EventTicket[] = []) {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
 
-  const ticketMap = useMemo(() => 
-    new Map(tickets.map(t => [t.id, t])), 
+  const ticketMap = useMemo(() =>
+    new Map(tickets.map(t => [t.id, t])),
     [tickets]
   );
 
@@ -30,7 +30,7 @@ export function useTicketSelection(tickets: EventTicket[] = []) {
     });
   }, [ticketMap]);
 
-  const selectedTickets = useMemo(() => 
+  const selectedTickets = useMemo(() =>
     Object.entries(quantities).map(([id, qty]) => ({
       ticket: ticketMap.get(id)!,
       quantity: qty
@@ -38,15 +38,17 @@ export function useTicketSelection(tickets: EventTicket[] = []) {
     [quantities, ticketMap]
   );
 
-  const totalPrice = useMemo(() => 
+  const totalPrice = useMemo(() =>
     selectedTickets.reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0),
     [selectedTickets]
   );
 
-  const totalItems = useMemo(() => 
+  const totalItems = useMemo(() =>
     selectedTickets.reduce((sum, item) => sum + item.quantity, 0),
     [selectedTickets]
   );
+
+  const isAtMaxTickets = totalItems >= MAX_TICKETS_PER_TRANSACTION;
 
   return {
     quantities,
@@ -54,6 +56,7 @@ export function useTicketSelection(tickets: EventTicket[] = []) {
     totalPrice,
     totalItems,
     selectedTickets,
+    isAtMaxTickets,
     maxTicketsPerTransaction: MAX_TICKETS_PER_TRANSACTION,
   };
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { Card } from "~/core/design-system/components";
+import { MAX_TICKETS_PER_ORDER } from "../domain/checkout.types";
 import { 
   OrderDetailsForm, 
   CheckoutSidebar, 
@@ -22,6 +23,7 @@ import {
 import { useOrderSummary } from "./hooks/use-order-summary";
 import { useCheckoutForm } from "./hooks/use-checkout-form";
 import { useCheckoutSteps } from "./hooks/use-checkout-steps";
+import { usePaymentSelection } from "./hooks/use-payment-selection";
 import { buildPaymentOrderSummary } from "../domain/checkout.pricing";
 import { eventApi } from "../../event/infrastructure/event.api";
 import { paymentApi } from "../infrastructure/payment.api";
@@ -48,16 +50,38 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
   const [searchParams] = useSearchParams();
   
   // Application/Domain hooks
-  const summary = useOrderSummary(event, searchParams);
-  const { buyerInfo, errors, validate, handleInputChange } = useCheckoutForm();
-  
+  const paymentSelectionState = usePaymentSelection();
+  const discount = paymentSelectionState.selection.appliedPromo?.discount ?? 0;
+  const summary = useOrderSummary(event, searchParams, discount);
+  const {
+    buyerInfo,
+    errors,
+    validate,
+    handleInputChange,
+    holders,
+    holderErrors,
+    sameAsMain,
+    syncHolderCount,
+    handleHolderChange,
+    handleToggleSameAsMain,
+  } = useCheckoutForm();
+
+  const totalTicketQuantity = useMemo(
+    () => summary.items.reduce((sum, item) => sum + item.quantity, 0),
+    [summary.items],
+  );
+
+  useEffect(() => {
+    syncHolderCount(totalTicketQuantity);
+  }, [totalTicketQuantity, syncHolderCount]);
+
   // Steps orchestration hook (now managing payment state too)
-  const { 
-    currentStep, 
-    isActionLoading, 
-    completedOrder, 
-    handleNext, 
-    handleBack, 
+  const {
+    currentStep,
+    isActionLoading,
+    completedOrder,
+    handleNext,
+    handleBack,
     handleExpire,
     paymentSelection,
     selectedPaymentMethod,
@@ -67,8 +91,10 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
     isStep2Valid,
     handlePaymentMethodSelect,
     setAgreedToTerms,
-    setAgreedToPrivacy
-  } = useCheckoutSteps(event, buyerInfo, summary, validate, paymentMethods, order);
+    setAgreedToPrivacy,
+    applyPromo,
+    removePromo
+  } = useCheckoutSteps(event, buyerInfo, summary, validate, paymentMethods, order, paymentSelectionState, holders);
 
   const paymentSummary = useMemo(
     () => buildPaymentOrderSummary(summary, selectedPaymentMethod ?? order?.paymentMethod ?? null),
@@ -115,11 +141,22 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
           </div>
 
           {currentStep === 1 && (
-            <OrderDetailsForm 
-              data={buyerInfo} 
+            <OrderDetailsForm
+              data={buyerInfo}
               errors={errors}
-              onChange={handleInputChange} 
+              onChange={handleInputChange}
               className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100"
+              items={summary.items}
+              holders={holders}
+              holderErrors={holderErrors}
+              sameAsMain={sameAsMain}
+              onHolderChange={handleHolderChange}
+              onToggleSameAsMain={handleToggleSameAsMain}
+              ticketCapNotice={
+                totalTicketQuantity > MAX_TICKETS_PER_ORDER
+                  ? `Maksimal ${MAX_TICKETS_PER_ORDER} tiket per transaksi. Kurangi jumlah tiket sebelum melanjutkan.`
+                  : null
+              }
             />
           )}
 
@@ -168,7 +205,14 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
               <OrderSummaryCard summary={activeSummary} />
               {currentStep === 2 && (
                 <Card className="p-6 bg-white border-gray-100 shadow-sm rounded-3xl">
-                  <PromoSection />
+                  <PromoSection
+                    eventId={event.id}
+                    subtotal={summary.subtotal}
+                    serviceFee={summary.serviceFee}
+                    appliedPromo={paymentSelection.appliedPromo}
+                    onApply={applyPromo}
+                    onRemove={removePromo}
+                  />
                   <PaymentConsent
                     agreedToTerms={paymentSelection.agreedToTerms}
                     agreedToPrivacy={paymentSelection.agreedToPrivacy}
@@ -188,9 +232,9 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
         {currentStep < 3 && (
           <aside className="lg:col-span-4 lg:sticky lg:top-28 hidden lg:block animate-in fade-in slide-in-from-right-8 duration-700 delay-300 overflow-hidden">
             <div className="space-y-6 pb-12">
-              <CheckoutSidebar 
-                summary={activeSummary} 
-                onNext={() => handleNext()} 
+              <CheckoutSidebar
+                summary={activeSummary}
+                onNext={() => handleNext()}
                 onBack={handleBack}
                 step={currentStep}
                 agreedToTerms={paymentSelection.agreedToTerms}
@@ -198,6 +242,10 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
                 onToggleTerms={setAgreedToTerms}
                 onTogglePrivacy={setAgreedToPrivacy}
                 isMethodSelected={!!paymentSelection.methodId}
+                eventId={event.id}
+                appliedPromo={paymentSelection.appliedPromo}
+                onApplyPromo={applyPromo}
+                onRemovePromo={removePromo}
               />
               {currentStep === 1 && <PaymentPartners />}
             </div>

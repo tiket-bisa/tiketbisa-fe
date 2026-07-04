@@ -17,6 +17,7 @@ describe("orderApi", () => {
     serviceFeePerTicket: 5000,
     serviceFee: 10000,
     transactionFee: 0,
+    discount: 0,
     totalPrice: 110000,
     ticketCount: 2,
     items: [{ ticketId: "tc-001", ticketName: "Regular", quantity: 2, price: 50000 }],
