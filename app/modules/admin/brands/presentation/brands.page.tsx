@@ -1,4 +1,4 @@
-import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from "react";
+import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState, useCallback } from "react";
 import {
   SearchInput,
   Pagination,
@@ -40,6 +40,10 @@ function formatRupiah(value: number): string {
     maximumFractionDigits: 0,
   }).format(value);
 }
+
+const accessUnavailableMessage = "Fitur akses login belum aktif di backend yang sedang berjalan. Sinkronkan atau restart backend lalu coba lagi.";
+const isAccessEndpointUnavailable = (statusCode?: number | null) =>
+  statusCode === 404 || statusCode === 405;
 
 /** Admin — Brand management (view all partner brands) */
 export default function AdminBrandsPage() {
@@ -119,11 +123,7 @@ export default function AdminBrandsPage() {
     label: brand.name,
   }));
 
-  const accessUnavailableMessage = "Fitur akses login belum aktif di backend yang sedang berjalan. Sinkronkan atau restart backend lalu coba lagi.";
-  const isAccessEndpointUnavailable = (statusCode?: number | null) =>
-    statusCode === 404 || statusCode === 405;
-
-  const loadAccessSummary = async () => {
+  const loadAccessSummary = useCallback(async () => {
     if (!selectedAccessBrand?.id) {
       setAccessSummary(null);
       setAccessState("idle");
@@ -150,7 +150,7 @@ export default function AdminBrandsPage() {
 
     setAccessState("error");
     setAccessError(response.error || "Gagal memuat akses login brand.");
-  };
+  }, [selectedAccessBrand?.id]);
 
   useEffect(() => {
     if (activeTab !== "access") {
@@ -158,7 +158,7 @@ export default function AdminBrandsPage() {
     }
 
     void loadAccessSummary();
-  }, [activeTab, selectedAccessBrand?.id]);
+  }, [activeTab, loadAccessSummary]);
 
   const resetForm = () => {
     setFormMode(null);
@@ -339,6 +339,10 @@ export default function AdminBrandsPage() {
 
   const handleUpsertScanner = async () => {
     if (!selectedAccessBrand?.id) return;
+    if (scannerPassword.length < 6) {
+      setAccessError("Password scanner minimal 6 karakter.");
+      return;
+    }
     setIsAccessSubmitting(true);
     setAccessError(null);
     setAccessSuccess(null);
@@ -659,7 +663,7 @@ export default function AdminBrandsPage() {
                           onClick={() => {
                             void loadAccessSummary();
                           }}
-                          disabled={!selectedAccessBrand || accessState === "loading"}
+                          disabled={!selectedAccessBrand}
                         >
                           Coba Lagi
                         </Button>

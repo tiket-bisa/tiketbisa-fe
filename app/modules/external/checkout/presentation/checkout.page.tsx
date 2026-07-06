@@ -67,7 +67,8 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
     isStep2Valid,
     handlePaymentMethodSelect,
     setAgreedToTerms,
-    setAgreedToPrivacy
+    setAgreedToPrivacy,
+    isStorageCleared
   } = useCheckoutSteps(event, buyerInfo, summary, validate, paymentMethods, order);
 
   const paymentSummary = useMemo(
@@ -77,8 +78,9 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
   const activeSummary = currentStep >= 2 ? paymentSummary : summary;
 
   useEffect(() => {
+    if (isStorageCleared) return;
     sessionStorage.setItem("tiketbisa_checkout_summary", JSON.stringify(activeSummary));
-  }, [activeSummary]);
+  }, [activeSummary, isStorageCleared]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });

@@ -6,6 +6,7 @@ import { useOrderConfirmation } from "./use-order-confirmation";
 import { usePaymentSelection } from "./use-payment-selection";
 import { buildPaymentOrderSummary } from "../../domain/checkout.pricing";
 import { MAX_TICKETS_PER_TRANSACTION } from "~/shared/constants/transaction";
+import { useToast } from "~/core/design-system/components";
 
 import type { BuyerInfo, OrderSummary, PaymentMethod, OrderResponse } from "../../domain/checkout.types";
 import type { EventSummary } from "~/core/types";
@@ -30,6 +31,8 @@ export function useCheckoutSteps(
   const params = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentStep = parseInt(searchParams.get("step") || "1", 10);
+  const { error: toastError } = useToast();
+  const [isStorageCleared, setIsStorageCleared] = useState(false);
   
   // State for Backend Session Management
   const [lockId, setLockId] = useState<string | null>(searchParams.get("lockId"));
@@ -63,13 +66,14 @@ export function useCheckoutSteps(
 
   const clearCheckoutStorage = useCallback(() => {
     CHECKOUT_STORAGE_KEYS.forEach((key) => sessionStorage.removeItem(key));
+    setIsStorageCleared(true);
   }, []);
 
   const redirectForTicketLimit = useCallback(() => {
     clearCheckoutStorage();
-    alert(`Maksimum ${MAX_TICKETS_PER_TRANSACTION} tiket per transaksi.`);
+    toastError(`Maksimum ${MAX_TICKETS_PER_TRANSACTION} tiket per transaksi.`);
     navigate(`/event/${params.eventId ?? event.id}`);
-  }, [clearCheckoutStorage, event.id, navigate, params.eventId]);
+  }, [clearCheckoutStorage, event.id, navigate, params.eventId, toastError]);
 
   const expireCheckoutSession = useCallback((showMessage = true) => {
     clearCheckoutStorage();
@@ -77,10 +81,10 @@ export function useCheckoutSteps(
     setManualTransferProofFile(null);
     setIsManualTransferPending(false);
     if (showMessage) {
-      alert("Sesi checkout kamu sudah kedaluwarsa. Silakan pilih tiket ulang.");
+      toastError("Sesi checkout kamu sudah kedaluwarsa. Silakan pilih tiket ulang.");
     }
     navigate(`/event/${params.eventId ?? event.id}`);
-  }, [clearCheckoutStorage, event.id, navigate, params.eventId]);
+  }, [clearCheckoutStorage, event.id, navigate, params.eventId, toastError]);
 
   const setDeadlineFromRemainingSeconds = useCallback((remainingSeconds: number) => {
     if (remainingSeconds > 0) {
@@ -220,7 +224,7 @@ export function useCheckoutSteps(
       case 1:
         if (validateForm()) {
           if (baseSummary.items.length === 0) {
-            alert("Pilih tiket dulu sebelum lanjut ke pembayaran.");
+            toastError("Pilih tiket dulu sebelum lanjut ke pembayaran.");
             navigate(`/event/${event.id}`);
             return;
           }
@@ -240,7 +244,7 @@ export function useCheckoutSteps(
                sessionStorage.setItem(CHECKOUT_DEADLINE_STORAGE_KEY, String(lock.expiresAt));
                setSearchParams({ ...Object.fromEntries(searchParams), step: "2", lockId: lock.userId });
              } catch (e: any) {
-               alert(e?.message || "Maaf, tiket tidak tersedia atau gagal dikunci. Silakan coba lagi.");
+               toastError(e?.message || "Maaf, tiket tidak tersedia atau gagal dikunci. Silakan coba lagi.");
                 return;
              } finally {
                setIsActionLoading(false);
@@ -299,7 +303,7 @@ export function useCheckoutSteps(
             }
             if (isManualTransferPayment) {
               if (!manualTransferProofFile) {
-                alert("Silakan unggah bukti transfer terlebih dahulu.");
+                toastError("Silakan unggah bukti transfer terlebih dahulu.");
                 return;
               }
 
@@ -326,7 +330,7 @@ export function useCheckoutSteps(
             }
             setSearchParams(nextParams);
           } else {
-            alert("Sesi checkout tidak ditemukan. Silakan ulangi dari halaman event.");
+            toastError("Sesi checkout tidak ditemukan. Silakan ulangi dari halaman event.");
             navigate(`/event/${params.eventId}`);
           }
         } catch (error: any) {
@@ -334,11 +338,11 @@ export function useCheckoutSteps(
           console.error("Failed to execute final order", error);
 
           if (message.includes("404") || message.toLowerCase().includes("expired") || message.toLowerCase().includes("not found")) {
-            alert("Sesi transaksi kamu sudah tidak valid atau kedaluwarsa. Silakan checkout ulang.");
+            toastError("Sesi transaksi kamu sudah tidak valid atau kedaluwarsa. Silakan checkout ulang.");
             sessionStorage.removeItem(CHECKOUT_DEADLINE_STORAGE_KEY);
             navigate(`/event/${params.eventId}`);
           } else {
-            alert(message);
+            toastError(message);
           }
         } finally {
           setIsActionLoading(false);
@@ -349,7 +353,7 @@ export function useCheckoutSteps(
         navigate("/event");
         break;
     }
-  }, [currentStep, event.id, buyerInfo, baseSummary, paymentSummary, validateForm, searchParams, setSearchParams, confirmOrder, navigate, selectedPaymentMethod, isStep2Valid, lockId, isManualTransferPayment, manualTransferProofFile, ensureCheckoutSessionActive, clearCheckoutStorage, params.eventId, getActiveLockId, exceedsTicketLimit, redirectForTicketLimit]);
+  }, [currentStep, event.id, buyerInfo, baseSummary, paymentSummary, validateForm, searchParams, setSearchParams, confirmOrder, navigate, selectedPaymentMethod, isStep2Valid, lockId, isManualTransferPayment, manualTransferProofFile, ensureCheckoutSessionActive, clearCheckoutStorage, params.eventId, getActiveLockId, exceedsTicketLimit, redirectForTicketLimit, toastError]);
 
   const handleBack = useCallback(() => {
     if (currentStep === 1) {
@@ -384,6 +388,7 @@ export function useCheckoutSteps(
     setMethodId,
     setAgreedToTerms,
     setAgreedToPrivacy,
-    lockId // Exposed for debugging or extended logic
+    lockId, // Exposed for debugging or extended logic
+    isStorageCleared
   };
 }

@@ -36,3 +36,7 @@ export type { CategoryChipProps } from "./category-chip";
 export { SocialLinks } from "./social-links";
 export type { SocialLinksProps } from "./social-links";
 export type { SocialLink } from "./social-links";
+
+export { ToastProvider, useToast } from "./toast";
+export type { ToastType, ToastItem } from "./toast";
+
