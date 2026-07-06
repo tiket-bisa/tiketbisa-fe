@@ -132,8 +132,15 @@ function buildQuery(params?: TransactionListParams): string {
 }
 
 async function downloadInternalBlob(path: string, fallbackFileName: string): Promise<BlobDownloadResult> {
-    const stored = localStorage.getItem("tiketbisa_auth");
-    const session = stored ? JSON.parse(stored) : {};
+    const stored = typeof window !== "undefined" ? localStorage.getItem("tiketbisa_auth") : null;
+    let session: any = {};
+    if (stored) {
+        try {
+            session = JSON.parse(stored);
+        } catch (e) {
+            console.error("Failed to parse tiketbisa_auth from localStorage", e);
+        }
+    }
     const headers: Record<string, string> = {
         "x-tb-identifier": session.email || "",
         "x-tb-internal-token": session.internal_token || "",
