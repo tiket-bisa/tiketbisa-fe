@@ -33,6 +33,25 @@ const adminTabs = [
   { label: "Akses Login", value: "access" },
 ];
 
+/** Sub-category options per brand category (enum dropdown, cascades from the chosen category). */
+const BRAND_SUBCATEGORY_OPTIONS: Record<string, { value: string; label: string }[]> = {
+  sepak_bola: [
+    { value: "liga_1", label: "Liga 1" },
+    { value: "liga_2", label: "Liga 2" },
+    { value: "liga_3", label: "Liga 3" },
+  ],
+  musik: [
+    { value: "konser", label: "Konser" },
+    { value: "festival", label: "Festival" },
+  ],
+  lari: [
+    { value: "5k", label: "5K" },
+    { value: "10k", label: "10K" },
+    { value: "half_marathon", label: "Half Marathon" },
+    { value: "full_marathon", label: "Full Marathon" },
+  ],
+};
+
 function formatRupiah(value: number): string {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -514,7 +533,7 @@ export default function AdminBrandsPage() {
                         label="Kategori"
                         name="category"
                         value={formData.category}
-                        onChange={handleChange}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, category: e.target.value, subCategory: "" }))}
                         placeholder="Pilih kategori"
                         options={[
                           { value: "sepak_bola", label: "Sepak Bola" },
@@ -522,12 +541,13 @@ export default function AdminBrandsPage() {
                           { value: "lari", label: "Lari" },
                         ]}
                       />
-                      <Input
+                      <Select
                         label="Sub Kategori"
                         name="subCategory"
                         value={formData.subCategory}
                         onChange={handleChange}
-                        placeholder="Contoh: Liga 1"
+                        placeholder="Pilih sub kategori"
+                        options={BRAND_SUBCATEGORY_OPTIONS[formData.category] ?? []}
                       />
                     </div>
 
