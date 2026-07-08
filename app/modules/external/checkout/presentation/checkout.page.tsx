@@ -19,13 +19,14 @@ import {
    PaymentPartners,
    OrderSuccess,
    ManualTransferPending
-} from "./components";
+ } from "./components";
 import { useOrderSummary } from "./hooks/use-order-summary";
 import { useCheckoutForm } from "./hooks/use-checkout-form";
 import { useCheckoutSteps } from "./hooks/use-checkout-steps";
 import { usePaymentSelection } from "./hooks/use-payment-selection";
 import { buildPaymentOrderSummary } from "../domain/checkout.pricing";
 import { eventApi } from "../../event/infrastructure/event.api";
+import { brandApi } from "../../brand/infrastructure/brand.api";
 import { paymentApi } from "../infrastructure/payment.api";
 import { orderApi } from "../infrastructure/order.api";
 import type { Route } from "./+types/checkout.page";
@@ -35,20 +36,22 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   const step = parseInt(url.searchParams.get("step") || "1", 10);
   const orderId = url.searchParams.get("orderId");
 
-  const [event, paymentMethods, order] = await Promise.all([
-    eventApi.getEventById(params.eventId),
+  const event = await eventApi.getEventById(params.eventId);
+  if (!event) throw new Response("Not Found", { status: 404 });
+
+  const [paymentMethods, order, brand] = await Promise.all([
     paymentApi.getPaymentMethods(),
-    (step === 4 || step === 5) && orderId ? orderApi.getOrderById(orderId) : Promise.resolve(null)
+    (step === 4 || step === 5) && orderId ? orderApi.getOrderById(orderId) : Promise.resolve(null),
+    event.brandId ? brandApi.getBrandBySlug(event.brandId) : Promise.resolve(null),
   ]);
 
-  if (!event) throw new Response("Not Found", { status: 404 });
-  return { event, paymentMethods, order };
+  return { event, paymentMethods, order, adminFee: brand?.adminFee ?? 0 };
 }
 
 export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
   const { event, paymentMethods, order } = loaderData;
   const [searchParams] = useSearchParams();
-  
+
   // Application/Domain hooks
   const paymentSelectionState = usePaymentSelection();
   const discount = paymentSelectionState.selection.appliedPromo?.discount ?? 0;
@@ -83,6 +86,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
     handleNext,
     handleBack,
     handleExpire,
+    handlePaymentConfirmed,
     paymentSelection,
     selectedPaymentMethod,
     isManualTransferPending,
@@ -96,6 +100,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
     removePromo
   } = useCheckoutSteps(event, buyerInfo, summary, validate, paymentMethods, order, paymentSelectionState, holders);
 
+  // Add "Biaya Transaksi" once a payment method is chosen (display total).
   const paymentSummary = useMemo(
     () => buildPaymentOrderSummary(summary, selectedPaymentMethod ?? order?.paymentMethod ?? null),
     [summary, selectedPaymentMethod, order?.paymentMethod],
@@ -196,6 +201,8 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
               onBack={handleBack}
               onExpire={handleExpire}
               isLoading={isActionLoading}
+              transactionId={searchParams.get("orderId") ?? searchParams.get("lockId")}
+              onPaymentCompleted={handlePaymentConfirmed}
             />
           )}
 
