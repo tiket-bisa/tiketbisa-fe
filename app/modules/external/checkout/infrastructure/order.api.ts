@@ -327,6 +327,9 @@ export const orderApi = {
     const { virtualAccount, qrPayload, gatewayStatus, gatewayExpiry, ...ticketsByCategory } = response.data;
 
     const normalizedTickets = Object.values(ticketsByCategory)
+      // Only the per-category arrays are tickets; ignore any stray scalar fields the gateway
+      // response may carry (e.g. invoiceUrl) so they don't become phantom empty ticket cards.
+      .filter((value): value is TicketIssuedFromApi[] => Array.isArray(value))
       .flat()
       .map((ticket) => ({
       ticketId: ticket.id,
