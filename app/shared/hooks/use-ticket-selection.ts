@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import type { EventTicket } from "~/modules/external/event/domain/event.entity";
+import { MAX_TICKETS_PER_TRANSACTION } from "../constants/transaction";
 
 export function useTicketSelection(tickets: EventTicket[] = []) {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -13,11 +14,14 @@ export function useTicketSelection(tickets: EventTicket[] = []) {
     const ticket = ticketMap.get(id);
     if (!ticket || !ticket.available) return;
 
-    // Max quantity validation per user/order
-    const max = ticket.maxPerOrder ?? 10;
-    const safeQty = Math.max(0, Math.min(qty, max));
-
     setQuantities(prev => {
+      const currentQty = prev[id] ?? 0;
+      const totalSelected = Object.values(prev).reduce((sum, value) => sum + value, 0);
+      const remainingSlots = MAX_TICKETS_PER_TRANSACTION - (totalSelected - currentQty);
+      const perTicketMax = ticket.maxPerOrder ?? MAX_TICKETS_PER_TRANSACTION;
+      const maxAllowed = Math.max(0, Math.min(perTicketMax, remainingSlots));
+      const safeQty = Math.max(0, Math.min(qty, maxAllowed));
+
       if (safeQty === 0) {
         const { [id]: _, ...rest } = prev;
         return rest;
@@ -49,6 +53,7 @@ export function useTicketSelection(tickets: EventTicket[] = []) {
     updateQuantity,
     totalPrice,
     totalItems,
-    selectedTickets
+    selectedTickets,
+    maxTicketsPerTransaction: MAX_TICKETS_PER_TRANSACTION,
   };
 }

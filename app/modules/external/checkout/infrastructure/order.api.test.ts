@@ -14,10 +14,11 @@ describe("orderApi", () => {
   const mockEventId = "e-001";
   const mockSummary: OrderSummary = {
     subtotal: 100000,
-    adminFee: 5000,
+    serviceFeePerTicket: 5000,
     serviceFee: 10000,
-    tax: 10000,
-    totalPrice: 125000,
+    transactionFee: 0,
+    totalPrice: 110000,
+    ticketCount: 2,
     items: [{ ticketId: "tc-001", ticketName: "Regular", quantity: 2, price: 50000 }],
   };
   const mockBuyerInfo: BuyerInfo = {
