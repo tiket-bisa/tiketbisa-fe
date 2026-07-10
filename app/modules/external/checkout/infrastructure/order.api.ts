@@ -85,6 +85,22 @@ export interface TransactionStatusResult {
   gatewayExpiry?: string | null;
 }
 
+/**
+ * Whether a gateway (VA/QRIS) transaction has actually been paid/settled.
+ *
+ * For gateway methods, `POST /transaction/:id/complete` only creates the Xendit invoice
+ * and returns `gatewayStatus: "PENDING"` with tickets still WAITING_APPROVAL — the buyer
+ * has NOT paid yet. Payment is confirmed later (webhook → status poll), at which point
+ * `gatewayStatus` flips to "SUCCESSFUL" and tickets become ISSUED. Use this to decide
+ * whether the checkout may advance to the success screen.
+ */
+export function isGatewayPaymentSuccessful(
+  order: Pick<CompleteOrderResponse, "gatewayStatus" | "tickets">,
+): boolean {
+  if (order.gatewayStatus === "SUCCESSFUL") return true;
+  return (order.tickets ?? []).some((ticket) => ticket.status?.toUpperCase() === "ISSUED");
+}
+
 export interface LockResponse {
   userId: string;
   eventId: string;

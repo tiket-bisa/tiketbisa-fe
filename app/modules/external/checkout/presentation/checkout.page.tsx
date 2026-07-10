@@ -97,7 +97,9 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
     setAgreedToTerms,
     setAgreedToPrivacy,
     applyPromo,
-    removePromo
+    removePromo,
+    blockingError,
+    clearBlockingError
   } = useCheckoutSteps(event, buyerInfo, summary, validate, paymentMethods, order, paymentSelectionState, holders);
 
   // Add "Biaya Transaksi" once a payment method is chosen (display total).
@@ -106,6 +108,20 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
     [summary, selectedPaymentMethod, order?.paymentMethod],
   );
   const activeSummary = currentStep >= 2 ? paymentSummary : summary;
+
+  // After "Bayar Sekarang" creates the Xendit invoice, the fresh QR/VA payload arrives on
+  // `completedOrder`. Overlay it onto the loader order so PaymentInstruction renders the QR
+  // immediately instead of waiting up to ~5s for the next status poll to catch up.
+  const paymentInstructionOrder = useMemo(() => {
+    if (!order || !completedOrder) return order;
+    return {
+      ...order,
+      virtualAccount: completedOrder.virtualAccount ?? order.virtualAccount,
+      qrPayload: completedOrder.qrPayload ?? order.qrPayload,
+      gatewayStatus: completedOrder.gatewayStatus ?? order.gatewayStatus,
+      gatewayExpiry: completedOrder.gatewayExpiry ?? order.gatewayExpiry,
+    };
+  }, [order, completedOrder]);
 
   useEffect(() => {
     sessionStorage.setItem("tiketbisa_checkout_summary", JSON.stringify(activeSummary));
@@ -131,6 +147,24 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
 
   return (
     <div className="relative pb-32 lg:pb-0">
+      {blockingError && (
+        <div className="mx-auto max-w-7xl px-4 pt-4">
+          <div
+            role="alert"
+            className="flex items-start justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
+          >
+            <span>{blockingError}</span>
+            <button
+              type="button"
+              onClick={clearBlockingError}
+              aria-label="Tutup pesan kesalahan"
+              className="shrink-0 font-bold text-red-500 hover:text-red-700"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
       <div className={`mx-auto max-w-7xl py-4 ${(currentStep === 3 || currentStep === 4) ? "space-y-10" : "grid grid-cols-1 gap-12 lg:grid-cols-12 items-start"}`}>
         {/* Main Content Area */}
         <div className={(currentStep === 3 || currentStep === 4) ? "w-full" : "lg:col-span-8 space-y-8"}>
@@ -188,7 +222,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
 
           {currentStep === 4 && order && (
               <PaymentInstruction
-              order={order}
+              order={paymentInstructionOrder ?? order}
               event={event}
               fallbackTotalAmount={
                 completedOrder?.totalPrice && completedOrder.totalPrice > 0

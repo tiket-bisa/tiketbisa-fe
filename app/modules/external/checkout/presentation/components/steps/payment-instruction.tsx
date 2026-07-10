@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { Card, Button } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils/currency";
@@ -98,14 +98,20 @@ export function PaymentInstruction({
       result.gatewayStatus === "SUCCESSFUL";
 
     if (isCompleted) {
-      setHasCompleted((already) => {
-        if (!already) {
-          onPaymentCompleted?.();
-        }
-        return true;
-      });
+      setHasCompleted(true);
     }
-  }, [onPaymentCompleted]);
+  }, []);
+
+  // Fire the completion callback exactly once, from a passive effect — never inside a
+  // setState updater, which is a side effect during render (React warns with "Cannot
+  // update a component while rendering a different component" and can drop the update).
+  const paymentCompletedRef = useRef(false);
+  useEffect(() => {
+    if (hasCompleted && !paymentCompletedRef.current) {
+      paymentCompletedRef.current = true;
+      onPaymentCompleted?.();
+    }
+  }, [hasCompleted, onPaymentCompleted]);
 
   // Reliability fallback: poll transaction status every ~5s while awaiting payment.
   useEffect(() => {
