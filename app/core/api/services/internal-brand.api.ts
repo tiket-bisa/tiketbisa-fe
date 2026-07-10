@@ -7,6 +7,7 @@ export interface InternalBrandApiData {
   logoPath?: string | null;
   bannerPath?: string | null;
   description?: string | null;
+  adminFee?: number | null;
   created?: string | null;
   createBy?: string | null;
   lastUpdated?: string | null;
@@ -51,6 +52,7 @@ function normalizeBrand(api: InternalBrandApiData & Record<string, unknown>): In
     logoPath: (api.logoPath ?? api.logo_path ?? null) as string | null,
     bannerPath: (api.bannerPath ?? api.banner_path ?? null) as string | null,
     description: (api.description ?? null) as string | null,
+    adminFee: Number(api.adminFee ?? api.admin_fee ?? 0),
     created: (api.created ?? null) as string | null,
     createBy: (api.createBy ?? api.create_by ?? null) as string | null,
     lastUpdated: (api.lastUpdated ?? api.last_updated ?? null) as string | null,

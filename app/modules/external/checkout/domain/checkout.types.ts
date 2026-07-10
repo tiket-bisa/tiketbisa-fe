@@ -15,10 +15,12 @@ export interface OrderItem {
 
 export interface OrderSummary {
   subtotal: number;
-  adminFee: number;
+  serviceFeePerTicket: number;
   serviceFee: number;
-  tax: number;
+  transactionFee: number;
+  transactionFeeDescription?: string;
   totalPrice: number;
+  ticketCount: number;
   items: OrderItem[];
 }
 
