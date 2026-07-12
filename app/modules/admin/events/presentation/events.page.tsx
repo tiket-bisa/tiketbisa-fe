@@ -25,6 +25,7 @@ import {
 import type { EventSummary } from "~/core/types";
 import { fileToBase64, ImageSourceInput } from "~/modules/internal/common/presentation/image-source-input";
 import { EventGalleryManager } from "~/modules/internal/common/presentation/event-gallery-manager";
+import { SearchableCitySelect } from "~/modules/internal/events/presentation/components/searchable-city-select";
 
 const STATUS_MAP = {
   draft: { label: "Draft", variant: "default" as const },
@@ -410,12 +411,11 @@ export default function AdminEventsPage() {
                 onChange={handleChange}
                 required
               />
-              <Input
-                label="Kota"
-                name="city"
+              <SearchableCitySelect
                 value={formData.city}
-                onChange={handleChange}
+                onChange={(city) => setFormData((prev) => ({ ...prev, city }))}
                 required
+                disabled={isSubmitting}
               />
             </div>
 
