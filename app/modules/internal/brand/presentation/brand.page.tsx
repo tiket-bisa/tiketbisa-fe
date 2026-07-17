@@ -255,7 +255,9 @@ export default function BrandPage() {
                 label="Kategori"
                 name="category"
                 value={formData.category}
-                onChange={handleChange}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, category: e.target.value, subCategory: "" }))
+                }
                 placeholder="Pilih kategori"
                 options={[
                   { value: "sepak_bola", label: "Sepak Bola" },

@@ -198,6 +198,13 @@ export const transactionApi = {
     downloadTicketPdf: (ticketId: string): Promise<BlobDownloadResult> =>
         downloadInternalBlob(`/internal-tb/transaction/ticket/${ticketId}/download`, `ticket-${ticketId}.pdf`),
 
+    /** Email a single issued ticket's PDF to the original customer or a custom recipient */
+    emailTicketPdf: (ticketId: string, request: TicketEmailDeliveryRequest) =>
+        internalHttpClient.post<{ ticketId: string; sentTo: string }>(
+            `/transaction/ticket/${ticketId}/email`,
+            request,
+        ),
+
     /** Review manual transfer transaction */
     reviewManualTransfer: (id: string, request: ManualTransferReviewRequest) =>
         internalHttpClient.post<TransactionApiData>(`/transaction/detail/${id}/review`, request),
