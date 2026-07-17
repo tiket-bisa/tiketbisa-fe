@@ -20,8 +20,12 @@ export default function GenerateComplimentaryTicketPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [generatedTickets, setGeneratedTickets] = useState<GeneratedTicketRow[]>([]);
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  // Set (not a single id) so several tickets can be downloaded at once without one download's
+  // spinner clearing another's — each button tracks its own loading state.
+  const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
+  const [emailingIds, setEmailingIds] = useState<Set<string>>(new Set());
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [emailFeedback, setEmailFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [formData, setFormData] = useState({
     customerName: "",
     customerEmail: "",
@@ -143,7 +147,7 @@ export default function GenerateComplimentaryTicketPage() {
   };
 
   const handleDownload = async (ticketId: string) => {
-    setDownloadingId(ticketId);
+    setDownloadingIds((prev) => new Set(prev).add(ticketId));
     setDownloadError(null);
     try {
       const result = await transactionApi.downloadTicketPdf(ticketId);
@@ -162,7 +166,38 @@ export default function GenerateComplimentaryTicketPage() {
     } catch (err) {
       setDownloadError(err instanceof Error ? err.message : "Gagal mengunduh tiket.");
     } finally {
-      setDownloadingId(null);
+      setDownloadingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(ticketId);
+        return next;
+      });
+    }
+  };
+
+  // Re-send a single ticket to the original customer's email (recovery when the auto-send failed).
+  const handleEmail = async (ticketId: string) => {
+    setEmailingIds((prev) => new Set(prev).add(ticketId));
+    setEmailFeedback(null);
+    try {
+      const res = await transactionApi.emailTicketPdf(ticketId, {
+        deliveryMode: "ORIGINAL_CUSTOMER_EMAIL",
+      });
+      if (res.success) {
+        setEmailFeedback({ type: "success", msg: "Tiket dikirim ke email pemesan." });
+      } else {
+        setEmailFeedback({ type: "error", msg: res.error || "Gagal mengirim email tiket." });
+      }
+    } catch (err) {
+      setEmailFeedback({
+        type: "error",
+        msg: err instanceof Error ? err.message : "Gagal mengirim email tiket.",
+      });
+    } finally {
+      setEmailingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(ticketId);
+        return next;
+      });
     }
   };
 
@@ -308,6 +343,18 @@ export default function GenerateComplimentaryTicketPage() {
               </div>
             )}
 
+            {emailFeedback && (
+              <div
+                className={`p-3 rounded-md text-sm ${
+                  emailFeedback.type === "success"
+                    ? "bg-green-50 text-success-text"
+                    : "bg-red-50 text-destructive-text"
+                }`}
+              >
+                {emailFeedback.msg}
+              </div>
+            )}
+
             <div className="divide-y divide-border-subtle">
               {generatedTickets.map((ticket) => (
                 <div
@@ -321,15 +368,26 @@ export default function GenerateComplimentaryTicketPage() {
                       {ticket.ticketEventNumber != null ? ` · No. ${ticket.ticketEventNumber}` : ""}
                     </p>
                   </div>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    isLoading={downloadingId === ticket.id}
-                    onClick={() => handleDownload(ticket.id)}
-                  >
-                    Download PDF
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      isLoading={emailingIds.has(ticket.id)}
+                      onClick={() => handleEmail(ticket.id)}
+                    >
+                      Kirim Email
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      isLoading={downloadingIds.has(ticket.id)}
+                      onClick={() => handleDownload(ticket.id)}
+                    >
+                      Download PDF
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>

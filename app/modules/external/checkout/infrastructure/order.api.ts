@@ -1,6 +1,6 @@
 import { apiFetch } from "~/core/api";
 import type { ApiResponse } from "~/core/api";
-import type { BuyerInfo, GatewayStatus, OrderResponse, OrderSummary, PaymentMethod, TicketHolder } from "../domain/checkout.types";
+import type { BuyerInfo, GatewayStatus, OrderItem, OrderResponse, OrderSummary, PaymentMethod, TicketHolder } from "../domain/checkout.types";
 
 interface TicketRequest {
   categoryId: string;
@@ -224,7 +224,7 @@ export const orderApi = {
    */
   async acquireLock(eventId: string, summary: OrderSummary, holders?: TicketHolder[]): Promise<LockResponse> {
     let holderCursor = 0;
-    const tickets: TicketRequest[] = summary.items.map((item: any) => {
+    const tickets: TicketRequest[] = summary.items.map((item: OrderItem) => {
       const quantity = item.quantity;
       const itemHolders = holders
         ? holders.slice(holderCursor, holderCursor + quantity)
@@ -232,7 +232,7 @@ export const orderApi = {
       holderCursor += quantity;
 
       return {
-        categoryId: item.ticketId || item.id,
+        categoryId: item.ticketId,
         quantity,
         price: item.price,
         ...(itemHolders && itemHolders.length === quantity ? { holders: itemHolders } : {}),

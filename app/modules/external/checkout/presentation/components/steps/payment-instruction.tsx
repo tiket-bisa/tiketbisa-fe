@@ -117,9 +117,20 @@ export function PaymentInstruction({
   useEffect(() => {
     if (!transactionId || isManualTransfer || hasCompleted) return;
 
+    // Cap the polling at the payment deadline. Past it, the invoice/ticket-lock has expired, so a
+    // late payment can't be honoured anyway — polling forever (e.g. a tab left open) would just
+    // hammer the backend. Normally the countdown unmounts this view first; this is the safety net.
+    const deadlineSource = gatewayData.gatewayExpiry || order.expiryTime;
+    const deadlineMs = deadlineSource ? new Date(deadlineSource).getTime() : null;
+
     let cancelled = false;
+    let interval: ReturnType<typeof setInterval> | undefined;
 
     const poll = async () => {
+      if (deadlineMs != null && Date.now() > deadlineMs) {
+        if (interval) clearInterval(interval);
+        return;
+      }
       const result = await orderApi.getTransactionStatus(transactionId);
       if (!cancelled) {
         handleStatusResult(result);
@@ -127,13 +138,20 @@ export function PaymentInstruction({
     };
 
     void poll();
-    const interval = setInterval(poll, STATUS_POLL_INTERVAL_MS);
+    interval = setInterval(poll, STATUS_POLL_INTERVAL_MS);
 
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      if (interval) clearInterval(interval);
     };
-  }, [transactionId, isManualTransfer, hasCompleted, handleStatusResult]);
+  }, [
+    transactionId,
+    isManualTransfer,
+    hasCompleted,
+    handleStatusResult,
+    gatewayData.gatewayExpiry,
+    order.expiryTime,
+  ]);
 
   // Faster path: realtime push when the webhook updates the transaction.
   const handleRealtimeMessage = useCallback((message: RealtimeMessage) => {
