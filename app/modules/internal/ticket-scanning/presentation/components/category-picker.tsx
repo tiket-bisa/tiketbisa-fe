@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Card, Select, Button } from "~/core/design-system/components";
-import { useCategoryPicker, type CategoryPickerEvent } from "../hooks/use-category-picker";
+import { useCategoryPicker, useEventCategories } from "../hooks/use-category-picker";
 
 export interface SelectedCategory {
   eventId: string;
@@ -22,7 +22,10 @@ export function CategoryPicker({ brandSlug, selected, onChange }: CategoryPicker
   const [eventId, setEventId] = useState("");
   const [categoryId, setCategoryId] = useState("");
 
-  const selectedEvent = useMemo<CategoryPickerEvent | undefined>(
+  // Categories are fetched lazily for the selected event only (avoids one request per event).
+  const { categories, loading: loadingCategories } = useEventCategories(eventId || undefined);
+
+  const selectedEvent = useMemo(
     () => events.find((e) => e.id === eventId),
     [events, eventId],
   );
@@ -37,12 +40,12 @@ export function CategoryPicker({ brandSlug, selected, onChange }: CategoryPicker
   );
 
   const categoryOptions = useMemo(
-    () => (selectedEvent?.categories ?? []).map((c) => ({ value: c.id, label: c.name })),
-    [selectedEvent],
+    () => categories.map((c) => ({ value: c.id, label: c.name })),
+    [categories],
   );
 
   const handleConfirm = () => {
-    const category = selectedEvent?.categories.find((c) => c.id === categoryId);
+    const category = categories.find((c) => c.id === categoryId);
     if (!selectedEvent || !category) return;
     onChange({
       eventId: selectedEvent.id,
@@ -105,11 +108,11 @@ export function CategoryPicker({ brandSlug, selected, onChange }: CategoryPicker
           <div className="flex-1">
             <Select
               label="Kategori Tiket"
-              placeholder="Pilih kategori"
+              placeholder={loadingCategories ? "Memuat kategori..." : "Pilih kategori"}
               options={categoryOptions}
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
-              disabled={!eventId}
+              disabled={!eventId || loadingCategories}
             />
           </div>
           <Button variant="primary" onClick={handleConfirm} disabled={!eventId || !categoryId}>

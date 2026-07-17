@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, Button, Input, Select } from "~/core/design-system/components";
 import { useAuth } from "~/core/auth";
 import { useApiQuery } from "~/core/api";
 import { brandApi, mapBrandApiToFe } from "~/core/api/services/brand.api";
 import { partnerTicketApi } from "../infrastructure/partner-ticket.api";
+
+/** Max codes per ingest request; mirrors the backend PARTNER_TICKET_MAX_INGEST default. */
+const MAX_CODES = 5000;
 
 function parseCodes(raw: string): string[] {
   return Array.from(
@@ -37,7 +40,15 @@ export default function PartnerTicketIngestPage() {
 
   const brandOptions = (brandsData ?? []).map((b) => ({ value: b.id, label: b.name }));
   const effectiveBrandId = isAdmin ? brandId : user?.brand_id ?? "";
-  const codes = parseCodes(codesRaw);
+
+  // parseCodes (split/trim/dedupe) is O(n) and can lag on a huge paste, so the live "detected"
+  // count is computed on a debounce rather than on every keystroke; the authoritative parse runs
+  // only on submit (handleSubmit).
+  const [codeCount, setCodeCount] = useState(0);
+  useEffect(() => {
+    const handle = setTimeout(() => setCodeCount(parseCodes(codesRaw).length), 300);
+    return () => clearTimeout(handle);
+  }, [codesRaw]);
 
   const handleSubmit = async () => {
     setError(null);
@@ -51,8 +62,17 @@ export default function PartnerTicketIngestPage() {
       setError("Nama partner wajib diisi.");
       return;
     }
+
+    // Parse on submit (not on every keystroke) so a large paste never blocks typing.
+    const codes = parseCodes(codesRaw);
     if (codes.length === 0) {
       setError("Masukkan minimal satu kode tiket.");
+      return;
+    }
+    if (codes.length > MAX_CODES) {
+      setError(
+        `Maksimal ${MAX_CODES.toLocaleString("id-ID")} kode per unggahan. Bagi menjadi beberapa unggahan.`,
+      );
       return;
     }
 
@@ -120,7 +140,12 @@ export default function PartnerTicketIngestPage() {
               placeholder={"KODE-001\nKODE-002\nKODE-003"}
               className="w-full rounded-lg border border-border-default bg-surface-alt px-3 py-2 text-sm font-mono text-text-primary placeholder:text-text-tertiary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent disabled:bg-button-disabled disabled:text-text-tertiary disabled:cursor-not-allowed"
             />
-            <p className="text-xs text-text-tertiary">{codes.length} kode terdeteksi</p>
+            <p className={`text-xs ${codeCount > MAX_CODES ? "text-destructive-text" : "text-text-tertiary"}`}>
+              {codeCount.toLocaleString("id-ID")} kode terdeteksi
+              {codeCount > MAX_CODES
+                ? ` — melebihi batas ${MAX_CODES.toLocaleString("id-ID")}`
+                : ""}
+            </p>
           </div>
 
           {error && <p className="text-sm text-destructive-text">{error}</p>}
