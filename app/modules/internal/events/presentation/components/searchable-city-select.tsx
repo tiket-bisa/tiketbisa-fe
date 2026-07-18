@@ -81,6 +81,11 @@ export function SearchableCitySelect({
             setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              setIsOpen(false);
+            }
+          }}
           disabled={disabled}
           required={required}
           placeholder="Cari kota..."

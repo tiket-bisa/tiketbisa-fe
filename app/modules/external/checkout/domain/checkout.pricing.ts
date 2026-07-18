@@ -26,7 +26,7 @@ function buildTransactionFee(paymentMethod: PaymentMethod | null | undefined, ba
 
   if (paymentMethod.id === "qris" || paymentMethod.category === "E_WALLET_QRIS") {
     return {
-      transactionFee: Math.round(baseAmount * QRIS_TRANSACTION_RATE),
+      transactionFee: Math.ceil((baseAmount * 3) / 100),
       transactionFeeDescription: "QRIS 3% dari sub total + biaya layanan",
     };
   }

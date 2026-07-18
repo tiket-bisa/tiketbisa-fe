@@ -59,7 +59,7 @@ export function TicketDeliveryActions({
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
       setMessage("File tiket berhasil disiapkan.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal download tiket");
