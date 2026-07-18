@@ -86,6 +86,11 @@ export default [
       "modules/admin/scan/presentation/scan.page.tsx",
     ),
     route(
+      "internal-tb/admin/partner-tickets",
+      "modules/internal/partner-ticket-ingest/presentation/partner-ticket-ingest.page.tsx",
+      { id: "admin-partner-ticket-ingest" },
+    ),
+    route(
       "internal-tb/admin/transactions/:id",
       "modules/admin/transactions/presentation/transaction-details.page.tsx",
     ),
@@ -132,6 +137,11 @@ export default [
     route(
       "internal-tb/partner/scan",
       "modules/internal/ticket-scanning/presentation/ticket-scanning.page.tsx",
+    ),
+    route(
+      "internal-tb/partner/partner-tickets",
+      "modules/internal/partner-ticket-ingest/presentation/partner-ticket-ingest.page.tsx",
+      { id: "partner-partner-ticket-ingest" },
     ),
   ]),
 
