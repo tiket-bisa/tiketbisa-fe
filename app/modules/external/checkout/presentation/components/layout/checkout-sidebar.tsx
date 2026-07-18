@@ -1,5 +1,5 @@
 import { Card, Button } from "~/core/design-system/components";
-import type { OrderSummary } from "../../../domain/checkout.types";
+import type { AppliedPromo, OrderSummary } from "../../../domain/checkout.types";
 import { CountdownTimer } from "../shared/countdown-timer";
 import { OrderSummaryCard } from "../shared/order-summary-card";
 import { PromoSection, PaymentConsent } from "../shared/payment-extras";
@@ -16,6 +16,10 @@ export interface CheckoutSidebarProps {
   onToggleTerms?: (val: boolean) => void;
   onTogglePrivacy?: (val: boolean) => void;
   isMethodSelected?: boolean;
+  eventId?: string;
+  appliedPromo?: AppliedPromo | null;
+  onApplyPromo?: (promo: AppliedPromo) => void;
+  onRemovePromo?: () => void;
 }
 
 export function CheckoutSidebar({
@@ -30,6 +34,10 @@ export function CheckoutSidebar({
   onToggleTerms = () => {},
   onTogglePrivacy = () => {},
   isMethodSelected = false,
+  eventId = "",
+  appliedPromo = null,
+  onApplyPromo = () => {},
+  onRemovePromo = () => {},
 }: CheckoutSidebarProps) {
   const isStep2 = step === 2;
   const canSubmit = isStep2 ? (agreedToTerms && agreedToPrivacy && isMethodSelected) : true;
@@ -45,7 +53,16 @@ export function CheckoutSidebar({
       {/* Actions Card */}
       <Card className="p-8 bg-white border-gray-100 shadow-sm rounded-3xl">
         {/* Promo Section - Only Step 2 */}
-        {isStep2 && <PromoSection />}
+        {isStep2 && (
+          <PromoSection
+            eventId={eventId}
+            subtotal={summary.subtotal}
+            serviceFee={summary.serviceFee}
+            appliedPromo={appliedPromo}
+            onApply={onApplyPromo}
+            onRemove={onRemovePromo}
+          />
+        )}
 
         {/* Checkboxes - Only Step 2 */}
         {isStep2 && (

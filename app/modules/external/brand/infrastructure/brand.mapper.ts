@@ -43,10 +43,15 @@ export function mapBrandDtoToEntity(dto: BrandDto): Brand {
     logoUrl: logoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(dto.name)}&background=random`,
     bannerUrl: bannerUrl || `https://picsum.photos/seed/${dto.id}/1200/400`,
     description: dto.description || `Ini adalah halaman official dari ${dto.name}.`,
-    // Fallbacks for fields not currently returned by backend
-    category: generateFallbackCategory(dto.id),
+    // Prefer real backend values, fall back to generated ones for display variety.
+    category: dto.category || generateFallbackCategory(dto.id),
+    subCategory: dto.subCategory ?? dto.sub_category ?? undefined,
     location: generateFallbackLocation(dto.id),
     joinedSince: formatJoinedDate(dto.created),
     socialMedia: [],
+    adminFee: Number(dto.adminFee ?? dto.admin_fee ?? 0) || 0,
+    sponsorUrl: normalizeImageUrl(dto.sponsorPath ?? dto.sponsor_path) || undefined,
+    homeOnly: Boolean(dto.homeOnly ?? dto.home_only ?? false),
+    homeCity: dto.homeCity ?? dto.home_city ?? null,
   };
 }

@@ -10,4 +10,15 @@ export interface BrandDto {
   bannerPath: string | null;
   banner_path?: string | null;
   description: string | null;
+  adminFee?: number | string | null;
+  admin_fee?: number | string | null;
+  category?: string | null;
+  subCategory?: string | null;
+  sub_category?: string | null;
+  sponsorPath?: string | null;
+  sponsor_path?: string | null;
+  homeOnly?: boolean | null;
+  home_only?: boolean | null;
+  homeCity?: string | null;
+  home_city?: string | null;
 }

@@ -7,7 +7,7 @@ import { usePaymentSelection } from "./use-payment-selection";
 import { buildPaymentOrderSummary } from "../../domain/checkout.pricing";
 import { MAX_TICKETS_PER_TRANSACTION } from "~/shared/constants/transaction";
 
-import type { BuyerInfo, OrderSummary, PaymentMethod, OrderResponse } from "../../domain/checkout.types";
+import type { BuyerInfo, OrderSummary, PaymentMethod, OrderResponse, TicketHolder } from "../../domain/checkout.types";
 import type { EventSummary } from "~/core/types";
 
 const CHECKOUT_DEADLINE_STORAGE_KEY = "tiketbisa_checkout_deadline";
@@ -16,6 +16,8 @@ const CHECKOUT_STORAGE_KEYS = [
   "tiketbisa_buyer_info",
   "tiketbisa_payment_selection",
   "tiketbisa_checkout_summary",
+  "tiketbisa_ticket_holders",
+  "tiketbisa_holders_same_as_main",
 ];
 
 export function useCheckoutSteps(
@@ -24,7 +26,9 @@ export function useCheckoutSteps(
   baseSummary: OrderSummary,
   validateForm: () => boolean,
   paymentMethods: PaymentMethod[],
-  existingOrder?: OrderResponse | null
+  existingOrder: OrderResponse | null | undefined,
+  paymentSelectionState: ReturnType<typeof usePaymentSelection>,
+  holders: TicketHolder[] = [],
 ) {
   const navigate = useNavigate();
   const params = useParams();
@@ -37,9 +41,18 @@ export function useCheckoutSteps(
   const [completedOrder, setCompletedOrder] = useState<CompleteOrderResponse | null>(null);
   const [manualTransferProofFile, setManualTransferProofFile] = useState<File | null>(null);
   const [isManualTransferPending, setIsManualTransferPending] = useState(searchParams.get("manualPending") === "1");
-  
-  const { confirmOrder, isLoading: isConfirming } = useOrderConfirmation();
-  const { selection, setMethodId, setAgreedToTerms, setAgreedToPrivacy } = usePaymentSelection();
+  /** Blocking error surfaced prominently (e.g. domicile/NIK rejection from the backend). */
+  const [blockingError, setBlockingError] = useState<string | null>(null);
+
+  const { confirmOrder, isLoading: isConfirming, error: confirmOrderError } = useOrderConfirmation();
+  const { selection, setMethodId, setAgreedToTerms, setAgreedToPrivacy, applyPromo, removePromo } = paymentSelectionState;
+
+  // Surface a rejection from confirmOrder (e.g. domicile/NIK validation) as the blocking error.
+  useEffect(() => {
+    if (confirmOrderError) {
+      setBlockingError(confirmOrderError);
+    }
+  }, [confirmOrderError]);
 
   const selectedPaymentMethod = useMemo(() => 
     paymentMethods.find(m => m.id === selection.methodId),
@@ -218,6 +231,7 @@ export function useCheckoutSteps(
   const handleNext = useCallback(async () => {
     switch (currentStep) {
       case 1:
+        setBlockingError(null);
         if (validateForm()) {
           if (baseSummary.items.length === 0) {
             alert("Pilih tiket dulu sebelum lanjut ke pembayaran.");
@@ -235,12 +249,12 @@ export function useCheckoutSteps(
           if (!activeLockId) {
              setIsActionLoading(true);
            try {
-               const lock = await orderApi.acquireLock(event.id, baseSummary);
+               const lock = await orderApi.acquireLock(event.id, baseSummary, holders);
                setLockId(lock.userId);
                sessionStorage.setItem(CHECKOUT_DEADLINE_STORAGE_KEY, String(lock.expiresAt));
                setSearchParams({ ...Object.fromEntries(searchParams), step: "2", lockId: lock.userId });
              } catch (e: any) {
-               alert(e?.message || "Maaf, tiket tidak tersedia atau gagal dikunci. Silakan coba lagi.");
+               setBlockingError(e?.message || "Maaf, tiket tidak tersedia atau gagal dikunci. Silakan coba lagi.");
                 return;
              } finally {
                setIsActionLoading(false);
@@ -260,6 +274,7 @@ export function useCheckoutSteps(
         break;
       case 3:
         {
+          setBlockingError(null);
           const activeLockId = getActiveLockId();
           if (selectedPaymentMethod && activeLockId) {
             if (!(await ensureCheckoutSessionActive())) {
@@ -384,6 +399,10 @@ export function useCheckoutSteps(
     setMethodId,
     setAgreedToTerms,
     setAgreedToPrivacy,
+    applyPromo,
+    removePromo,
+    blockingError,
+    clearBlockingError: useCallback(() => setBlockingError(null), []),
     lockId // Exposed for debugging or extended logic
   };
 }

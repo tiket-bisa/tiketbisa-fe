@@ -41,18 +41,20 @@ function buildTransactionFee(paymentMethod: PaymentMethod | null | undefined, ba
   return { transactionFee: 0 };
 }
 
-export function buildBaseOrderSummary(event: Event, items: OrderItem[]): OrderSummary {
+export function buildBaseOrderSummary(event: Event, items: OrderItem[], discount = 0): OrderSummary {
   const subtotal = calculateSubtotal(items);
   const ticketCount = calculateTicketCount(items);
   const serviceFeePerTicket = Number(event.brandAdminFee ?? 0);
   const serviceFee = serviceFeePerTicket * ticketCount;
+  const appliedDiscount = Math.max(0, Math.round(discount || 0));
 
   return {
     subtotal,
     serviceFeePerTicket,
     serviceFee,
     transactionFee: 0,
-    totalPrice: subtotal + serviceFee,
+    discount: appliedDiscount,
+    totalPrice: subtotal + serviceFee - appliedDiscount,
     ticketCount,
     items,
   };
@@ -64,12 +66,14 @@ export function buildPaymentOrderSummary(
 ): OrderSummary {
   const baseAmount = baseSummary.subtotal + baseSummary.serviceFee;
   const { transactionFee, transactionFeeDescription } = buildTransactionFee(paymentMethod, baseAmount);
+  // Transaction fee is computed on the pre-discount base; the promo discount only reduces the final total.
+  const discount = Math.max(0, Math.round(baseSummary.discount || 0));
 
   return {
     ...baseSummary,
     transactionFee,
     transactionFeeDescription,
-    totalPrice: baseAmount + transactionFee,
+    totalPrice: baseAmount + transactionFee - discount,
   };
 }
 

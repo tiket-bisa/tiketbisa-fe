@@ -1,12 +1,23 @@
 import { Card, Select, Input } from "~/core/design-system/components";
-import type { BuyerInfo } from "../../../domain/checkout.types";
+import type { BuyerInfo, OrderItem, TicketHolder } from "../../../domain/checkout.types";
+import type { HolderFieldErrors } from "../../hooks/use-checkout-form";
 import { CheckoutFormField } from "../shared/checkout-form-field";
+import { TicketHolderInputs } from "./ticket-holder-inputs";
 
 export interface OrderDetailsFormProps {
   data: BuyerInfo;
   errors?: Partial<Record<keyof BuyerInfo, string>>;
   onChange: (field: keyof BuyerInfo, value: string) => void;
   className?: string;
+  items?: OrderItem[];
+  holders?: TicketHolder[];
+  holderErrors?: HolderFieldErrors[];
+  sameAsMain?: boolean;
+  onHolderChange?: (index: number, field: keyof TicketHolder, value: string) => void;
+  onToggleSameAsMain?: (checked: boolean) => void;
+  /** [Khusus bola] shown when the event's brand restricts sales to home-city KTP holders. */
+  domicileNotice?: string | null;
+  ticketCapNotice?: string | null;
 }
 
 const IDENTITY_OPTIONS = [
@@ -15,7 +26,20 @@ const IDENTITY_OPTIONS = [
   { label: "Paspor", value: "PASPOR" },
 ];
 
-export function OrderDetailsForm({ data, errors = {}, onChange, className = "" }: OrderDetailsFormProps) {
+export function OrderDetailsForm({
+  data,
+  errors = {},
+  onChange,
+  className = "",
+  items = [],
+  holders = [],
+  holderErrors = [],
+  sameAsMain = false,
+  onHolderChange,
+  onToggleSameAsMain,
+  domicileNotice,
+  ticketCapNotice,
+}: OrderDetailsFormProps) {
   return (
     <Card className={`p-8 bg-white border-gray-100 shadow-sm rounded-3xl ${className}`}>
       <div className="space-y-8">
@@ -50,12 +74,31 @@ export function OrderDetailsForm({ data, errors = {}, onChange, className = "" }
             onChange={(val) => onChange("phoneNumber", val)}
           />
 
-          <IdentityField 
-            data={data} 
-            error={errors.identityType || errors.identityNumber} 
-            onChange={onChange} 
+          <IdentityField
+            data={data}
+            error={errors.identityType || errors.identityNumber}
+            onChange={onChange}
           />
         </div>
+
+        {ticketCapNotice && (
+          <div className="p-4 rounded-2xl border border-warning-text/20 bg-warning-bg">
+            <p className="text-xs font-bold text-warning-text">{ticketCapNotice}</p>
+          </div>
+        )}
+
+        {items.length > 0 && onHolderChange && onToggleSameAsMain && (
+          <TicketHolderInputs
+            items={items}
+            buyerInfo={data}
+            holders={holders}
+            holderErrors={holderErrors}
+            sameAsMain={sameAsMain}
+            onHolderChange={onHolderChange}
+            onToggleSameAsMain={onToggleSameAsMain}
+            domicileNotice={domicileNotice}
+          />
+        )}
 
         <WarningInfo />
       </div>

@@ -74,6 +74,9 @@ export function OrderConfirmation({
                     detail={summary.transactionFeeDescription}
                   />
                 )}
+                {summary.discount > 0 && (
+                  <SummaryRow label="Diskon" value={`-${formatIDR(summary.discount)}`} valueClassName="text-destructive-text" />
+                )}
                 <div className="pt-6 border-t-2 border-dashed border-gray-200 mt-2 flex justify-between items-center">
                   <span className="font-black text-text-primary text-lg md:text-xl">Total</span>
                   <span className="font-black text-brand-primary text-2xl md:text-3xl">{formatIDR(summary.totalPrice)}</span>
@@ -140,14 +143,24 @@ function InfoItem({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SummaryRow({ label, value, detail }: { label: string; value: string; detail?: string }) {
+function SummaryRow({
+  label,
+  value,
+  detail,
+  valueClassName = "text-text-primary",
+}: {
+  label: string;
+  value: string;
+  detail?: string;
+  valueClassName?: string;
+}) {
   return (
     <div className="flex justify-between items-start gap-4">
       <div className="space-y-1">
         <span className="block text-sm font-medium text-text-secondary">{label}</span>
         {detail && <span className="block text-xs font-medium text-text-tertiary">{detail}</span>}
       </div>
-      <span className="text-base font-bold text-text-primary whitespace-nowrap">{value}</span>
+      <span className={`text-base font-bold whitespace-nowrap ${valueClassName}`}>{value}</span>
     </div>
   );
 }
