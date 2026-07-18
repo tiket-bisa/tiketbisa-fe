@@ -33,6 +33,25 @@ const adminTabs = [
   { label: "Akses Login", value: "access" },
 ];
 
+/** Sub-category options per brand category (enum dropdown, cascades from the chosen category). */
+const BRAND_SUBCATEGORY_OPTIONS: Record<string, { value: string; label: string }[]> = {
+  sepak_bola: [
+    { value: "liga_1", label: "Liga 1" },
+    { value: "liga_2", label: "Liga 2" },
+    { value: "liga_3", label: "Liga 3" },
+  ],
+  musik: [
+    { value: "konser", label: "Konser" },
+    { value: "festival", label: "Festival" },
+  ],
+  lari: [
+    { value: "5k", label: "5K" },
+    { value: "10k", label: "10K" },
+    { value: "half_marathon", label: "Half Marathon" },
+    { value: "full_marathon", label: "Full Marathon" },
+  ],
+};
+
 function formatRupiah(value: number): string {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -66,7 +85,12 @@ export default function AdminBrandsPage() {
     logoPath: "",
     bannerPath: "",
     description: "",
-    adminFee: "0",
+    adminFee: "",
+    category: "",
+    subCategory: "",
+    sponsorPath: "",
+    homeOnly: false,
+    homeCity: "",
   });
 
   const { data: brandsResponse, loading, error, refetch } = useApiQuery(
@@ -165,7 +189,7 @@ export default function AdminBrandsPage() {
     setEditingBrand(null);
     setFormError(null);
     setFormSuccess(null);
-    setFormData({ name: "", logoPath: "", bannerPath: "", description: "", adminFee: "0" });
+    setFormData({ name: "", logoPath: "", bannerPath: "", description: "", adminFee: "", category: "", subCategory: "", sponsorPath: "", homeOnly: false, homeCity: "" });
   };
 
   const startCreate = () => {
@@ -173,7 +197,7 @@ export default function AdminBrandsPage() {
     setEditingBrand(null);
     setFormError(null);
     setFormSuccess(null);
-    setFormData({ name: "", logoPath: "", bannerPath: "", description: "", adminFee: "0" });
+    setFormData({ name: "", logoPath: "", bannerPath: "", description: "", adminFee: "", category: "", subCategory: "", sponsorPath: "", homeOnly: false, homeCity: "" });
   };
 
   const startEdit = (id: string) => {
@@ -188,15 +212,24 @@ export default function AdminBrandsPage() {
       logoPath: brand.logoPath ?? "",
       bannerPath: brand.bannerPath ?? "",
       description: brand.description ?? "",
-      adminFee: String(brand.adminFee ?? 0),
+      adminFee: brand.adminFee != null ? String(brand.adminFee) : "",
+      category: brand.category ?? "",
+      subCategory: brand.subCategory ?? "",
+      sponsorPath: brand.sponsorPath ?? "",
+      homeOnly: Boolean(brand.homeOnly),
+      homeCity: brand.homeCity ?? "",
     });
     setActiveTab("brand");
   };
 
   const handleChange = (
-    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) => {
-    const { name, value } = event.target;
+    const { name, value, type } = e.target;
+    if (type === "checkbox") {
+      setFormData((prev) => ({ ...prev, [name]: (e.target as HTMLInputElement).checked }));
+      return;
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -218,12 +251,17 @@ export default function AdminBrandsPage() {
 
     setIsSubmitting(true);
     try {
+      const isFootball = formData.category.trim() === "sepak_bola";
       const payload = {
         name: formData.name.trim(),
         logoPath: formData.logoPath.trim() || null,
         bannerPath: formData.bannerPath.trim() || null,
-        description: formData.description.trim() || null,
         adminFee: Math.round(parsedAdminFee),
+        category: formData.category.trim() || null,
+        subCategory: formData.subCategory.trim() || null,
+        sponsorPath: formData.sponsorPath.trim() || null,
+        homeOnly: isFootball ? formData.homeOnly : false,
+        homeCity: isFootball && formData.homeOnly ? formData.homeCity.trim() || null : null,
       };
 
       const result = formMode === "edit" && editingBrand
@@ -238,7 +276,7 @@ export default function AdminBrandsPage() {
       setFormSuccess(formMode === "edit" ? "Brand berhasil diperbarui." : "Brand berhasil dibuat.");
       await refetch();
       if (formMode === "create") {
-        setFormData({ name: "", logoPath: "", bannerPath: "", description: "", adminFee: "0" });
+        setFormData({ name: "", logoPath: "", bannerPath: "", description: "", adminFee: "", category: "", subCategory: "", sponsorPath: "", homeOnly: false, homeCity: "" });
       }
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Koneksi bermasalah.");
@@ -489,6 +527,63 @@ export default function AdminBrandsPage() {
                         disabled={isSubmitting}
                       />
                     </div>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <Select
+                        label="Kategori"
+                        name="category"
+                        value={formData.category}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, category: e.target.value, subCategory: "" }))}
+                        placeholder="Pilih kategori"
+                        options={[
+                          { value: "sepak_bola", label: "Sepak Bola" },
+                          { value: "musik", label: "Musik" },
+                          { value: "lari", label: "Lari" },
+                        ]}
+                      />
+                      <Select
+                        label="Sub Kategori"
+                        name="subCategory"
+                        value={formData.subCategory}
+                        onChange={handleChange}
+                        placeholder="Pilih sub kategori"
+                        options={BRAND_SUBCATEGORY_OPTIONS[formData.category] ?? []}
+                      />
+                    </div>
+
+                    <ImageSourceInput
+                      label="Logo Sponsor (1 gambar berisi semua sponsor)"
+                      value={formData.sponsorPath}
+                      onChange={(value) => setFormData((prev) => ({ ...prev, sponsorPath: value }))}
+                      uploadFile={(file) => uploadBrandImage(file, "BANNER")}
+                      disabled={isSubmitting}
+                      hint="Gabungkan semua logo sponsor ke dalam satu gambar."
+                    />
+
+                    {formData.category.trim() === "sepak_bola" && (
+                      <div className="space-y-3 rounded-lg border border-border-subtle p-4">
+                        <label className="flex items-center gap-2 text-sm font-medium text-text-primary">
+                          <input
+                            type="checkbox"
+                            name="homeOnly"
+                            checked={formData.homeOnly}
+                            onChange={handleChange}
+                            className="h-4 w-4 rounded border-border-default accent-brand-primary"
+                          />
+                          Batasi pembelian untuk KTP berdomisili tertentu (Home Only)
+                        </label>
+                        {formData.homeOnly && (
+                          <Input
+                            label="Kota Domisili"
+                            name="homeCity"
+                            value={formData.homeCity}
+                            onChange={handleChange}
+                            placeholder="Contoh: Bandung"
+                            hint="Pembeli wajib memiliki KTP berdomisili kota ini."
+                          />
+                        )}
+                      </div>
+                    )}
 
                     <div className="flex flex-col gap-1.5">
                       <label className="text-sm font-medium text-text-primary" htmlFor="brand-description">

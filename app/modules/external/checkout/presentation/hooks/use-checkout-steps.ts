@@ -1,9 +1,9 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useSearchParams, useNavigate, useParams } from "react-router";
-import { orderApi } from "../../infrastructure/order.api";
+import { orderApi, isGatewayPaymentSuccessful } from "../../infrastructure/order.api";
 import type { CompleteOrderResponse } from "../../infrastructure/order.api";
 import { useOrderConfirmation } from "./use-order-confirmation";
-import { usePaymentSelection } from "./use-payment-selection";
+import type { usePaymentSelection } from "./use-payment-selection";
 import { buildPaymentOrderSummary } from "../../domain/checkout.pricing";
 import { MAX_TICKETS_PER_TRANSACTION } from "~/shared/constants/transaction";
 
@@ -11,8 +11,11 @@ import type { BuyerInfo, OrderSummary, PaymentMethod, OrderResponse, TicketHolde
 import type { EventSummary } from "~/core/types";
 
 const CHECKOUT_DEADLINE_STORAGE_KEY = "tiketbisa_checkout_deadline";
+/** Persists the issued-ticket success payload so a reload on step 5 can restore OrderSuccess. */
+const CHECKOUT_COMPLETED_ORDER_STORAGE_KEY = "tiketbisa_completed_order";
 const CHECKOUT_STORAGE_KEYS = [
   CHECKOUT_DEADLINE_STORAGE_KEY,
+  CHECKOUT_COMPLETED_ORDER_STORAGE_KEY,
   "tiketbisa_buyer_info",
   "tiketbisa_payment_selection",
   "tiketbisa_checkout_summary",
@@ -21,8 +24,8 @@ const CHECKOUT_STORAGE_KEYS = [
 ];
 
 export function useCheckoutSteps(
-  event: EventSummary, 
-  buyerInfo: BuyerInfo, 
+  event: EventSummary,
+  buyerInfo: BuyerInfo,
   baseSummary: OrderSummary,
   validateForm: () => boolean,
   paymentMethods: PaymentMethod[],
@@ -34,7 +37,7 @@ export function useCheckoutSteps(
   const params = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentStep = parseInt(searchParams.get("step") || "1", 10);
-  
+
   // State for Backend Session Management
   const [lockId, setLockId] = useState<string | null>(searchParams.get("lockId"));
   const [isActionLoading, setIsActionLoading] = useState(false);
@@ -228,6 +231,41 @@ export function useCheckoutSteps(
     };
   }, [currentStep, ensureCheckoutSessionActive]);
 
+  // Persist the completed order while on the success step so a browser reload can restore
+  // it. In-memory React state is wiped on reload, and without this OrderSuccess would fall
+  // back to the "Segera Hadir" (CheckoutComingSoon) placeholder even though the purchase
+  // completed successfully.
+  useEffect(() => {
+    if (currentStep === 5 && completedOrder) {
+      try {
+        sessionStorage.setItem(
+          CHECKOUT_COMPLETED_ORDER_STORAGE_KEY,
+          JSON.stringify(completedOrder),
+        );
+      } catch {
+        // Ignore storage write failures (quota / serialization).
+      }
+    }
+  }, [currentStep, completedOrder]);
+
+  // Restore the completed order after a reload lands directly on the success step. Guarded
+  // by the transaction id so a stale cache from a previous purchase is never shown, and
+  // skipped for manual transfer (which renders ManualTransferPending, not OrderSuccess).
+  useEffect(() => {
+    if (currentStep !== 5 || isManualTransferPending || completedOrder) return;
+    try {
+      const raw = sessionStorage.getItem(CHECKOUT_COMPLETED_ORDER_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as CompleteOrderResponse;
+      const orderId = searchParams.get("orderId") ?? searchParams.get("lockId");
+      if (parsed && (!orderId || parsed.transactionId === orderId)) {
+        setCompletedOrder(parsed);
+      }
+    } catch {
+      // Ignore malformed cache.
+    }
+  }, [currentStep, isManualTransferPending, completedOrder, searchParams]);
+
   const handleNext = useCallback(async () => {
     switch (currentStep) {
       case 1:
@@ -243,26 +281,24 @@ export function useCheckoutSteps(
             return;
           }
 
-          // Reuse existing lock from state/query if present before trying to lock again
-          const activeLockId = lockId || searchParams.get("lockId");
-
-          if (!activeLockId) {
-             setIsActionLoading(true);
-           try {
-               const lock = await orderApi.acquireLock(event.id, baseSummary, holders);
-               setLockId(lock.userId);
-               sessionStorage.setItem(CHECKOUT_DEADLINE_STORAGE_KEY, String(lock.expiresAt));
-               setSearchParams({ ...Object.fromEntries(searchParams), step: "2", lockId: lock.userId });
-             } catch (e: any) {
-               setBlockingError(e?.message || "Maaf, tiket tidak tersedia atau gagal dikunci. Silakan coba lagi.");
-                return;
-             } finally {
-               setIsActionLoading(false);
-             }
-           } else {
-            setLockId(activeLockId);
-            setSearchParams({ ...Object.fromEntries(searchParams), step: "2", lockId: activeLockId });
-           }
+          // Always (re-)acquire the lock here with the buyer's current holder data. The
+          // preliminary "intent" lock made on mount (see acquireInitialLock) has no holders
+          // yet - reusing that lockId as-is would carry an empty holders array all the way to
+          // the final commit and fail validation there. Re-locking (even if a lockId already
+          // exists) guarantees the lock Redis is holding always matches what the buyer just
+          // filled in on this step.
+          setIsActionLoading(true);
+          try {
+            const lock = await orderApi.acquireLock(event.id, baseSummary, holders);
+            setLockId(lock.userId);
+            sessionStorage.setItem(CHECKOUT_DEADLINE_STORAGE_KEY, String(lock.expiresAt));
+            setSearchParams({ ...Object.fromEntries(searchParams), step: "2", lockId: lock.userId });
+          } catch (e: any) {
+            setBlockingError(e?.message || "Maaf, tiket tidak tersedia atau gagal dikunci. Silakan coba lagi.");
+            return;
+          } finally {
+            setIsActionLoading(false);
+          }
         }
         break;
       case 2:
@@ -287,7 +323,8 @@ export function useCheckoutSteps(
               eventId: event.id,
               buyerInfo,
               summary: paymentSummary,
-              paymentMethod: selectedPaymentMethod
+              paymentMethod: selectedPaymentMethod,
+              promoCode: selection.appliedPromo?.code,
             });
 
             if (result) {
@@ -318,28 +355,44 @@ export function useCheckoutSteps(
                 return;
               }
 
+              // Manual transfer: proof uploaded, now awaiting admin approval. Advance to
+              // the pending screen (ManualTransferPending) — NOT the success screen.
               await orderApi.submitManualTransferProof(activeLockId, manualTransferProofFile);
               setCompletedOrder(null);
               setIsManualTransferPending(true);
+
+              const nextParams = new URLSearchParams(searchParams);
+              nextParams.set("step", "5");
+              nextParams.set("lockId", activeLockId);
+              nextParams.set("orderId", activeLockId);
+              nextParams.set("manualPending", "1");
+              setSearchParams(nextParams);
             } else {
+              // Gateway (QRIS/VA): `/complete` only creates the Xendit invoice and leaves the
+              // transaction WAITING_PAYMENT (tickets WAITING_APPROVAL). The buyer still has to
+              // pay via Xendit, so we must NOT jump to OrderSuccess here. Surface the fresh
+              // QR/VA payload and stay on the payment step; handlePaymentConfirmed advances to
+              // success once the status poll/webhook reports the payment SUCCESSFUL.
               const result = await orderApi.executeOrder(
                 activeLockId,
                 paymentSummary.totalPrice,
               );
               setCompletedOrder(result);
               setIsManualTransferPending(false);
-            }
 
-            const nextParams = new URLSearchParams(searchParams);
-            nextParams.set("step", "5");
-            nextParams.set("lockId", activeLockId);
-            nextParams.set("orderId", activeLockId);
-            if (isManualTransferPayment) {
-              nextParams.set("manualPending", "1");
-            } else {
-              nextParams.delete("manualPending");
+              if (isGatewayPaymentSuccessful(result)) {
+                // Edge case: the gateway already reports success (e.g. re-click after paying,
+                // or an instantly-settled bill) — go straight to the success screen.
+                const nextParams = new URLSearchParams(searchParams);
+                nextParams.set("step", "5");
+                nextParams.set("lockId", activeLockId);
+                nextParams.set("orderId", activeLockId);
+                nextParams.delete("manualPending");
+                setSearchParams(nextParams);
+              }
+              // Otherwise stay on step 4 (PaymentInstruction) showing the QR/VA and the
+              // "Menunggu pembayaran..." state until the payment is confirmed.
             }
-            setSearchParams(nextParams);
           } else {
             alert("Sesi checkout tidak ditemukan. Silakan ulangi dari halaman event.");
             navigate(`/event/${params.eventId}`);
@@ -353,7 +406,9 @@ export function useCheckoutSteps(
             sessionStorage.removeItem(CHECKOUT_DEADLINE_STORAGE_KEY);
             navigate(`/event/${params.eventId}`);
           } else {
-            alert(message);
+            // Hard validation failure (e.g. KTP domicile block): surface it inline instead of a
+            // blocking alert() — the buyer stays on the payment step and can fix their data.
+            setBlockingError(message);
           }
         } finally {
           setIsActionLoading(false);
@@ -382,6 +437,40 @@ export function useCheckoutSteps(
     expireCheckoutSession(false);
   }, [expireCheckoutSession]);
 
+  /**
+   * Called when the gateway (FLIP) reports the VA/QRIS payment as completed —
+   * either via realtime push or the status polling fallback on step 4.
+   * Mirrors the manual "Bayar Sekarang" completion path in `handleNext` (case 4),
+   * but is triggered automatically instead of by a user click.
+   */
+  const handlePaymentConfirmed = useCallback(async () => {
+    if (currentStep !== 4 || isManualTransferPayment) return;
+
+    const activeLockId = lockId || searchParams.get("lockId") || searchParams.get("orderId");
+    if (!activeLockId) return;
+
+    setIsActionLoading(true);
+    try {
+      const result = await orderApi.executeOrder(activeLockId, paymentSummary.totalPrice);
+      setCompletedOrder(result);
+      setIsManualTransferPending(false);
+
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set("step", "5");
+      nextParams.set("lockId", activeLockId);
+      nextParams.set("orderId", activeLockId);
+      nextParams.delete("manualPending");
+      setSearchParams(nextParams);
+    } catch (error) {
+      // The payment already succeeded at the gateway; a transient error finalizing
+      // locally shouldn't alarm the buyer. The regular poll/realtime loop or the
+      // manual "Bayar Sekarang" button remains available as a fallback.
+      console.error("Failed to auto-finalize completed payment", error);
+    } finally {
+      setIsActionLoading(false);
+    }
+  }, [currentStep, isManualTransferPayment, lockId, searchParams, paymentSummary.totalPrice, setSearchParams]);
+
   return {
     currentStep,
     isActionLoading: isActionLoading || isConfirming,
@@ -392,6 +481,7 @@ export function useCheckoutSteps(
     handleNext,
     handleBack,
     handleExpire,
+    handlePaymentConfirmed,
     paymentSelection: selection,
     selectedPaymentMethod,
     isStep2Valid,

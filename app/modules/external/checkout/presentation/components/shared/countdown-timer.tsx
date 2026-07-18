@@ -6,23 +6,38 @@ export interface CountdownTimerProps {
   initialMinutes?: number;
   onExpire?: () => void;
   className?: string;
+  /**
+   * When provided (epoch milliseconds), this deadline takes precedence over the
+   * sessionStorage-persisted deadline. Used to feed a real gateway expiry
+   * (e.g. FLIP's `gatewayExpiry`) into the timer on the payment-instruction step.
+   */
+  deadlineTimestamp?: number | null;
 }
 
-export function CountdownTimer({ initialMinutes = 15, onExpire, className = "" }: CountdownTimerProps) {
+export function CountdownTimer({ initialMinutes = 15, onExpire, className = "", deadlineTimestamp }: CountdownTimerProps) {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    let deadline = sessionStorage.getItem(STORAGE_KEY);
-    if (!deadline) {
-      const newDeadline = Date.now() + initialMinutes * 60 * 1000;
-      sessionStorage.setItem(STORAGE_KEY, newDeadline.toString());
-      deadline = newDeadline.toString();
+    let deadline: string;
+    if (deadlineTimestamp != null) {
+      deadline = String(deadlineTimestamp);
+    } else {
+      const stored = sessionStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        deadline = stored;
+      } else {
+        const newDeadline = Date.now() + initialMinutes * 60 * 1000;
+        sessionStorage.setItem(STORAGE_KEY, newDeadline.toString());
+        deadline = newDeadline.toString();
+      }
     }
 
     const calculateTimeLeft = () => {
-      const currentDeadline = sessionStorage.getItem(STORAGE_KEY) ?? deadline;
+      const currentDeadline = deadlineTimestamp != null
+        ? deadline
+        : (sessionStorage.getItem(STORAGE_KEY) ?? deadline);
       const difference = parseInt(currentDeadline, 10) - Date.now();
       return Math.max(0, Math.floor(difference / 1000));
     };
@@ -39,7 +54,7 @@ export function CountdownTimer({ initialMinutes = 15, onExpire, className = "" }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [initialMinutes, onExpire]);
+  }, [initialMinutes, onExpire, deadlineTimestamp]);
 
   if (timeLeft === null) return null;
 

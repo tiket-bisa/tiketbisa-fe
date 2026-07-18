@@ -24,8 +24,11 @@ export const MAX_TICKETS_PER_ORDER = 4;
 
 export interface OrderSummary {
   subtotal: number;
+  /** "Biaya Layanan" per ticket = brand.admin_fee. */
   serviceFeePerTicket: number;
+  /** "Biaya Layanan" total = serviceFeePerTicket x jumlah tiket. */
   serviceFee: number;
+  /** "Biaya Transaksi" (payment gateway): QRIS 3% / VA Rp5.000. */
   transactionFee: number;
   transactionFeeDescription?: string;
   /** Promo discount applied client-side for display only; backend recomputes authoritatively. */
@@ -60,6 +63,9 @@ export interface PaymentSelection {
 
 export type OrderStatus = "PENDING" | "PAID" | "EXPIRED" | "CANCELLED";
 
+/** Gateway payment status as reported by FLIP (VA/QRIS), threaded through completion + status polling. */
+export type GatewayStatus = "PENDING" | "SUCCESSFUL" | "EXPIRED" | "FAILED";
+
 export interface OrderResponse {
   orderId: string;
   status: OrderStatus;
@@ -67,6 +73,11 @@ export interface OrderResponse {
   paymentMethod: PaymentMethod;
   expiryTime: string;
   paymentInstructions?: string;
-  virtualAccount?: string;
+  virtualAccount?: string | null;
   qrCodeUrl?: string;
+  /** Raw QRIS payload from the gateway (may be a scannable string or a deep-link URL). */
+  qrPayload?: string | null;
+  gatewayStatus?: GatewayStatus | null;
+  /** ISO timestamp for when the gateway-issued VA/QRIS bill expires. */
+  gatewayExpiry?: string | null;
 }
