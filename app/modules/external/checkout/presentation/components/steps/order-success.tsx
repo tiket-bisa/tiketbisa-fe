@@ -38,7 +38,7 @@ export function OrderSuccess({ event, order, onAction }: OrderSuccessProps) {
              
              <div className="space-y-6">
                 {order.tickets.map((ticket, index) => (
-                  <div key={ticket.ticketId} className="flex flex-col md:flex-row gap-6 p-6 border-2 border-gray-50 rounded-2xl bg-gray-50/30">
+                  <div key={ticket.ticketId ?? `ticket-${index}`} className="flex flex-col md:flex-row gap-6 p-6 border-2 border-gray-50 rounded-2xl bg-gray-50/30">
                     <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 self-center">
                       <img 
                         src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${ticket.code}`} 
