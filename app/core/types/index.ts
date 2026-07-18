@@ -96,3 +96,28 @@ export interface TicketDashboardSummary {
   checked_in_tickets: number;
   sold_tickets: number;
 }
+
+/** Validate-step scan status (read-only, pre check-in) */
+export type ScanValidateStatus = "VALID" | "ALREADY_CHECKED_IN" | "INVALID" | "WRONG_CATEGORY";
+
+/** Check-in step outcome, shown after the operator confirms "CHECK IN" */
+export type ScanCheckInStatus = "SUCCESS" | "FAILED";
+
+export interface ScanValidateResult {
+  status: ScanValidateStatus;
+  holderName?: string;
+  ticketCategoryName?: string;
+  checkInTime?: string;
+  source?: "TIKETBISA" | "PARTNER";
+  partner?: string;
+  message?: string;
+  /** Raw code + type, kept so the confirm step can re-submit for check-in */
+  codeHash: string;
+  codeType: "QR_CODE" | "BARCODE";
+}
+
+export interface ScanCheckInResult {
+  status: ScanCheckInStatus;
+  message?: string;
+  checkInTime?: string;
+}
