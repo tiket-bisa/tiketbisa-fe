@@ -117,35 +117,44 @@ export default function IntegrationClientsPage() {
       return;
     }
     setIsMutating(true);
-    const response = await integrationClientApi.create({ code, name, client_key: clientKey });
-    setIsMutating(false);
-    if (!response.success) {
-      setPageError(response.error || "Gagal membuat integration client.");
-      return;
+    try {
+      const response = await integrationClientApi.create({ code, name, client_key: clientKey });
+      if (!response.success) {
+        setPageError(response.error || "Gagal membuat integration client.");
+        return;
+      }
+      setCreateCode(""); setCreateName(""); setCreateKey("");
+      if (response.data?.id) setSelectedId(response.data.id);
+      setPageSuccess("Integration client berhasil dibuat.");
+      refetchClients();
+    } finally {
+      setIsMutating(false);
     }
-    setCreateCode(""); setCreateName(""); setCreateKey("");
-    if (response.data?.id) setSelectedId(response.data.id);
-    setPageSuccess("Integration client berhasil dibuat.");
-    refetchClients();
   };
 
   const handleUpdateName = async () => {
     if (!selectedClient || !editName.trim()) return;
     clearMessage(); setIsMutating(true);
-    const response = await integrationClientApi.update(selectedClient.id, editName.trim());
-    setIsMutating(false);
-    if (!response.success) return setPageError(response.error || "Gagal memperbarui nama client.");
-    setPageSuccess("Nama client berhasil diperbarui."); refetchClients();
+    try {
+      const response = await integrationClientApi.update(selectedClient.id, editName.trim());
+      if (!response.success) return setPageError(response.error || "Gagal memperbarui nama client.");
+      setPageSuccess("Nama client berhasil diperbarui."); refetchClients();
+    } finally {
+      setIsMutating(false);
+    }
   };
 
   const handleClientStatus = async (client: IntegrationClient) => {
     const nextActive = !client.active;
     if (!nextActive && !window.confirm(`Nonaktifkan integration client ${client.name}?`)) return;
     clearMessage(); setIsMutating(true);
-    const response = await integrationClientApi.updateStatus(client.id, nextActive);
-    setIsMutating(false);
-    if (!response.success) return setPageError(response.error || "Gagal memperbarui status client.");
-    setPageSuccess(`Client berhasil ${nextActive ? "diaktifkan" : "dinonaktifkan"}.`); refetchClients();
+    try {
+      const response = await integrationClientApi.updateStatus(client.id, nextActive);
+      if (!response.success) return setPageError(response.error || "Gagal memperbarui status client.");
+      setPageSuccess(`Client berhasil ${nextActive ? "diaktifkan" : "dinonaktifkan"}.`); refetchClients();
+    } finally {
+      setIsMutating(false);
+    }
   };
 
   const handleAddKey = async () => {
@@ -166,15 +175,18 @@ export default function IntegrationClientsPage() {
       return;
     }
     setIsMutating(true);
-    const response = await integrationClientApi.addKey(selectedClient.id, {
-      public_key_pem: pem.trim(),
-      valid_from: fromDate.toISOString(),
-      valid_until: untilDate?.toISOString() ?? null,
-    });
-    setIsMutating(false);
-    if (!response.success) return setPageError(response.error || "Gagal menambahkan public key.");
-    setPem(""); setValidFrom(toLocalDateTime()); setValidUntil("");
-    setPageSuccess("RSA public key berhasil ditambahkan."); refetchKeys(); refetchClients();
+    try {
+      const response = await integrationClientApi.addKey(selectedClient.id, {
+        public_key_pem: pem.trim(),
+        valid_from: fromDate.toISOString(),
+        valid_until: untilDate?.toISOString() ?? null,
+      });
+      if (!response.success) return setPageError(response.error || "Gagal menambahkan public key.");
+      setPem(""); setValidFrom(toLocalDateTime()); setValidUntil("");
+      setPageSuccess("RSA public key berhasil ditambahkan."); refetchKeys(); refetchClients();
+    } finally {
+      setIsMutating(false);
+    }
   };
 
   const handleKeyStatus = async (keyId: string, active: boolean) => {
@@ -182,11 +194,14 @@ export default function IntegrationClientsPage() {
     const nextActive = !active;
     if (!nextActive && !window.confirm("Nonaktifkan RSA public key ini?")) return;
     clearMessage(); setIsMutating(true);
-    const response = await integrationClientApi.updateKeyStatus(selectedClient.id, keyId, nextActive);
-    setIsMutating(false);
-    if (!response.success) return setPageError(response.error || "Gagal memperbarui status key.");
-    setPageSuccess(`Public key berhasil ${nextActive ? "diaktifkan" : "dinonaktifkan"}.`);
-    refetchKeys(); refetchClients();
+    try {
+      const response = await integrationClientApi.updateKeyStatus(selectedClient.id, keyId, nextActive);
+      if (!response.success) return setPageError(response.error || "Gagal memperbarui status key.");
+      setPageSuccess(`Public key berhasil ${nextActive ? "diaktifkan" : "dinonaktifkan"}.`);
+      refetchKeys(); refetchClients();
+    } finally {
+      setIsMutating(false);
+    }
   };
 
   return (
