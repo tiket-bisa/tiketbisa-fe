@@ -5,6 +5,7 @@ import { toAbsoluteApiUrl } from "./api-url";
 const INTERNAL_API_PREFIX = "/internal-tb";
 
 interface StoredAuthSession {
+  identifier?: string;
   email?: string;
   internal_token?: string;
 }
@@ -143,11 +144,12 @@ export const httpClient = {
 function getInternalAuthHeaders(): Record<string, string> {
   const session = getStoredAuthSession();
   if (!session?.internal_token) {
-    if (!session?.email) {
+    const identifier = session?.identifier ?? session?.email;
+    if (!identifier) {
       return {};
     }
     return {
-      "x-tb-identifier": session.email,
+      "x-tb-identifier": identifier,
     };
   }
 
@@ -155,8 +157,8 @@ function getInternalAuthHeaders(): Record<string, string> {
     "x-tb-internal-token": session.internal_token,
   };
 
-  if (session.email) {
-    headers["x-tb-identifier"] = session.email;
+  if (session.identifier || session.email) {
+    headers["x-tb-identifier"] = session.identifier ?? session.email ?? "";
   }
 
   return headers;

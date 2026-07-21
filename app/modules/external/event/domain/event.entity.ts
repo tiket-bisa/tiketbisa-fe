@@ -11,6 +11,7 @@ export interface Event {
   name: string;
   brandId?: string;
   brand: string;
+  brandAdminFee?: number;
   description: string;
   imageUrl: string;
   galleryImages?: string[];

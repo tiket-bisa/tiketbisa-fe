@@ -1,6 +1,7 @@
 import { Card } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils/currency";
 import type { OrderSummary } from "../../../domain/checkout.types";
+import { formatServiceFeeBreakdown } from "../../../domain/checkout.pricing";
 
 export interface OrderSummaryCardProps {
   summary: OrderSummary;
@@ -33,26 +34,41 @@ export function OrderSummaryCard({ summary, className = "" }: OrderSummaryCardPr
 
       <div className="pt-6 border-t border-gray-50 space-y-4">
         <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-text-secondary">Subtotal</span>
+          <span className="text-sm font-medium text-text-secondary">Sub total</span>
           <span className="text-sm font-bold text-text-primary">{formatIDR(summary.subtotal)}</span>
         </div>
-        
-        {summary.tax > 0 && (
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-medium text-text-secondary">Pajak Daerah</span>
-            <span className="text-sm font-bold text-text-primary">{formatIDR(summary.tax)}</span>
+
+        {summary.serviceFee > 0 && (
+          <div className="flex justify-between items-start gap-4">
+            <div className="space-y-1">
+              <span className="block text-sm font-medium text-text-secondary">Biaya layanan</span>
+              <span className="block text-xs font-medium text-text-tertiary">{formatServiceFeeBreakdown(summary)}</span>
+            </div>
+            <span className="text-sm font-bold text-text-primary whitespace-nowrap">{formatIDR(summary.serviceFee)}</span>
           </div>
         )}
 
-        {summary.serviceFee > 0 && (
+        {summary.transactionFee > 0 && (
+          <div className="flex justify-between items-start gap-4">
+            <div className="space-y-1">
+              <span className="block text-sm font-medium text-text-secondary">Biaya transaksi (payment gateway)</span>
+              {summary.transactionFeeDescription && (
+                <span className="block text-xs font-medium text-text-tertiary">{summary.transactionFeeDescription}</span>
+              )}
+            </div>
+            <span className="text-sm font-bold text-text-primary whitespace-nowrap">{formatIDR(summary.transactionFee)}</span>
+          </div>
+        )}
+
+        {summary.discount > 0 && (
           <div className="flex justify-between items-center">
-            <span className="text-sm font-medium text-text-secondary">Biaya Layanan</span>
-            <span className="text-sm font-bold text-text-primary">{formatIDR(summary.serviceFee)}</span>
+            <span className="text-sm font-medium text-text-secondary">Diskon</span>
+            <span className="text-sm font-bold text-destructive-text">-{formatIDR(summary.discount)}</span>
           </div>
         )}
 
         <div className="flex justify-between items-center pt-5 border-t-2 border-dashed border-gray-100 mt-2">
-          <span className="text-sm font-bold text-text-primary">Total Bayar</span>
+          <span className="text-sm font-bold text-text-primary">Total</span>
           <span className="text-xl font-black text-brand-primary">
             {formatIDR(summary.totalPrice)}
           </span>

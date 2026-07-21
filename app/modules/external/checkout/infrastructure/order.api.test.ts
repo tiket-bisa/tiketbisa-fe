@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { apiFetch } from "~/core/api";
 import type { BuyerInfo, OrderSummary, PaymentMethod } from "../domain/checkout.types";
-import { orderApi } from "./order.api";
+import { isGatewayPaymentSuccessful, orderApi } from "./order.api";
 
 vi.mock("~/core/api", () => ({
   apiFetch: vi.fn(),
@@ -14,10 +14,12 @@ describe("orderApi", () => {
   const mockEventId = "e-001";
   const mockSummary: OrderSummary = {
     subtotal: 100000,
-    adminFee: 5000,
+    serviceFeePerTicket: 5000,
     serviceFee: 10000,
-    tax: 10000,
-    totalPrice: 125000,
+    transactionFee: 0,
+    discount: 0,
+    totalPrice: 110000,
+    ticketCount: 2,
     items: [{ ticketId: "tc-001", ticketName: "Regular", quantity: 2, price: 50000 }],
   };
   const mockBuyerInfo: BuyerInfo = {
@@ -142,5 +144,33 @@ describe("orderApi", () => {
         status: "ISSUED",
       },
     ]);
+  });
+
+  describe("isGatewayPaymentSuccessful", () => {
+    it("is false for a freshly created invoice (PENDING, tickets awaiting approval)", () => {
+      expect(
+        isGatewayPaymentSuccessful({
+          gatewayStatus: "PENDING",
+          tickets: [
+            { ticketId: "t1", code: "", codeType: "QR_CODE", categoryId: "tc-001", status: "WAITING_APPROVAL" },
+          ],
+        }),
+      ).toBe(false);
+    });
+
+    it("is true once the gateway reports SUCCESSFUL", () => {
+      expect(isGatewayPaymentSuccessful({ gatewayStatus: "SUCCESSFUL", tickets: [] })).toBe(true);
+    });
+
+    it("is true once tickets are ISSUED even if gatewayStatus is missing", () => {
+      expect(
+        isGatewayPaymentSuccessful({
+          gatewayStatus: null,
+          tickets: [
+            { ticketId: "t1", code: "QR-1", codeType: "QR_CODE", categoryId: "tc-001", status: "ISSUED" },
+          ],
+        }),
+      ).toBe(true);
+    });
   });
 });

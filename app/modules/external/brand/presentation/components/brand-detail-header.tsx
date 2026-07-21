@@ -20,7 +20,7 @@ export function BrandDetailHeader({ brand }: BrandDetailHeaderProps) {
           <img
             src={brand.bannerUrl}
             alt={`${brand.name} banner`}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover lg:object-contain"
           />
         ) : (
           <div className="w-full h-full bg-surface-alt flex items-center justify-center text-text-tertiary">

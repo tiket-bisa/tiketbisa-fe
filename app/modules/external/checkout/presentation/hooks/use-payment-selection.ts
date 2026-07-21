@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import type { PaymentSelection } from "../../domain/checkout.types";
+import type { AppliedPromo, PaymentSelection } from "../../domain/checkout.types";
 
 const STORAGE_KEY = "tiketbisa_payment_selection";
 const DEFAULT_SELECTION: PaymentSelection = {
   methodId: null,
   agreedToTerms: false,
   agreedToPrivacy: false,
+  appliedPromo: null,
 };
 
 export function usePaymentSelection() {
@@ -41,10 +42,20 @@ export function usePaymentSelection() {
     setSelection((prev) => ({ ...prev, agreedToPrivacy }));
   };
 
+  const applyPromo = (promo: AppliedPromo) => {
+    setSelection((prev) => ({ ...prev, promoCode: promo.code, appliedPromo: promo }));
+  };
+
+  const removePromo = () => {
+    setSelection((prev) => ({ ...prev, promoCode: undefined, appliedPromo: null }));
+  };
+
   return {
     selection,
     setMethodId,
     setAgreedToTerms,
     setAgreedToPrivacy,
+    applyPromo,
+    removePromo,
   };
 }
