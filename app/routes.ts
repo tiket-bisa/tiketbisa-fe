@@ -91,6 +91,10 @@ export default [
       { id: "admin-partner-ticket-ingest" },
     ),
     route(
+      "internal-tb/admin/integration-clients",
+      "modules/admin/integration-clients/presentation/integration-clients.page.tsx",
+    ),
+    route(
       "internal-tb/admin/transactions/:id",
       "modules/admin/transactions/presentation/transaction-details.page.tsx",
     ),
