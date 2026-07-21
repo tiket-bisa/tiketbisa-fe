@@ -60,6 +60,13 @@ export function OrderSummaryCard({ summary, className = "" }: OrderSummaryCardPr
           </div>
         )}
 
+        {summary.discount > 0 && (
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium text-text-secondary">Diskon</span>
+            <span className="text-sm font-bold text-destructive-text">-{formatIDR(summary.discount)}</span>
+          </div>
+        )}
+
         <div className="flex justify-between items-center pt-5 border-t-2 border-dashed border-gray-100 mt-2">
           <span className="text-sm font-bold text-text-primary">Total</span>
           <span className="text-xl font-black text-brand-primary">

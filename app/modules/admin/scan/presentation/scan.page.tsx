@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
-import { Card, Tabs, Badge } from "~/core/design-system/components";
+import { Link } from "react-router";
+import { Card, Tabs, Badge, Button } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
 import { useApiQuery } from "~/core/api";
 import { eventApi, mapEventApiToFe } from "~/core/api/services/event.api";
@@ -81,7 +82,14 @@ export default function AdminScanPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-text-primary text-2xl font-bold">Scan Tiket</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-text-primary text-2xl font-bold">Scan Tiket</h1>
+        <Link to="/internal-tb/admin/partner-tickets">
+          <Button variant="secondary" size="sm">
+            Impor Tiket Partner
+          </Button>
+        </Link>
+      </div>
 
       {/* Scanning component is imported from partner ticket-scanning module */}
       <ScanTabsSection dashboard={dashboard} />
@@ -105,6 +113,7 @@ function ScanTabsSection({ dashboard }: { dashboard: TicketDashboardSummary[] })
       <Tabs items={tabItems} value={tab} onChange={setTab} />
 
       {tab === "scan" && <ScanSection />}
+      {/* Admin sees events across every brand, so no brandSlug scoping is passed here. */}
       {tab === "generate" && <QrGeneratorSection />}
       {tab === "dashboard" && <AdminDashboardSection dashboard={dashboard} />}
     </>

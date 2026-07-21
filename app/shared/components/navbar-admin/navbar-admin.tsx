@@ -14,6 +14,7 @@ const navLinks: readonly { to: string; label: string; exact?: boolean }[] = [
   { to: "/internal-tb/admin/brands", label: "Brand" },
   { to: "/internal-tb/admin/events", label: "Event" },
   { to: "/internal-tb/admin/analytics", label: "Analitik" },
+  { to: "/internal-tb/admin/integration-clients", label: "Integrasi" },
 ];
 
 export function NavbarAdmin({

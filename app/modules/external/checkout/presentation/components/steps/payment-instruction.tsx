@@ -1,9 +1,15 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { Card, Button } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils/currency";
-import { validateManualTransferProofFile } from "../../../infrastructure/order.api";
+import { orderApi, validateManualTransferProofFile } from "../../../infrastructure/order.api";
+import type { TransactionStatusResult } from "../../../infrastructure/order.api";
+import { usePublicRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 import type { OrderResponse } from "../../../domain/checkout.types";
 import type { Event } from "../../../../event/domain/event.entity";
 import { CountdownTimer } from "../shared/countdown-timer";
+
+const STATUS_POLL_INTERVAL_MS = 5000;
 
 export interface PaymentInstructionProps {
   order: OrderResponse;
@@ -15,6 +21,28 @@ export interface PaymentInstructionProps {
   onBack: () => void;
   onExpire: () => void;
   isLoading?: boolean;
+  /** Transaction/order id used for status polling + realtime subscription. */
+  transactionId?: string | null;
+  /** Called once the gateway reports the payment as completed/successful. */
+  onPaymentCompleted?: () => void;
+}
+
+/** Parses a VA string possibly encoded as "BANK:NUMBER"; falls back to showing the raw value. */
+function parseVirtualAccount(raw: string | null | undefined): { bankName: string | null; accountNumber: string } {
+  if (!raw) return { bankName: null, accountNumber: "" };
+  const separatorIndex = raw.indexOf(":");
+  if (separatorIndex > -1) {
+    return {
+      bankName: raw.slice(0, separatorIndex).trim() || null,
+      accountNumber: raw.slice(separatorIndex + 1).trim(),
+    };
+  }
+  return { bankName: null, accountNumber: raw };
+}
+
+function isUrlLike(value: string | null | undefined): value is string {
+  if (!value) return false;
+  return /^https?:\/\//i.test(value.trim());
 }
 
 export function PaymentInstruction({
@@ -27,6 +55,8 @@ export function PaymentInstruction({
   onBack,
   onExpire,
   isLoading,
+  transactionId,
+  onPaymentCompleted,
 }: PaymentInstructionProps) {
   const isBank = order.paymentMethod.category === "BANK_TRANSFER";
   const isManualTransfer = order.paymentMethod.id === "manual" || order.paymentMethod.id === "manual_transfer";
@@ -34,6 +64,106 @@ export function PaymentInstruction({
     Number(order.totalAmount) > 0
       ? Number(order.totalAmount)
       : Number(fallbackTotalAmount || 0);
+
+  const [gatewayData, setGatewayData] = useState<{
+    virtualAccount?: string | null;
+    qrPayload?: string | null;
+    gatewayExpiry?: string | null;
+  }>({
+    virtualAccount: order.virtualAccount,
+    qrPayload: order.qrPayload,
+    gatewayExpiry: order.gatewayExpiry,
+  });
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [hasCompleted, setHasCompleted] = useState(false);
+
+  useEffect(() => {
+    setGatewayData({
+      virtualAccount: order.virtualAccount,
+      qrPayload: order.qrPayload,
+      gatewayExpiry: order.gatewayExpiry,
+    });
+  }, [order.virtualAccount, order.qrPayload, order.gatewayExpiry]);
+
+  const handleStatusResult = useCallback((result: TransactionStatusResult | null) => {
+    if (!result) return;
+    setGatewayData((prev) => ({
+      virtualAccount: result.virtualAccount ?? prev.virtualAccount,
+      qrPayload: result.qrPayload ?? prev.qrPayload,
+      gatewayExpiry: result.gatewayExpiry ?? prev.gatewayExpiry,
+    }));
+
+    const isCompleted =
+      result.status?.toUpperCase() === "COMPLETED" ||
+      result.gatewayStatus === "SUCCESSFUL";
+
+    if (isCompleted) {
+      setHasCompleted(true);
+    }
+  }, []);
+
+  // Fire the completion callback exactly once, from a passive effect — never inside a
+  // setState updater, which is a side effect during render (React warns with "Cannot
+  // update a component while rendering a different component" and can drop the update).
+  const paymentCompletedRef = useRef(false);
+  useEffect(() => {
+    if (hasCompleted && !paymentCompletedRef.current) {
+      paymentCompletedRef.current = true;
+      onPaymentCompleted?.();
+    }
+  }, [hasCompleted, onPaymentCompleted]);
+
+  // Reliability fallback: poll transaction status every ~5s while awaiting payment.
+  useEffect(() => {
+    if (!transactionId || isManualTransfer || hasCompleted) return;
+
+    // Cap the polling at the payment deadline. Past it, the invoice/ticket-lock has expired, so a
+    // late payment can't be honoured anyway — polling forever (e.g. a tab left open) would just
+    // hammer the backend. Normally the countdown unmounts this view first; this is the safety net.
+    const deadlineSource = gatewayData.gatewayExpiry || order.expiryTime;
+    const deadlineMs = deadlineSource ? new Date(deadlineSource).getTime() : null;
+
+    let cancelled = false;
+    let interval: ReturnType<typeof setInterval> | undefined;
+
+    const poll = async () => {
+      if (deadlineMs != null && Date.now() > deadlineMs) {
+        if (interval) clearInterval(interval);
+        return;
+      }
+      const result = await orderApi.getTransactionStatus(transactionId);
+      if (!cancelled) {
+        handleStatusResult(result);
+      }
+    };
+
+    void poll();
+    interval = setInterval(poll, STATUS_POLL_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      if (interval) clearInterval(interval);
+    };
+  }, [
+    transactionId,
+    isManualTransfer,
+    hasCompleted,
+    handleStatusResult,
+    gatewayData.gatewayExpiry,
+    order.expiryTime,
+  ]);
+
+  // Faster path: realtime push when the webhook updates the transaction.
+  const handleRealtimeMessage = useCallback((message: RealtimeMessage) => {
+    if (message.type !== "transaction.updated") return;
+    if (!transactionId || isManualTransfer) return;
+    void orderApi.getTransactionStatus(transactionId).then(handleStatusResult);
+  }, [transactionId, isManualTransfer, handleStatusResult]);
+
+  usePublicRealtimeSubscription(
+    transactionId && !isManualTransfer ? [`transaction:${transactionId}`] : [],
+    handleRealtimeMessage,
+  );
 
   const handleProofFileChange = (file: File | null) => {
     if (!file) {
@@ -48,15 +178,26 @@ export function PaymentInstruction({
     }
     onProofFileChange?.(file);
   };
-  
-  const deadline = new Date(order.expiryTime).toLocaleTimeString('id-ID', { 
-    hour: '2-digit', 
+
+  const gatewayExpiryTimestamp = useMemo(() => {
+    if (!gatewayData.gatewayExpiry) return null;
+    const parsed = new Date(gatewayData.gatewayExpiry).getTime();
+    return Number.isFinite(parsed) ? parsed : null;
+  }, [gatewayData.gatewayExpiry]);
+
+  const deadlineSource = gatewayData.gatewayExpiry || order.expiryTime;
+  const deadline = new Date(deadlineSource).toLocaleTimeString('id-ID', {
+    hour: '2-digit',
     minute: '2-digit',
-    hour12: false 
+    hour12: false
   });
 
-  // --- 1. QRIS LAYOUT (Centered Style) ---
-  if (!isBank) {
+  const { bankName, accountNumber } = parseVirtualAccount(gatewayData.virtualAccount);
+  const qrPayload = gatewayData.qrPayload;
+  const qrRedirectUrl = isUrlLike(qrPayload) ? qrPayload : null;
+
+  // --- 1. XENDIT HOSTED-INVOICE LAYOUT (VA + QRIS both resolve to one hosted checkout page) ---
+  if (!isManualTransfer) {
     return (
       <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
         <Card className="overflow-hidden border-gray-100 rounded-3xl shadow-sm bg-white">
@@ -64,25 +205,42 @@ export function PaymentInstruction({
             {/* Top Section: Timer & Deadline */}
             <div className="flex flex-col items-center text-center space-y-6">
               <div className="w-full max-w-sm">
-                <CountdownTimer onExpire={onExpire} className="!shadow-none border-2 border-orange-100" />
+                <CountdownTimer
+                  onExpire={onExpire}
+                  deadlineTimestamp={gatewayExpiryTimestamp}
+                  className="!shadow-none border-2 border-orange-100"
+                />
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-medium text-text-secondary">Batas Waktu Pembayaran</p>
                 <p className="text-lg font-black text-text-primary">{deadline} WIB</p>
               </div>
+              {!hasCompleted && (
+                <div className="flex items-center gap-2 text-xs font-bold text-warning-text uppercase tracking-widest">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                  </span>
+                  Menunggu pembayaran...
+                </div>
+              )}
             </div>
 
             {/* QR Area */}
             <div className="flex flex-col items-center space-y-8 py-4">
               <div className="space-y-3 text-center">
-                <img src="/logo/qris.png" alt="QRIS" className="h-10 mx-auto" />
-                <p className="text-sm font-black text-text-primary tracking-tight">Pindai Kode QR Untuk Bayar</p>
+                <p className="text-sm font-black text-text-primary tracking-tight">Selesaikan Pembayaran via Xendit</p>
+                <p className="text-xs font-medium text-text-secondary">Pindai QR atau buka halaman pembayaran Xendit untuk memilih metode (VA / QRIS / e-wallet).</p>
               </div>
-              
-              <div className="p-6 bg-white border-4 border-gray-100 rounded-[3rem] shadow-xl relative">
+
+              <button
+                type="button"
+                onClick={() => setIsQrModalOpen(true)}
+                className="p-6 bg-white border-4 border-gray-100 rounded-[3rem] shadow-xl relative hover:border-brand-primary/30 transition-colors"
+              >
                 <div className="w-64 h-64 md:w-72 md:h-72 bg-gray-50 rounded-3xl flex items-center justify-center border-2 border-dashed border-gray-200 overflow-hidden">
-                  {order.qrCodeUrl ? (
-                    <img src={order.qrCodeUrl} alt="QR Code" className="w-full h-full object-cover p-2" />
+                  {qrPayload ? (
+                    <QRCodeSVG value={qrPayload} size={256} className="w-full h-full p-4" />
                   ) : (
                     <div className="text-text-tertiary text-center p-8">
                        <svg className="w-20 h-20 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -92,7 +250,25 @@ export function PaymentInstruction({
                     </div>
                   )}
                 </div>
-              </div>
+                {qrPayload && (
+                  <span className="absolute bottom-2 right-2 text-[10px] font-black text-brand-primary uppercase tracking-widest bg-white/90 px-2 py-1 rounded-full shadow-sm">
+                    Perbesar
+                  </span>
+                )}
+              </button>
+
+              {qrRedirectUrl && (
+                <button
+                  type="button"
+                  onClick={() => { window.open(qrRedirectUrl, "_blank", "noopener"); }}
+                  className="text-sm font-black text-brand-primary hover:underline flex items-center gap-2"
+                >
+                  Buka Halaman Pembayaran Xendit
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </button>
+              )}
 
               <div className="flex flex-wrap justify-center gap-6 opacity-40 grayscale">
                 <img src="/logos/gopay.png" alt="GoPay" className="h-4 w-auto" />
@@ -151,6 +327,49 @@ export function PaymentInstruction({
             </div>
           </div>
         </Card>
+
+        {isQrModalOpen && (
+          <div
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4 animate-in fade-in duration-200"
+            onClick={() => setIsQrModalOpen(false)}
+          >
+            <div
+              className="bg-white rounded-3xl p-8 max-w-sm w-full space-y-6 relative animate-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setIsQrModalOpen(false)}
+                className="absolute top-4 right-4 text-text-tertiary hover:text-text-primary transition-colors"
+                aria-label="Tutup"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <div className="text-center space-y-1">
+                <img src="/logo/qris.png" alt="QRIS" className="h-8 mx-auto" />
+                <p className="text-sm font-black text-text-primary">Pindai Kode QR Untuk Bayar</p>
+                <p className="text-xs font-bold text-text-secondary">{formatIDR(totalAmount)}</p>
+              </div>
+              <div className="flex items-center justify-center p-4 bg-gray-50 rounded-2xl">
+                {qrPayload ? (
+                  <QRCodeSVG value={qrPayload} size={280} />
+                ) : (
+                  <p className="text-sm text-text-tertiary py-20">QR belum tersedia</p>
+                )}
+              </div>
+              {qrRedirectUrl && (
+                <Button
+                  onClick={() => { window.location.href = qrRedirectUrl; }}
+                  className="w-full py-4 rounded-2xl font-black"
+                >
+                  Buka di Aplikasi Pembayaran
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -168,11 +387,20 @@ export function PaymentInstruction({
         {/* Header Status */}
         <div className="p-6 md:p-8 border-b border-gray-100 bg-white flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-3">
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
-            </span>
-            <span className="text-sm font-black text-warning-text uppercase tracking-widest">Menunggu Pembayaran</span>
+            {hasCompleted ? (
+              <>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-success-text"></span>
+                <span className="text-sm font-black text-success-text uppercase tracking-widest">Pembayaran Diterima</span>
+              </>
+            ) : (
+              <>
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+                </span>
+                <span className="text-sm font-black text-warning-text uppercase tracking-widest">Menunggu Pembayaran...</span>
+              </>
+            )}
           </div>
           <p className="text-sm font-bold text-text-secondary">
             Batas waktu: <span className="text-text-primary font-black">{deadline} WIB</span>
@@ -245,10 +473,22 @@ export function PaymentInstruction({
                 Nomor Virtual Account
               </h3>
               <div className="p-8 border-2 border-gray-100 rounded-3xl bg-white text-center space-y-4">
-                <span className="text-3xl md:text-4xl font-black text-text-primary tracking-wider">
-                  {order.virtualAccount}
+                {bankName && (
+                  <p className="text-xs uppercase tracking-wider text-text-secondary font-bold">{bankName}</p>
+                )}
+                <span className="text-3xl md:text-4xl font-black text-text-primary tracking-wider block">
+                  {accountNumber || "Menunggu nomor VA..."}
                 </span>
-                <button className="block mx-auto px-6 py-2 bg-brand-primary/10 text-brand-primary rounded-full text-xs font-black uppercase tracking-widest hover:bg-brand-primary/20 transition-all">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (accountNumber && typeof navigator !== "undefined" && navigator.clipboard) {
+                      void navigator.clipboard.writeText(accountNumber);
+                    }
+                  }}
+                  disabled={!accountNumber}
+                  className="block mx-auto px-6 py-2 bg-brand-primary/10 text-brand-primary rounded-full text-xs font-black uppercase tracking-widest hover:bg-brand-primary/20 transition-all disabled:opacity-40"
+                >
                   Salin Nomor VA
                 </button>
               </div>

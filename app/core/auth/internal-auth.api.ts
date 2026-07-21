@@ -110,7 +110,7 @@ export async function requestScannerToken(
   password: string,
 ): Promise<InternalTokenResponseData> {
   const response = await apiFetch<ApiResponse<RawInternalTokenResponseData>>(
-    "/internal-tb/token/scanner/login",
+    "/internal-tb/token/login",
     {
       method: "POST",
       body: JSON.stringify({ username, password }),

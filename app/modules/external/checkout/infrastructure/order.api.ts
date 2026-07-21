@@ -1,11 +1,13 @@
 import { apiFetch } from "~/core/api";
 import type { ApiResponse } from "~/core/api";
-import type { BuyerInfo, OrderResponse, OrderSummary, PaymentMethod } from "../domain/checkout.types";
+import type { BuyerInfo, GatewayStatus, OrderItem, OrderResponse, OrderSummary, PaymentMethod, TicketHolder } from "../domain/checkout.types";
 
 interface TicketRequest {
   categoryId: string;
   quantity: number;
   price?: number;
+  /** One entry per ticket in this category; length must equal `quantity`. */
+  holders?: TicketHolder[];
 }
 
 interface LockTicketRq {
@@ -22,6 +24,7 @@ interface StoreTempTransactionRq {
   source: string;
   paymentMethod: string;
   isComplimentary: boolean;
+  promoCode?: string;
 }
 
 interface CompleteTransactionPayload {
@@ -67,6 +70,35 @@ export interface CompleteOrderResponse {
   totalPrice: number;
   tickets: TicketIssued[];
   paymentDate: string;
+  /** Gateway (FLIP) VA/QRIS payload, present for non-manual-transfer payment methods. */
+  virtualAccount?: string | null;
+  qrPayload?: string | null;
+  gatewayStatus?: GatewayStatus | null;
+  gatewayExpiry?: string | null;
+}
+
+export interface TransactionStatusResult {
+  status: string;
+  gatewayStatus?: GatewayStatus | null;
+  virtualAccount?: string | null;
+  qrPayload?: string | null;
+  gatewayExpiry?: string | null;
+}
+
+/**
+ * Whether a gateway (VA/QRIS) transaction has actually been paid/settled.
+ *
+ * For gateway methods, `POST /transaction/:id/complete` only creates the Xendit invoice
+ * and returns `gatewayStatus: "PENDING"` with tickets still WAITING_APPROVAL — the buyer
+ * has NOT paid yet. Payment is confirmed later (webhook → status poll), at which point
+ * `gatewayStatus` flips to "SUCCESSFUL" and tickets become ISSUED. Use this to decide
+ * whether the checkout may advance to the success screen.
+ */
+export function isGatewayPaymentSuccessful(
+  order: Pick<CompleteOrderResponse, "gatewayStatus" | "tickets">,
+): boolean {
+  if (order.gatewayStatus === "SUCCESSFUL") return true;
+  return (order.tickets ?? []).some((ticket) => ticket.status?.toUpperCase() === "ISSUED");
 }
 
 export interface LockResponse {
@@ -109,6 +141,11 @@ interface TransactionStatusFromApi {
   paymentDate?: string;
   paymentMethod?: string;
   tickets?: TicketRequest[];
+  status?: string;
+  virtualAccount?: string | null;
+  qrPayload?: string | null;
+  gatewayStatus?: string | null;
+  gatewayExpiry?: string | null;
 }
 
 interface TtlResponse {
@@ -178,14 +215,29 @@ function mapPaymentMethod(paymentMethodRaw: string | undefined): PaymentMethod {
 export const orderApi = {
   /**
    * Phase 1: Lock tickets (DDD - Acquire Lock)
-   * This should be called early in the checkout process
+   * This should be called early in the checkout process.
+   *
+   * `holders` is the flat, per-ticket list (one entry per ticket across all
+   * categories, in the same order as `summary.items`) collected on the buyer
+   * details step. It's optional because the very first lock (fired on mount,
+   * before the buyer has filled the form) has no holder data yet.
    */
-  async acquireLock(eventId: string, summary: OrderSummary): Promise<LockResponse> {
-    const tickets: TicketRequest[] = summary.items.map((item: any) => ({
-      categoryId: item.ticketId || item.id,
-      quantity: item.quantity,
-      price: item.price
-    }));
+  async acquireLock(eventId: string, summary: OrderSummary, holders?: TicketHolder[]): Promise<LockResponse> {
+    let holderCursor = 0;
+    const tickets: TicketRequest[] = summary.items.map((item: OrderItem) => {
+      const quantity = item.quantity;
+      const itemHolders = holders
+        ? holders.slice(holderCursor, holderCursor + quantity)
+        : undefined;
+      holderCursor += quantity;
+
+      return {
+        categoryId: item.ticketId,
+        quantity,
+        price: item.price,
+        ...(itemHolders && itemHolders.length === quantity ? { holders: itemHolders } : {}),
+      };
+    });
 
     const payload: LockTicketRq = {
       eventId,
@@ -208,11 +260,12 @@ export const orderApi = {
    * Phase 2: Store temporary transaction with buyer info (DDD - Store Context)
    */
   async storeTempTransaction(
-    lockId: string, 
-    eventId: string, 
-    buyerInfo: BuyerInfo, 
+    lockId: string,
+    eventId: string,
+    buyerInfo: BuyerInfo,
     summary: OrderSummary,
-    paymentMethod: PaymentMethod
+    paymentMethod: PaymentMethod,
+    promoCode?: string
   ): Promise<void> {
     let backendPaymentMethod = "MANUAL_TRANSFER";
     if (paymentMethod.category === "BANK_TRANSFER") {
@@ -232,7 +285,8 @@ export const orderApi = {
       customerPhone: buyerInfo.phoneNumber,
       source: "WEBSITE",
       paymentMethod: backendPaymentMethod,
-      isComplimentary: false
+      isComplimentary: false,
+      ...(promoCode ? { promoCode } : {}),
     };
 
     const response = await apiFetch<ApiResponse<string>>("/transaction/temp", {
@@ -257,7 +311,12 @@ export const orderApi = {
   ): Promise<CompleteOrderResponse> {
     const transactionSnapshot = await this.getTransactionSnapshot(lockId);
 
-    const response = await apiFetch<ApiResponse<Record<string, TicketIssuedFromApi[]>>>(`/transaction/${lockId}/complete`, {
+    const response = await apiFetch<ApiResponse<Record<string, TicketIssuedFromApi[]> & {
+      virtualAccount?: string | null;
+      qrPayload?: string | null;
+      gatewayStatus?: string | null;
+      gatewayExpiry?: string | null;
+    }>>(`/transaction/${lockId}/complete`, {
       method: "POST"
     });
 
@@ -265,7 +324,12 @@ export const orderApi = {
       throw new Error(getApiErrorMessage(response, "Failed to complete transaction"));
     }
 
-    const normalizedTickets = Object.values(response.data)
+    const { virtualAccount, qrPayload, gatewayStatus, gatewayExpiry, ...ticketsByCategory } = response.data;
+
+    const normalizedTickets = Object.values(ticketsByCategory)
+      // Only the per-category arrays are tickets; ignore any stray scalar fields the gateway
+      // response may carry (e.g. invoiceUrl) so they don't become phantom empty ticket cards.
+      .filter((value): value is TicketIssuedFromApi[] => Array.isArray(value))
       .flat()
       .map((ticket) => ({
       ticketId: ticket.id,
@@ -290,6 +354,10 @@ export const orderApi = {
       totalPrice,
       paymentDate: transactionSnapshot?.paymentDate || new Date().toISOString(),
       tickets: normalizedTickets,
+      virtualAccount: virtualAccount ?? transactionSnapshot?.virtualAccount ?? null,
+      qrPayload: qrPayload ?? transactionSnapshot?.qrPayload ?? null,
+      gatewayStatus: (gatewayStatus ?? transactionSnapshot?.gatewayStatus ?? null) as GatewayStatus | null,
+      gatewayExpiry: gatewayExpiry ?? transactionSnapshot?.gatewayExpiry ?? null,
     };
   },
 
@@ -412,25 +480,52 @@ export const orderApi = {
         }
       }
 
+      const gatewayExpiry = data.gatewayExpiry as string | undefined;
+      const virtualAccount = (data.virtualAccount as string | null | undefined) ?? null;
+      const qrPayload = (data.qrPayload as string | null | undefined) ?? null;
+      const gatewayStatus = (data.gatewayStatus as GatewayStatus | null | undefined) ?? null;
+
       return {
         orderId: orderId,
         status: "PENDING",
         totalAmount,
         paymentMethod,
-        expiryTime: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        expiryTime: gatewayExpiry || new Date(Date.now() + 15 * 60 * 1000).toISOString(),
         paymentInstructions: paymentMethod.category === "BANK_TRANSFER"
           ? "Silakan transfer tepat sesuai nominal hingga 3 digit terakhir."
           : "Pindai kode QR menggunakan aplikasi pembayaran Anda.",
-        virtualAccount:
-          paymentMethod.category === "BANK_TRANSFER"
-            ? "123456789012345"
-            : undefined,
-        qrCodeUrl:
-          paymentMethod.category !== "BANK_TRANSFER"
-            ? "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=TIKETBISA_MOCK_QRIS"
-            : undefined,
+        virtualAccount,
+        qrPayload,
+        gatewayStatus,
+        gatewayExpiry: gatewayExpiry ?? null,
       };
     } catch (e) {
+      return null;
+    }
+  },
+
+  /**
+   * Poll the gateway/transaction status while on the payment-instruction step.
+   * Wraps the public transaction snapshot route (`GET /transaction/:id`), which
+   * carries the VA/QRIS gateway fields once FLIP has created the bill.
+   * NOTE: the contract also mentions `GET /transaction/status/:id`, but that path
+   * is currently only registered under the internal/authenticated route group on
+   * the backend; this wraps the public equivalent so it works for anonymous buyers.
+   */
+  async getTransactionStatus(transactionId: string): Promise<TransactionStatusResult | null> {
+    try {
+      const response = await apiFetch<ApiResponse<TransactionStatusFromApi>>(`/transaction/${transactionId}`);
+      if (!response.success || !response.data) return null;
+
+      const data = response.data;
+      return {
+        status: String(data.status || "WAITING_PAYMENT"),
+        gatewayStatus: (data.gatewayStatus as GatewayStatus | null | undefined) ?? null,
+        virtualAccount: data.virtualAccount ?? null,
+        qrPayload: data.qrPayload ?? null,
+        gatewayExpiry: data.gatewayExpiry ?? null,
+      };
+    } catch {
       return null;
     }
   }
