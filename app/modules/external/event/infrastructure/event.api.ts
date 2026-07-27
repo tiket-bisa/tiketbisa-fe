@@ -91,6 +91,22 @@ export const eventApi: EventRepository = {
     const queryParams = new URLSearchParams();
     if (params.search) queryParams.append("name", params.search);
     if (params.city) queryParams.append("city", params.city);
+    if (params.brand_id) queryParams.append("brandId", params.brand_id);
+    if (params.status) queryParams.append("status", params.status);
+    if (params.category) queryParams.append("category", params.category);
+    if (params.start_date) queryParams.append("startDate", params.start_date);
+    if (params.end_date) queryParams.append("endDate", params.end_date);
+    if (params.min_price !== undefined) queryParams.append("minPrice", String(params.min_price));
+    if (params.max_price !== undefined) queryParams.append("maxPrice", String(params.max_price));
+    if (params.order_by) {
+      const sortBy: Record<string, string> = {
+        date_asc: "start_date:ASC",
+        date_desc: "start_date:DESC",
+        name_asc: "name:ASC",
+        name_desc: "name:DESC",
+      };
+      queryParams.append("sortBy", sortBy[params.order_by] ?? params.order_by);
+    }
     queryParams.append("limit", params.limit.toString());
     queryParams.append("offset", params.offset.toString());
     queryParams.append("isPublished", "true");
