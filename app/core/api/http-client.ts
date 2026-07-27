@@ -138,7 +138,7 @@ export const httpClient = {
   get: <T>(path: string) => request<T>("GET", path),
   post: <T>(path: string, body: unknown) => request<T>("POST", path, body),
   put: <T>(path: string, body: unknown) => request<T>("PUT", path, body),
-  delete: <T>(path: string) => request<T>("DELETE", path),
+  delete: <T>(path: string, body?: unknown) => request<T>("DELETE", path, body),
 };
 
 function getInternalAuthHeaders(): Record<string, string> {
@@ -171,6 +171,6 @@ export const internalHttpClient = {
     request<T>("POST", `${INTERNAL_API_PREFIX}${normalizePath(path)}`, body, getInternalAuthHeaders()),
   put: <T>(path: string, body: unknown) =>
     request<T>("PUT", `${INTERNAL_API_PREFIX}${normalizePath(path)}`, body, getInternalAuthHeaders()),
-  delete: <T>(path: string) =>
-    request<T>("DELETE", `${INTERNAL_API_PREFIX}${normalizePath(path)}`, undefined, getInternalAuthHeaders()),
+  delete: <T>(path: string, body?: unknown) =>
+    request<T>("DELETE", `${INTERNAL_API_PREFIX}${normalizePath(path)}`, body, getInternalAuthHeaders()),
 };
