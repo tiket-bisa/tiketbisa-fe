@@ -19,7 +19,7 @@ import {
   type InternalEventApiData,
 } from "~/core/api/services/internal-event.api";
 import type { EventSummary } from "~/core/types";
-import { fileToBase64, ImageSourceInput } from "~/modules/internal/common/presentation/image-source-input";
+import { fileToBase64 } from "~/modules/internal/common/presentation/image-source-input";
 import { EventGalleryManager } from "~/modules/internal/common/presentation/event-gallery-manager";
 import { SearchableCitySelect } from "./components/searchable-city-select";
 
@@ -205,7 +205,7 @@ export default function EventsPage() {
       const payload = {
         brandId: user.brand_id,
         name: formData.name.trim(),
-        bannerPath: formData.bannerPath.trim() || null,
+        bannerPath: formMode === "create" ? null : undefined,
         startDate,
         endDate,
         description: formData.description.trim() || null,
@@ -376,29 +376,10 @@ export default function EventsPage() {
               />
             </div>
 
-            <ImageSourceInput
-              label="Banner Event"
-              value={formData.bannerPath}
-              onChange={(value) => setFormData((prev) => ({ ...prev, bannerPath: value }))}
-              uploadFile={uploadEventBanner}
-              disabled={isSubmitting}
-              hint="Tempel URL banner atau upload gambar baru."
-            />
-
             <EventGalleryManager
               eventId={editingEvent?.id}
               uploadFile={uploadEventBanner}
               disabled={isSubmitting}
-              onCoverChange={(imageUrl) => setFormData((prev) => ({ ...prev, bannerPath: imageUrl }))}
-            />
-
-            <Input
-              label="Banner URL"
-              name="bannerPath"
-              value={formData.bannerPath}
-              onChange={handleChange}
-              placeholder="https://..."
-              hint="Opsional jika ingin pakai link gambar yang sudah ada."
             />
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

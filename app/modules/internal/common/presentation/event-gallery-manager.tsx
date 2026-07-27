@@ -1,42 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button, Input } from "~/core/design-system/components";
-import { toAbsoluteApiUrl } from "~/core/api";
+import { normalizeImageUrl } from "~/core/api";
 import { internalEventApi, type EventImageData } from "~/core/api/services/internal-event.api";
 
 type EventGalleryManagerProps = {
   eventId?: string | null;
   uploadFile: (file: File) => Promise<string>;
   disabled?: boolean;
-  onCoverChange?: (imageUrl: string) => void;
 };
 
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
-
-function normalizeImageUrl(value: string): string {
-  if (!value) return "";
-  if (/^https?:\/\//i.test(value) || value.startsWith("data:") || value.startsWith("blob:")) {
-    return value;
-  }
-
-  const legacyLocalPathMatch = value.match(/\/(temp-(?:event-banners|brand-images)\/[^/]+)$/);
-  if (legacyLocalPathMatch) {
-    return toAbsoluteApiUrl(`/${legacyLocalPathMatch[1]}`);
-  }
-
-  return toAbsoluteApiUrl(value);
-}
 
 export function EventGalleryManager({
   eventId,
   uploadFile,
   disabled = false,
-  onCoverChange,
 }: EventGalleryManagerProps) {
   const [images, setImages] = useState<EventImageData[]>([]);
   const [linkValue, setLinkValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isMutating, setIsMutating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadPreviews, setUploadPreviews] = useState<string[]>([]);
 
   const sortedImages = useMemo(
     () => [...images].sort((a, b) => Number(b.isCover) - Number(a.isCover) || a.sortOrder - b.sortOrder),
@@ -74,8 +59,6 @@ export function EventGalleryManager({
     try {
       const result = await internalEventApi.addImage(eventId, {
         imageUrl: imageUrl.trim(),
-        sortOrder: images.length,
-        isCover: images.length === 0,
       });
       if (!result.success) {
         setError(result.error || "Gagal menambahkan gambar.");
@@ -83,7 +66,6 @@ export function EventGalleryManager({
       }
       setLinkValue("");
       await loadImages();
-      if (images.length === 0) onCoverChange?.(imageUrl.trim());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menambahkan gambar.");
     } finally {
@@ -103,12 +85,16 @@ export function EventGalleryManager({
     }
     setIsMutating(true);
     setError(null);
+    const previewUrl = URL.createObjectURL(file);
+    setUploadPreviews((current) => [...current, previewUrl]);
     try {
       const imageUrl = await uploadFile(file);
       await addImageUrl(imageUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mengunggah gambar.");
     } finally {
+      URL.revokeObjectURL(previewUrl);
+      setUploadPreviews((current) => current.filter((url) => url !== previewUrl));
       setIsMutating(false);
     }
   };
@@ -127,8 +113,6 @@ export function EventGalleryManager({
         return;
       }
       setImages(result.data.images);
-      const cover = result.data.images.find((image) => image.isCover);
-      if (cover) onCoverChange?.(cover.imageUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menyimpan urutan galeri.");
     } finally {
@@ -220,6 +204,17 @@ export function EventGalleryManager({
 
       {isLoading && <p className="text-sm text-text-tertiary">Memuat galeri...</p>}
       {error && <p className="text-sm text-destructive-text">{error}</p>}
+
+      {uploadPreviews.length > 0 && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {uploadPreviews.map((previewUrl) => (
+            <div key={previewUrl} className="overflow-hidden rounded-lg border border-brand-primary/30 bg-surface-alt">
+              <img src={previewUrl} alt="Preview upload galeri" className="aspect-video h-full w-full object-cover opacity-70" />
+              <p className="p-2 text-xs font-medium text-text-tertiary">Mengunggah...</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {sortedImages.length > 0 ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
