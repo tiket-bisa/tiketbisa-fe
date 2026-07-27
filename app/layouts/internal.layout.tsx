@@ -14,7 +14,7 @@ import { RouteProgress } from "~/shared/components/route-progress";
  */
 
 function InternalShell() {
-  const { user, logout } = useAuth();
+  const { user, logout, selectBrand } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -32,6 +32,9 @@ function InternalShell() {
       <NavbarInternal
         userEmail={user?.email}
         brandName={user?.brand_name}
+        brandOptions={user?.role === "partner" ? user.available_brands : []}
+        activeBrandId={user?.role === "partner" ? user.brand_id : undefined}
+        onBrandChange={selectBrand}
         onLogout={handleLogout}
         onScanTicket={handleScanTicket}
       />

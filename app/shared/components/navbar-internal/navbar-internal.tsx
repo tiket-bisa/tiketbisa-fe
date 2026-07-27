@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router";
 import { Button } from "~/core/design-system/components";
+import type { PartnerBrandOption } from "~/core/auth/auth.context";
 
 export interface NavbarInternalProps {
   userEmail?: string;
@@ -8,6 +9,9 @@ export interface NavbarInternalProps {
   onLogout?: () => void;
   onScanTicket?: () => void;
   className?: string;
+  brandOptions?: PartnerBrandOption[];
+  activeBrandId?: string;
+  onBrandChange?: (brandId: string) => void;
 }
 
 const navLinks: readonly { to: string; label: string; exact?: boolean }[] = [
@@ -22,6 +26,9 @@ export function NavbarInternal({
   onLogout,
   onScanTicket,
   className = "",
+  brandOptions = [],
+  activeBrandId,
+  onBrandChange,
 }: NavbarInternalProps) {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -37,14 +44,25 @@ export function NavbarInternal({
         {/* Logo */}
         <Link to="/internal-tb/partner" className="shrink-0" aria-label="Tiketbisa partner">
           <img
-            src="/logo/tiketbisa-white.png"
+            src="/logo/tiketbisa.png"
             alt="Tiketbisa"
             className="w-auto h-8 lg:h-10 cursor-pointer"
           />
         </Link>
 
         {/* Brand name */}
-        {brandName && (
+        {brandOptions.length > 1 && onBrandChange ? (
+          <select
+            aria-label="Pilih brand aktif"
+            value={activeBrandId}
+            onChange={(event) => onBrandChange(event.target.value)}
+            className="hidden sm:block max-w-[200px] rounded-lg border border-border-default bg-white px-3 py-2 text-xs font-semibold text-text-primary"
+          >
+            {brandOptions.map((brand) => (
+              <option key={brand.id} value={brand.id}>{brand.name}</option>
+            ))}
+          </select>
+        ) : brandName && (
           <span className="hidden sm:inline-flex items-center rounded-md bg-surface-hover px-2 py-0.5 text-xs font-medium text-text-secondary truncate max-w-[160px]">
             {brandName}
           </span>
@@ -175,6 +193,19 @@ export function NavbarInternal({
                   <p className="text-xs text-text-secondary font-medium mt-0.5">{brandName}</p>
                 )}
               </div>
+            )}
+
+            {brandOptions.length > 1 && onBrandChange && (
+              <select
+                aria-label="Pilih brand aktif"
+                value={activeBrandId}
+                onChange={(event) => onBrandChange(event.target.value)}
+                className="w-full rounded-lg border border-border-default bg-white px-3 py-2 text-sm text-text-primary"
+              >
+                {brandOptions.map((brand) => (
+                  <option key={brand.id} value={brand.id}>{brand.name}</option>
+                ))}
+              </select>
             )}
 
             {/* Action buttons */}
