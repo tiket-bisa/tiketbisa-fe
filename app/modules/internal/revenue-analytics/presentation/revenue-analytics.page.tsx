@@ -15,7 +15,7 @@ export default function RevenueAnalyticsPage() {
     revenueTimeline,
     maxRevenue,
     isLoading,
-  } = useRevenueAnalyticsData(user?.brand_slug);
+  } = useRevenueAnalyticsData(user?.brand_id);
 
   if (isLoading) {
     return <div className="p-8 text-center text-text-tertiary">Memuat analitik...</div>;

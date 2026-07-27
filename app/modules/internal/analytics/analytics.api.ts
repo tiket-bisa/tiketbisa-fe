@@ -47,14 +47,16 @@ export interface TicketScanningSummary {
 }
 
 export const analyticsApi = {
-  getDashboardStats: async (): Promise<DashboardStats> => {
-    const res = await internalHttpClient.get<DashboardStats>("/analytics/dashboard/stats");
+  getDashboardStats: async (brandId?: string): Promise<DashboardStats> => {
+    const query = brandId ? `?brandId=${encodeURIComponent(brandId)}` : "";
+    const res = await internalHttpClient.get<DashboardStats>(`/analytics/dashboard/stats${query}`);
     if (!res.success || !res.data) throw new Error(res.error ?? "Failed to fetch dashboard stats");
     return res.data;
   },
 
-  getRevenueSummary: async (): Promise<RevenueSummary> => {
-    const res = await internalHttpClient.get<RevenueSummary>("/analytics/revenue/summary");
+  getRevenueSummary: async (brandId?: string): Promise<RevenueSummary> => {
+    const query = brandId ? `?brandId=${encodeURIComponent(brandId)}` : "";
+    const res = await internalHttpClient.get<RevenueSummary>(`/analytics/revenue/summary${query}`);
     if (!res.success || !res.data) throw new Error(res.error ?? "Failed to fetch revenue summary");
     return res.data;
   },
@@ -65,20 +67,23 @@ export const analyticsApi = {
     return res.data;
   },
 
-  getRevenueByEvent: async (): Promise<RevenueByEvent[]> => {
-    const res = await internalHttpClient.get<RevenueByEvent[]>("/analytics/revenue/events");
+  getRevenueByEvent: async (brandId?: string): Promise<RevenueByEvent[]> => {
+    const query = brandId ? `?brandId=${encodeURIComponent(brandId)}` : "";
+    const res = await internalHttpClient.get<RevenueByEvent[]>(`/analytics/revenue/events${query}`);
     if (!res.success || !res.data) throw new Error(res.error ?? "Failed to fetch revenue by event");
     return res.data;
   },
 
-  getRevenueTimeline: async (): Promise<RevenueTimeline[]> => {
-    const res = await internalHttpClient.get<RevenueTimeline[]>("/analytics/revenue/timeline");
+  getRevenueTimeline: async (brandId?: string): Promise<RevenueTimeline[]> => {
+    const query = brandId ? `?brandId=${encodeURIComponent(brandId)}` : "";
+    const res = await internalHttpClient.get<RevenueTimeline[]>(`/analytics/revenue/timeline${query}`);
     if (!res.success || !res.data) throw new Error(res.error ?? "Failed to fetch revenue timeline");
     return res.data;
   },
 
-  getTicketScanningDashboard: async (): Promise<TicketScanningSummary[]> => {
-    const res = await internalHttpClient.get<TicketScanningSummary[]>("/analytics/scanning/dashboard");
+  getTicketScanningDashboard: async (brandId?: string): Promise<TicketScanningSummary[]> => {
+    const query = brandId ? `?brandId=${encodeURIComponent(brandId)}` : "";
+    const res = await internalHttpClient.get<TicketScanningSummary[]>(`/analytics/scanning/dashboard${query}`);
     if (!res.success || !res.data) throw new Error(res.error ?? "Failed to fetch scanning dashboard");
     return res.data;
   }
