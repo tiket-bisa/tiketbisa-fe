@@ -41,7 +41,7 @@ export function NavbarAdmin({
           aria-label="Tiketbisa admin"
         >
           <img
-            src="/logo/tiketbisa-white.png"
+            src="/logo/tiketbisa.png"
             alt="Tiketbisa"
             className="w-auto h-8 lg:h-10 cursor-pointer"
           />
