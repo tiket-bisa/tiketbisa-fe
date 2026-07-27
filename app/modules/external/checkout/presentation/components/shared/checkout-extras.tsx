@@ -5,7 +5,7 @@ export function ImportantGuides() {
       <ul className="space-y-4">
         {[
           "Pastikan email aktif untuk pengiriman E-Tiket.",
-          "Nama harus sesuai kartu identitas (KTP/Passport).",
+          "Nama dan NIK harus sesuai KTP.",
           "E-Tiket akan dikirim maksimal 15 menit setelah pembayaran."
         ].map((text, i) => (
           <li key={i} className="flex items-start gap-3">
@@ -14,19 +14,6 @@ export function ImportantGuides() {
           </li>
         ))}
       </ul>
-    </div>
-  );
-}
-
-export function PaymentPartners() {
-  return (
-    <div className="mt-6 flex flex-wrap justify-center gap-4 grayscale opacity-40">
-       <div className="flex items-center gap-1">
-         <div className="w-5 h-3 bg-gray-400 rounded-sm" />
-         <div className="w-5 h-3 bg-gray-400 rounded-sm" />
-         <div className="w-5 h-3 bg-gray-400 rounded-sm" />
-       </div>
-       <span className="text-[10px] font-bold text-text-secondary">PAYMENT PARTNERS</span>
     </div>
   );
 }

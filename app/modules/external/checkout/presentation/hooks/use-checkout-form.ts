@@ -10,7 +10,7 @@ const DEFAULT_BUYER_INFO: BuyerInfo = {
   email: "",
   phoneNumber: "",
   identityType: "KTP",
-  identityNumber: "-",
+  identityNumber: "",
 };
 
 const NIK_REGEX = /^[0-9]{16}$/;
@@ -124,6 +124,12 @@ export function useCheckoutForm() {
       newErrors.phoneNumber = "Harus 10-13 digit";
     }
 
+    if (!buyerInfo.identityNumber.trim()) {
+      newErrors.identityNumber = "NIK wajib diisi";
+    } else if (!NIK_REGEX.test(buyerInfo.identityNumber.trim())) {
+      newErrors.identityNumber = "NIK harus 16 digit angka";
+    }
+
     setErrors(newErrors);
 
     const newHolderErrors: HolderFieldErrors[] = holders.map((holder) => {
@@ -179,7 +185,7 @@ export function useCheckoutForm() {
       setHolders((prev) =>
         prev.map(() => ({
           name: buyerInfo.fullName,
-          identityNumber: buyerInfo.identityNumber === "-" ? "" : buyerInfo.identityNumber,
+          identityNumber: buyerInfo.identityNumber,
         })),
       );
       setHolderErrors((prev) => prev.map(() => ({})));
@@ -191,7 +197,7 @@ export function useCheckoutForm() {
     if (!sameAsMain) return;
     setHolders((prev) =>
       prev.map((holder) => {
-        const nextIdentity = buyerInfo.identityNumber === "-" ? "" : buyerInfo.identityNumber;
+        const nextIdentity = buyerInfo.identityNumber;
         if (holder.name === buyerInfo.fullName && holder.identityNumber === nextIdentity) {
           return holder;
         }

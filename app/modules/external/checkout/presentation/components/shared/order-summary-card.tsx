@@ -32,7 +32,7 @@ export function OrderSummaryCard({ summary, className = "" }: OrderSummaryCardPr
         ))}
       </div>
 
-      <div className="pt-6 border-t border-gray-50 space-y-4">
+      <div className="pt-6 border-t-2 border-gray-200 space-y-4">
         <div className="flex justify-between items-center">
           <span className="text-sm font-medium text-text-secondary">Sub total</span>
           <span className="text-sm font-bold text-text-primary">{formatIDR(summary.subtotal)}</span>

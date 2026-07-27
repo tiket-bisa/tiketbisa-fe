@@ -21,6 +21,7 @@ interface StoreTempTransactionRq {
   customerName: string;
   customerEmail: string;
   customerPhone: string;
+  customerIdentityNumber: string;
   source: string;
   paymentMethod: string;
   isComplimentary: boolean;
@@ -283,6 +284,7 @@ export const orderApi = {
       customerName: buyerInfo.fullName,
       customerEmail: buyerInfo.email,
       customerPhone: buyerInfo.phoneNumber,
+      customerIdentityNumber: buyerInfo.identityNumber,
       source: "WEBSITE",
       paymentMethod: backendPaymentMethod,
       isComplimentary: false,

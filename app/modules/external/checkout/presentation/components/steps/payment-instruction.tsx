@@ -179,13 +179,18 @@ export function PaymentInstruction({
     onProofFileChange?.(file);
   };
 
-  const gatewayExpiryTimestamp = useMemo(() => {
-    if (!gatewayData.gatewayExpiry) return null;
-    const parsed = new Date(gatewayData.gatewayExpiry).getTime();
-    return Number.isFinite(parsed) ? parsed : null;
+  const paymentDeadlineTimestamp = useMemo(() => {
+    const stored = typeof window !== "undefined"
+      ? Number(sessionStorage.getItem("tiketbisa_checkout_deadline"))
+      : Number.NaN;
+    const gateway = gatewayData.gatewayExpiry
+      ? new Date(gatewayData.gatewayExpiry).getTime()
+      : Number.NaN;
+    const candidates = [stored, gateway].filter(Number.isFinite);
+    return candidates.length > 0 ? Math.min(...candidates) : null;
   }, [gatewayData.gatewayExpiry]);
 
-  const deadlineSource = gatewayData.gatewayExpiry || order.expiryTime;
+  const deadlineSource = paymentDeadlineTimestamp ?? new Date(order.expiryTime).getTime();
   const deadline = new Date(deadlineSource).toLocaleTimeString('id-ID', {
     hour: '2-digit',
     minute: '2-digit',
@@ -207,7 +212,7 @@ export function PaymentInstruction({
               <div className="w-full max-w-sm">
                 <CountdownTimer
                   onExpire={onExpire}
-                  deadlineTimestamp={gatewayExpiryTimestamp}
+                  deadlineTimestamp={paymentDeadlineTimestamp}
                   className="!shadow-none border-2 border-orange-100"
                 />
               </div>

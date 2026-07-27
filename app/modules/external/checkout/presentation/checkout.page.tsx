@@ -16,7 +16,6 @@ import {
   PaymentConsent,
   PaymentInstruction,
   ImportantGuides,
-   PaymentPartners,
    OrderSuccess,
    ManualTransferPending
  } from "./components";
@@ -288,7 +287,6 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
                 onApplyPromo={applyPromo}
                 onRemovePromo={removePromo}
               />
-              {currentStep === 1 && <PaymentPartners />}
             </div>
           </aside>
         )}
