@@ -84,7 +84,9 @@ export const internalBrandAccessApi = {
 
   removePartner: async (brandId: string, email: string) =>
     normalizeSummaryResponse(
-      await internalHttpClient.delete<BrandAccessSummary>(`/brand/${brandId}/access/partner`, { email }),
+      await internalHttpClient.delete<BrandAccessSummary>(
+        `/brand/${brandId}/access/partner/${encodeURIComponent(email.trim().toLowerCase())}`,
+      ),
     ),
 
   upsertScanner: async (brandId: string, username: string, password: string) =>
