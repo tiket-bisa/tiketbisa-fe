@@ -271,6 +271,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.setItem(selectedBrandStorageKey(current.identifier), active.id);
           return next;
         });
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          console.error("Failed to load partner brands", err);
+        }
       });
 
     return () => {
