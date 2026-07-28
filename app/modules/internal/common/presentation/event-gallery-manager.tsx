@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Button, Input } from "~/core/design-system/components";
 import { normalizeImageUrl } from "~/core/api";
 import { internalEventApi, type EventImageData } from "~/core/api/services/internal-event.api";
+import { useIsMounted } from "./use-is-mounted";
+import { useObjectUrlRegistry } from "./use-object-url-registry";
 
 type EventGalleryManagerProps = {
   eventId?: string | null;
@@ -22,6 +24,8 @@ export function EventGalleryManager({
   const [isMutating, setIsMutating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadPreviews, setUploadPreviews] = useState<string[]>([]);
+  const isMounted = useIsMounted();
+  const { createObjectUrl, revokeObjectUrl } = useObjectUrlRegistry();
 
   const sortedImages = useMemo(
     () => [...images].sort((a, b) => Number(b.isCover) - Number(a.isCover) || a.sortOrder - b.sortOrder),
@@ -34,15 +38,20 @@ export function EventGalleryManager({
     setError(null);
     try {
       const result = await internalEventApi.getImages(eventId);
+      if (!isMounted()) return;
       if (!result.success || !result.data) {
         setError(result.error || "Gagal memuat galeri event.");
         return;
       }
       setImages(result.data.images ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat galeri event.");
+      if (isMounted()) {
+        setError(err instanceof Error ? err.message : "Gagal memuat galeri event.");
+      }
     } finally {
-      setIsLoading(false);
+      if (isMounted()) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -60,6 +69,7 @@ export function EventGalleryManager({
       const result = await internalEventApi.addImage(eventId, {
         imageUrl: imageUrl.trim(),
       });
+      if (!isMounted()) return;
       if (!result.success) {
         setError(result.error || "Gagal menambahkan gambar.");
         return;
@@ -67,9 +77,13 @@ export function EventGalleryManager({
       setLinkValue("");
       await loadImages();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menambahkan gambar.");
+      if (isMounted()) {
+        setError(err instanceof Error ? err.message : "Gagal menambahkan gambar.");
+      }
     } finally {
-      setIsMutating(false);
+      if (isMounted()) {
+        setIsMutating(false);
+      }
     }
   };
 
@@ -85,17 +99,22 @@ export function EventGalleryManager({
     }
     setIsMutating(true);
     setError(null);
-    const previewUrl = URL.createObjectURL(file);
+    const previewUrl = createObjectUrl(file);
     setUploadPreviews((current) => [...current, previewUrl]);
     try {
       const imageUrl = await uploadFile(file);
+      if (!isMounted()) return;
       await addImageUrl(imageUrl);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal mengunggah gambar.");
+      if (isMounted()) {
+        setError(err instanceof Error ? err.message : "Gagal mengunggah gambar.");
+      }
     } finally {
-      URL.revokeObjectURL(previewUrl);
-      setUploadPreviews((current) => current.filter((url) => url !== previewUrl));
-      setIsMutating(false);
+      revokeObjectUrl(previewUrl);
+      if (isMounted()) {
+        setUploadPreviews((current) => current.filter((url) => url !== previewUrl));
+        setIsMutating(false);
+      }
     }
   };
 

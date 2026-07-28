@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, Input } from "~/core/design-system/components";
 import { normalizeImageUrl } from "~/core/api";
+import { useIsMounted } from "./use-is-mounted";
+import { useObjectUrlRegistry } from "./use-object-url-registry";
 
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 
@@ -51,6 +53,8 @@ export function ImageSourceInput({
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const isMounted = useIsMounted();
+  const { createObjectUrl, revokeObjectUrl } = useObjectUrlRegistry();
   const previewUrl = localPreviewUrl ?? normalizeImageUrl(value);
 
   useEffect(() => {
@@ -69,16 +73,18 @@ export function ImageSourceInput({
       return;
     }
     if (cropSquare) {
-      setCropState({ file, previewUrl: URL.createObjectURL(file) });
+      setCropState({ file, previewUrl: createObjectUrl(file) });
       return;
     }
-    const objectUrl = URL.createObjectURL(file);
+    const objectUrl = createObjectUrl(file);
     setLocalPreviewUrl(objectUrl);
     try {
       await uploadAndSet(file);
     } finally {
-      URL.revokeObjectURL(objectUrl);
-      setLocalPreviewUrl(null);
+      revokeObjectUrl(objectUrl);
+      if (isMounted()) {
+        setLocalPreviewUrl(null);
+      }
     }
   };
 
@@ -87,13 +93,18 @@ export function ImageSourceInput({
     setError(null);
     try {
       const imageUrl = await uploadFile(file);
+      if (!isMounted()) return;
       onChange(imageUrl);
       setPreviewError(false);
       if (inputRef.current) inputRef.current.value = "";
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal mengunggah gambar.");
+      if (isMounted()) {
+        setError(err instanceof Error ? err.message : "Gagal mengunggah gambar.");
+      }
     } finally {
-      setIsUploading(false);
+      if (isMounted()) {
+        setIsUploading(false);
+      }
     }
   };
 
@@ -165,12 +176,12 @@ export function ImageSourceInput({
         <CropModal
           cropState={cropState}
           onCancel={() => {
-            URL.revokeObjectURL(cropState.previewUrl);
+            revokeObjectUrl(cropState.previewUrl);
             setCropState(null);
             if (inputRef.current) inputRef.current.value = "";
           }}
           onSave={async (file) => {
-            URL.revokeObjectURL(cropState.previewUrl);
+            revokeObjectUrl(cropState.previewUrl);
             setCropState(null);
             await uploadAndSet(file);
           }}
@@ -195,6 +206,7 @@ function CropModal({
   const [offsetY, setOffsetY] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const imageRef = useRef<HTMLImageElement | null>(null);
+  const isMounted = useIsMounted();
 
   useEffect(() => {
     setZoom(1);
@@ -210,7 +222,9 @@ function CropModal({
       const cropped = await cropImageToSquare(image, cropState.file.name, zoom, offsetX, offsetY);
       await onSave(cropped);
     } finally {
-      setIsSaving(false);
+      if (isMounted()) {
+        setIsSaving(false);
+      }
     }
   };
 
