@@ -21,17 +21,16 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const activeTab = url.searchParams.get("tab") || "aktif";
   const sort = url.searchParams.get("sort") || "date_asc";
 
-  const [brand, eventsResponse] = await Promise.all([
-    brandApi.getBrandBySlug(slug),
-    eventApi.getEvents({
+  const brand = await brandApi.getBrandBySlug(slug);
+  if (!brand) throw new Response("Not Found", { status: 404 });
+
+  const eventsResponse = await eventApi.getEvents({
       limit,
       offset,
       order_by: sort,
-      brand_id: slug,
-    }),
-  ]);
-
-  if (!brand) throw new Response("Not Found", { status: 404 });
+      brand_id: brand.id,
+      status: activeTab === "lalu" ? "ENDED" : "ONGOING",
+    });
 
   return {
     brand,

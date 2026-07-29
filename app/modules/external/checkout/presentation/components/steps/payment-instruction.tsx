@@ -10,6 +10,7 @@ import type { Event } from "../../../../event/domain/event.entity";
 import { CountdownTimer } from "../shared/countdown-timer";
 
 const STATUS_POLL_INTERVAL_MS = 5000;
+const CHECKOUT_DEADLINE_STORAGE_KEY = "tiketbisa_checkout_deadline";
 
 export interface PaymentInstructionProps {
   order: OrderResponse;
@@ -76,6 +77,7 @@ export function PaymentInstruction({
   });
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [hasCompleted, setHasCompleted] = useState(false);
+  const [storedDeadlineTimestamp, setStoredDeadlineTimestamp] = useState<number | null>(null);
 
   useEffect(() => {
     setGatewayData({
@@ -84,6 +86,11 @@ export function PaymentInstruction({
       gatewayExpiry: order.gatewayExpiry,
     });
   }, [order.virtualAccount, order.qrPayload, order.gatewayExpiry]);
+
+  useEffect(() => {
+    const stored = Number(sessionStorage.getItem(CHECKOUT_DEADLINE_STORAGE_KEY));
+    setStoredDeadlineTimestamp(Number.isFinite(stored) && stored > 0 ? stored : null);
+  }, []);
 
   const handleStatusResult = useCallback((result: TransactionStatusResult | null) => {
     if (!result) return;
@@ -179,13 +186,16 @@ export function PaymentInstruction({
     onProofFileChange?.(file);
   };
 
-  const gatewayExpiryTimestamp = useMemo(() => {
-    if (!gatewayData.gatewayExpiry) return null;
-    const parsed = new Date(gatewayData.gatewayExpiry).getTime();
-    return Number.isFinite(parsed) ? parsed : null;
-  }, [gatewayData.gatewayExpiry]);
+  const paymentDeadlineTimestamp = useMemo(() => {
+    const gateway = gatewayData.gatewayExpiry
+      ? new Date(gatewayData.gatewayExpiry).getTime()
+      : Number.NaN;
+    const candidates = [storedDeadlineTimestamp, gateway]
+      .filter((candidate): candidate is number => candidate != null && Number.isFinite(candidate));
+    return candidates.length > 0 ? Math.min(...candidates) : null;
+  }, [gatewayData.gatewayExpiry, storedDeadlineTimestamp]);
 
-  const deadlineSource = gatewayData.gatewayExpiry || order.expiryTime;
+  const deadlineSource = paymentDeadlineTimestamp ?? new Date(order.expiryTime).getTime();
   const deadline = new Date(deadlineSource).toLocaleTimeString('id-ID', {
     hour: '2-digit',
     minute: '2-digit',
@@ -207,7 +217,7 @@ export function PaymentInstruction({
               <div className="w-full max-w-sm">
                 <CountdownTimer
                   onExpire={onExpire}
-                  deadlineTimestamp={gatewayExpiryTimestamp}
+                  deadlineTimestamp={paymentDeadlineTimestamp}
                   className="!shadow-none border-2 border-orange-100"
                 />
               </div>

@@ -9,6 +9,10 @@ import {
   type InternalBrandApiData,
 } from "~/core/api/services/internal-brand.api";
 import { fileToBase64, ImageSourceInput } from "~/modules/internal/common/presentation/image-source-input";
+import {
+  HOME_DOMICILE_OPTIONS,
+  normalizeHomeDomicile,
+} from "~/shared/constants/domicile.constants";
 
 /** Partner — Brand detail page (shows partner's own brand info) */
 export default function BrandPage() {
@@ -54,7 +58,7 @@ export default function BrandPage() {
       subCategory: brandRaw.subCategory ?? "",
       sponsorPath: brandRaw.sponsorPath ?? "",
       homeOnly: Boolean(brandRaw.homeOnly),
-      homeCity: brandRaw.homeCity ?? "",
+      homeCity: normalizeHomeDomicile(brandRaw.homeCity),
     });
   }, [brandRaw]);
 
@@ -296,14 +300,20 @@ export default function BrandPage() {
                   Batasi pembelian untuk KTP berdomisili tertentu (Home Only)
                 </label>
                 {formData.homeOnly && (
-                  <Input
+                  <Select
                     label="Kota Domisili"
                     name="homeCity"
                     value={formData.homeCity}
                     onChange={handleChange}
-                    placeholder="Contoh: Bandung"
-                    hint="Pembeli wajib memiliki KTP berdomisili kota ini."
+                    options={HOME_DOMICILE_OPTIONS}
+                    placeholder="Pilih kota atau provinsi"
+                    required
                   />
+                )}
+                {formData.homeOnly && (
+                  <p className="text-xs text-text-tertiary">
+                    Pembeli wajib memiliki KTP dari kota/kabupaten atau provinsi yang dipilih.
+                  </p>
                 )}
               </div>
             )}

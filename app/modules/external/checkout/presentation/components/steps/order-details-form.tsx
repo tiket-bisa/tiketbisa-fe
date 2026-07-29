@@ -1,4 +1,4 @@
-import { Card, Select, Input } from "~/core/design-system/components";
+import { Card, Input } from "~/core/design-system/components";
 import type { BuyerInfo, OrderItem, TicketHolder } from "../../../domain/checkout.types";
 import type { HolderFieldErrors } from "../../hooks/use-checkout-form";
 import { CheckoutFormField } from "../shared/checkout-form-field";
@@ -19,12 +19,6 @@ export interface OrderDetailsFormProps {
   domicileNotice?: string | null;
   ticketCapNotice?: string | null;
 }
-
-const IDENTITY_OPTIONS = [
-  { label: "KTP", value: "KTP" },
-  { label: "SIM", value: "SIM" },
-  { label: "Paspor", value: "PASPOR" },
-];
 
 export function OrderDetailsForm({
   data,
@@ -132,20 +126,18 @@ function IdentityField({ data, error, onChange }: IdentityFieldProps) {
       <label className="text-sm font-bold text-text-secondary ml-1">Identitas</label>
       <div className="grid grid-cols-12 gap-3 items-start">
         <div className="col-span-4">
-          <Select
-            id="identityType"
-            options={IDENTITY_OPTIONS}
-            value={data.identityType}
-            onChange={(e) => onChange("identityType", e.target.value)}
-            className={`${inputBaseStyles} ${getFieldBg(data.identityType)} ${error ? "border-destructive" : ""}`}
-          />
+          <div className={`${inputBaseStyles} flex items-center border px-4 bg-surface-hover`}>
+            KTP
+          </div>
         </div>
         <div className="col-span-8">
           <Input
             id="identityNumber"
-            placeholder="Nomor identitas"
+            placeholder="16 digit NIK"
+            inputMode="numeric"
+            maxLength={16}
             value={data.identityNumber}
-            onChange={(e) => onChange("identityNumber", e.target.value)}
+            onChange={(e) => onChange("identityNumber", e.target.value.replace(/[^0-9]/g, ""))}
             className={`${inputBaseStyles} ${getFieldBg(data.identityNumber)} ${error ? "border-destructive bg-destructive-bg" : ""}`}
           />
         </div>

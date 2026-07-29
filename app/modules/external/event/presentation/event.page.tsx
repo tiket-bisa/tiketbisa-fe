@@ -21,6 +21,8 @@ export async function loader({ request }: Route.LoaderArgs) {
   const page = Math.max(1, Number(sp.get("page") ?? 1));
   const offset = (page - 1) * limit;
 
+  const timeRange = resolveTimeRange(sp.get("time"));
+  const priceRange = resolvePriceRange(sp.get("price"));
   const params: EventFilterParams = {
     limit,
     offset,
@@ -31,6 +33,11 @@ export async function loader({ request }: Route.LoaderArgs) {
     time_range: sp.get("time") ?? undefined,
     price_range: sp.get("price") ?? undefined,
     search: sp.get("q") ?? undefined,
+    status: "ONGOING",
+    start_date: timeRange.startDate,
+    end_date: timeRange.endDate,
+    min_price: priceRange.minPrice,
+    max_price: priceRange.maxPrice,
   };
 
   const response = await eventApi.getEvents(params);
@@ -42,6 +49,31 @@ export async function loader({ request }: Route.LoaderArgs) {
     offset: response.data.offset,
     currentPage: page,
   };
+}
+
+function resolveTimeRange(value: string | null): { startDate?: string; endDate?: string } {
+  if (!value) return {};
+  const now = new Date();
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  if (value === "today") {
+    end.setDate(end.getDate() + 1);
+  } else if (value === "this_week") {
+    end.setDate(end.getDate() + 7);
+  } else if (value === "this_month") {
+    end.setMonth(end.getMonth() + 1);
+  } else {
+    return {};
+  }
+  return { startDate: start.toISOString(), endDate: end.toISOString() };
+}
+
+function resolvePriceRange(value: string | null): { minPrice?: number; maxPrice?: number } {
+  if (value === "0-50000") return { minPrice: 0, maxPrice: 50_000 };
+  if (value === "50000-100000") return { minPrice: 50_000, maxPrice: 100_000 };
+  if (value === "100000-plus") return { minPrice: 100_000 };
+  return {};
 }
 
 // Page Component //

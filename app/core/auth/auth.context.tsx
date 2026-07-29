@@ -13,6 +13,12 @@ export interface BaseAuthUser {
   brand_id?: string;
 }
 
+export interface PartnerBrandOption {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 export interface AdminUser extends BaseAuthUser {
   role: "admin";
   username?: undefined;
@@ -27,6 +33,7 @@ export interface PartnerUser extends BaseAuthUser {
   brand_id: string;
   brand_slug: string;
   brand_name: string;
+  available_brands?: PartnerBrandOption[];
 }
 
 export interface ScannerUser extends BaseAuthUser {
@@ -46,6 +53,7 @@ interface AuthContextValue {
   loginWithOAuth: (payload: InternalTokenResponseData) => void;
   loginWithScanner: (payload: InternalTokenResponseData) => void;
   logout: () => void;
+  selectBrand: (brandId: string) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -73,6 +81,8 @@ function decodeJwtPayload(token: string): GoogleIdTokenPayload {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const selectedBrandStorageKey = (identifier: string) =>
+    `tiketbisa_selected_brand:${identifier.toLowerCase()}`;
 
   const buildUserFromPayload = useCallback(
     (payload: InternalTokenResponseData, profile?: GoogleIdTokenPayload): AuthUser => {
@@ -227,6 +237,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [buildUserFromPayload]);
 
+  useEffect(() => {
+    if (user?.role !== "partner") return;
+    let cancelled = false;
+
+    void internalHttpClient.get<{ brands?: Array<Record<string, unknown>> }>("/brand?limit=200&offset=0")
+      .then((response) => {
+        if (cancelled || !response.success || !response.data) return;
+        const brands: PartnerBrandOption[] = (response.data.brands ?? [])
+          .map((brand) => {
+            const id = String(brand.id ?? "");
+            const name = String(brand.name ?? "");
+            const slug = name.trim().toLowerCase().replace(/\s+/g, "-");
+            return { id, name, slug };
+          })
+          .filter((brand) => brand.id && brand.name);
+        if (brands.length === 0) return;
+
+        const savedBrandId = localStorage.getItem(selectedBrandStorageKey(user.identifier));
+        const active = brands.find((brand) => brand.id === savedBrandId)
+          ?? brands.find((brand) => brand.id === user.brand_id)
+          ?? brands[0];
+        setUser((current) => {
+          if (!current || current.role !== "partner") return current;
+          const next: PartnerUser = {
+            ...current,
+            brand_id: active.id,
+            brand_name: active.name,
+            brand_slug: active.slug,
+            available_brands: brands,
+          };
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(next));
+          localStorage.setItem(selectedBrandStorageKey(current.identifier), active.id);
+          return next;
+        });
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          console.error("Failed to load partner brands", err);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.identifier]);
+
   const loginWithOAuth = useCallback((payload: InternalTokenResponseData) => {
     const profile = decodeJwtPayload(payload.idToken);
     const nextUser = buildUserFromPayload(payload, profile);
@@ -245,8 +301,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(AUTH_STORAGE_KEY);
   }, []);
 
+  const selectBrand = useCallback((brandId: string) => {
+    setUser((current) => {
+      if (!current || current.role !== "partner") return current;
+      const active = current.available_brands?.find((brand) => brand.id === brandId);
+      if (!active) return current;
+      const next: PartnerUser = {
+        ...current,
+        brand_id: active.id,
+        brand_name: active.name,
+        brand_slug: active.slug,
+      };
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(next));
+      localStorage.setItem(selectedBrandStorageKey(current.identifier), active.id);
+      return next;
+    });
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, loginWithOAuth, loginWithScanner, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, loginWithOAuth, loginWithScanner, logout, selectBrand }}>
       {children}
     </AuthContext.Provider>
   );

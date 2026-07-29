@@ -38,15 +38,29 @@ function normalizeScannerAccess(data: Record<string, unknown>): ScannerAccountSu
 }
 
 export function normalizeBrandAccessSummary(data: Record<string, unknown>): BrandAccessSummary {
+  const scannerItems = Array.isArray(data.scannerAccounts)
+    ? data.scannerAccounts
+    : Array.isArray(data.internalUsers)
+      ? data.internalUsers
+      : [];
   return {
     brandId: String(data.brandId ?? data.brand_id ?? ""),
     brandName: String(data.brandName ?? data.brand_name ?? ""),
     partnerEmails: Array.isArray(data.partnerEmails)
       ? data.partnerEmails.map((item) => normalizePartnerAccess(item as Record<string, unknown>))
       : [],
-    scannerAccounts: Array.isArray(data.scannerAccounts)
-      ? data.scannerAccounts.map((item) => normalizeScannerAccess(item as Record<string, unknown>))
-      : [],
+    scannerAccounts: scannerItems.map((item: unknown) =>
+      normalizeScannerAccess(item as Record<string, unknown>)),
+  };
+}
+
+async function normalizeSummaryResponse(
+  response: Awaited<ReturnType<typeof internalHttpClient.post<BrandAccessSummary>>>,
+) {
+  if (!response.success || !response.data) return response;
+  return {
+    ...response,
+    data: normalizeBrandAccessSummary(response.data as unknown as Record<string, unknown>),
   };
 }
 
@@ -63,15 +77,25 @@ export const internalBrandAccessApi = {
     };
   },
 
-  addPartner: (brandId: string, email: string) =>
-    internalHttpClient.post<BrandAccessSummary>(`/brand/${brandId}/access/partner`, { email }),
+  addPartner: async (brandId: string, email: string) =>
+    normalizeSummaryResponse(
+      await internalHttpClient.post<BrandAccessSummary>(`/brand/${brandId}/access/partner`, { email }),
+    ),
 
-  removePartner: (brandId: string, email: string) =>
-    internalHttpClient.post<BrandAccessSummary>(`/brand/${brandId}/access/partner/remove`, { email }),
+  removePartner: async (brandId: string, email: string) =>
+    normalizeSummaryResponse(
+      await internalHttpClient.delete<BrandAccessSummary>(
+        `/brand/${brandId}/access/partner/${encodeURIComponent(email.trim().toLowerCase())}`,
+      ),
+    ),
 
-  upsertScanner: (brandId: string, username: string, password: string) =>
-    internalHttpClient.post<BrandAccessSummary>(`/brand/${brandId}/access/scanner`, { username, password }),
+  upsertScanner: async (brandId: string, username: string, password: string) =>
+    normalizeSummaryResponse(
+      await internalHttpClient.post<BrandAccessSummary>(`/brand/${brandId}/access/internal-user`, { username, password }),
+    ),
 
-  deactivateScanner: (brandId: string, scannerId: string) =>
-    internalHttpClient.post<BrandAccessSummary>(`/brand/${brandId}/access/scanner/${scannerId}/deactivate`, {}),
+  deactivateScanner: async (brandId: string, scannerId: string) =>
+    normalizeSummaryResponse(
+      await internalHttpClient.delete<BrandAccessSummary>(`/brand/${brandId}/access/internal-user/${scannerId}`),
+    ),
 };

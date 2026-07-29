@@ -328,6 +328,8 @@ export function useCheckoutSteps(
             });
 
             if (result) {
+              const paymentRemainingSeconds = await orderApi.getTempTransactionTtl(activeLockId);
+              setDeadlineFromRemainingSeconds(paymentRemainingSeconds);
               setSearchParams({
                 ...Object.fromEntries(searchParams),
                 step: "4",
@@ -419,7 +421,7 @@ export function useCheckoutSteps(
         navigate("/event");
         break;
     }
-  }, [currentStep, event.id, buyerInfo, baseSummary, paymentSummary, validateForm, searchParams, setSearchParams, confirmOrder, navigate, selectedPaymentMethod, isStep2Valid, lockId, isManualTransferPayment, manualTransferProofFile, ensureCheckoutSessionActive, clearCheckoutStorage, params.eventId, getActiveLockId, exceedsTicketLimit, redirectForTicketLimit]);
+  }, [currentStep, event.id, buyerInfo, baseSummary, paymentSummary, validateForm, searchParams, setSearchParams, confirmOrder, navigate, selectedPaymentMethod, isStep2Valid, lockId, isManualTransferPayment, manualTransferProofFile, ensureCheckoutSessionActive, clearCheckoutStorage, params.eventId, getActiveLockId, exceedsTicketLimit, redirectForTicketLimit, setDeadlineFromRemainingSeconds]);
 
   const handleBack = useCallback(() => {
     if (currentStep === 1) {

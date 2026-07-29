@@ -91,6 +91,7 @@ describe("orderApi", () => {
           customerName: "John Doe",
           customerEmail: "john@example.com",
           customerPhone: "08123456789",
+          customerIdentityNumber: "1234567890123456",
           source: "WEBSITE",
           paymentMethod: "MANUAL_TRANSFER",
           isComplimentary: false,

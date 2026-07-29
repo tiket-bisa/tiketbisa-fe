@@ -23,7 +23,7 @@ import {
   type InternalBrandApiData,
 } from "~/core/api/services/internal-brand.api";
 import type { EventSummary } from "~/core/types";
-import { fileToBase64, ImageSourceInput } from "~/modules/internal/common/presentation/image-source-input";
+import { fileToBase64 } from "~/modules/internal/common/presentation/image-source-input";
 import { EventGalleryManager } from "~/modules/internal/common/presentation/event-gallery-manager";
 import { SearchableCitySelect } from "~/modules/internal/events/presentation/components/searchable-city-select";
 
@@ -242,7 +242,7 @@ export default function AdminEventsPage() {
       const payload = {
         brandId: formData.brandId,
         name: formData.name.trim(),
-        bannerPath: formData.bannerPath.trim() || null,
+        bannerPath: formMode === "create" ? null : undefined,
         startDate,
         endDate,
         description: formData.description.trim() || null,
@@ -419,19 +419,10 @@ export default function AdminEventsPage() {
               />
             </div>
 
-            <ImageSourceInput
-              label="Banner Event"
-              value={formData.bannerPath}
-              onChange={(value) => setFormData((prev) => ({ ...prev, bannerPath: value }))}
-              uploadFile={uploadEventBanner}
-              disabled={isSubmitting}
-            />
-
             <EventGalleryManager
               eventId={editingEvent?.id}
               uploadFile={uploadEventBanner}
               disabled={isSubmitting}
-              onCoverChange={(imageUrl) => setFormData((prev) => ({ ...prev, bannerPath: imageUrl }))}
             />
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

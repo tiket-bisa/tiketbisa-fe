@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, Input } from "~/core/design-system/components";
-import { toAbsoluteApiUrl } from "~/core/api";
+import { normalizeImageUrl } from "~/core/api";
+import { useIsMounted } from "./use-is-mounted";
+import { useObjectUrlRegistry } from "./use-object-url-registry";
 
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 
@@ -18,20 +20,6 @@ type CropState = {
   file: File;
   previewUrl: string;
 };
-
-function normalizeImageUrl(value: string): string {
-  if (!value) return "";
-  if (/^https?:\/\//i.test(value) || value.startsWith("data:") || value.startsWith("blob:")) {
-    return value;
-  }
-
-  const legacyLocalPathMatch = value.match(/\/(temp-(?:event-banners|brand-images)\/[^/]+)$/);
-  if (legacyLocalPathMatch) {
-    return toAbsoluteApiUrl(`/${legacyLocalPathMatch[1]}`);
-  }
-
-  return toAbsoluteApiUrl(value);
-}
 
 export async function fileToBase64(file: File): Promise<string> {
   return await new Promise<string>((resolve, reject) => {
@@ -62,8 +50,16 @@ export function ImageSourceInput({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cropState, setCropState] = useState<CropState | null>(null);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const previewUrl = normalizeImageUrl(value);
+  const isMounted = useIsMounted();
+  const { createObjectUrl, revokeObjectUrl } = useObjectUrlRegistry();
+  const previewUrl = localPreviewUrl ?? normalizeImageUrl(value);
+
+  useEffect(() => {
+    setPreviewError(false);
+  }, [previewUrl]);
 
   const handleFile = async (file: File | null) => {
     setError(null);
@@ -77,10 +73,19 @@ export function ImageSourceInput({
       return;
     }
     if (cropSquare) {
-      setCropState({ file, previewUrl: URL.createObjectURL(file) });
+      setCropState({ file, previewUrl: createObjectUrl(file) });
       return;
     }
-    await uploadAndSet(file);
+    const objectUrl = createObjectUrl(file);
+    setLocalPreviewUrl(objectUrl);
+    try {
+      await uploadAndSet(file);
+    } finally {
+      revokeObjectUrl(objectUrl);
+      if (isMounted()) {
+        setLocalPreviewUrl(null);
+      }
+    }
   };
 
   const uploadAndSet = async (file: File) => {
@@ -88,12 +93,18 @@ export function ImageSourceInput({
     setError(null);
     try {
       const imageUrl = await uploadFile(file);
+      if (!isMounted()) return;
       onChange(imageUrl);
+      setPreviewError(false);
       if (inputRef.current) inputRef.current.value = "";
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal mengunggah gambar.");
+      if (isMounted()) {
+        setError(err instanceof Error ? err.message : "Gagal mengunggah gambar.");
+      }
     } finally {
-      setIsUploading(false);
+      if (isMounted()) {
+        setIsUploading(false);
+      }
     }
   };
 
@@ -149,22 +160,28 @@ export function ImageSourceInput({
         </div>
       )}
 
-      {value && (
+      {(value || localPreviewUrl) && (
         <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface-alt">
-          <img src={previewUrl} alt={`${label} preview`} className="h-32 w-full object-cover" />
+          <img
+            src={previewUrl}
+            alt={`${label} preview`}
+            onError={() => setPreviewError(true)}
+            className="h-32 w-full object-cover"
+          />
         </div>
       )}
+      {previewError && <p className="text-xs text-destructive-text">Preview gambar tidak dapat dimuat.</p>}
       {error && <p className="text-xs text-destructive-text">{error}</p>}
       {cropState && (
         <CropModal
           cropState={cropState}
           onCancel={() => {
-            URL.revokeObjectURL(cropState.previewUrl);
+            revokeObjectUrl(cropState.previewUrl);
             setCropState(null);
             if (inputRef.current) inputRef.current.value = "";
           }}
           onSave={async (file) => {
-            URL.revokeObjectURL(cropState.previewUrl);
+            revokeObjectUrl(cropState.previewUrl);
             setCropState(null);
             await uploadAndSet(file);
           }}
@@ -189,6 +206,7 @@ function CropModal({
   const [offsetY, setOffsetY] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const imageRef = useRef<HTMLImageElement | null>(null);
+  const isMounted = useIsMounted();
 
   useEffect(() => {
     setZoom(1);
@@ -204,7 +222,9 @@ function CropModal({
       const cropped = await cropImageToSquare(image, cropState.file.name, zoom, offsetX, offsetY);
       await onSave(cropped);
     } finally {
-      setIsSaving(false);
+      if (isMounted()) {
+        setIsSaving(false);
+      }
     }
   };
 

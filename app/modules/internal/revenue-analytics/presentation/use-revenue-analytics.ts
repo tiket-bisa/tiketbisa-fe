@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { analyticsApi, type RevenueSummary, type RevenueByEvent, type RevenueTimeline } from "../../analytics/analytics.api";
 import { transactionApi } from "~/core/api/services/transaction.api";
 
-export function useRevenueAnalyticsData(brandSlug?: string) {
+export function useRevenueAnalyticsData(brandId?: string) {
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [totalTicketsSold, setTotalTicketsSold] = useState(0);
   const [totalTransactions, setTotalTransactions] = useState(0);
@@ -15,10 +15,10 @@ export function useRevenueAnalyticsData(brandSlug?: string) {
       setIsLoading(true);
       try {
         const [summary, events, timeline, txRes] = await Promise.all([
-          analyticsApi.getRevenueSummary(),
-          analyticsApi.getRevenueByEvent(),
-          analyticsApi.getRevenueTimeline(),
-          transactionApi.getList({ limit: 1000 })
+          analyticsApi.getRevenueSummary(brandId),
+          analyticsApi.getRevenueByEvent(brandId),
+          analyticsApi.getRevenueTimeline(brandId),
+          transactionApi.getList({ limit: 1000, brandId })
         ]);
         
         setTotalRevenue(summary.totalRevenue);
@@ -40,7 +40,7 @@ export function useRevenueAnalyticsData(brandSlug?: string) {
       }
     }
     loadData();
-  }, [brandSlug]);
+  }, [brandId]);
 
   const maxRevenue = Math.max(...revenueTimeline.map((d) => d.revenue), 1);
 

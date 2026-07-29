@@ -47,11 +47,13 @@ export default function DashboardPage() {
   const debouncedSearch = useDebouncedValue(search);
 
   useEffect(() => {
-    analyticsApi.getDashboardStats()
+    if (!user?.brand_id) return;
+    setIsStatsLoading(true);
+    analyticsApi.getDashboardStats(user.brand_id)
       .then(setStats)
       .catch((err) => console.error("Failed to load dashboard stats:", err))
       .finally(() => setIsStatsLoading(false));
-  }, []);
+  }, [user?.brand_id]);
 
   // Fetch real transaction list
   const { data: transactionRes, loading: loadingTransactions, refetch: refetchTransactions } = useApiQuery(
