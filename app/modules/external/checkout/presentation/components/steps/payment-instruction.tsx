@@ -206,7 +206,8 @@ export function PaymentInstruction({
   const qrPayload = gatewayData.qrPayload;
   const qrRedirectUrl = isUrlLike(qrPayload) ? qrPayload : null;
 
-  // --- 1. XENDIT HOSTED-INVOICE LAYOUT (VA + QRIS both resolve to one hosted checkout page) ---
+  // --- 1. XENDIT HOSTED-INVOICE LAYOUT (BE restricts the invoice's payment_methods so VA lands on
+  // a bank-selection page and QRIS lands on a QRIS-only page, instead of both showing every channel) ---
   if (!isManualTransfer) {
     return (
       <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
@@ -239,8 +240,14 @@ export function PaymentInstruction({
             {/* QR Area */}
             <div className="flex flex-col items-center space-y-8 py-4">
               <div className="space-y-3 text-center">
-                <p className="text-sm font-black text-text-primary tracking-tight">Selesaikan Pembayaran via Xendit</p>
-                <p className="text-xs font-medium text-text-secondary">Pindai QR atau buka halaman pembayaran Xendit untuk memilih metode (VA / QRIS / e-wallet).</p>
+                <p className="text-sm font-black text-text-primary tracking-tight">
+                  {isBank ? "Pilih Bank Virtual Account via Xendit" : "Selesaikan Pembayaran QRIS via Xendit"}
+                </p>
+                <p className="text-xs font-medium text-text-secondary">
+                  {isBank
+                    ? "Buka halaman pembayaran Xendit untuk memilih bank Virtual Account Anda (BCA, Mandiri, BNI, dan lainnya)."
+                    : "Pindai QR di bawah atau buka halaman pembayaran Xendit untuk membayar dengan QRIS."}
+                </p>
               </div>
 
               <button
