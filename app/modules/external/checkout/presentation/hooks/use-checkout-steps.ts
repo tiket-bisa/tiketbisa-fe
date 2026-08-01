@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate, useParams } from "react-router";
 import { orderApi, isGatewayPaymentSuccessful } from "../../infrastructure/order.api";
 import type { CompleteOrderResponse } from "../../infrastructure/order.api";
@@ -265,6 +265,53 @@ export function useCheckoutSteps(
       // Ignore malformed cache.
     }
   }, [currentStep, isManualTransferPending, completedOrder, searchParams]);
+
+  // Gateway payments (QRIS/VA) need an invoice created before there's anything to show, but
+  // the buyer previously had to click "Bayar Sekarang" first just to *generate* the QR —
+  // confusing, since that label reads as "I've already paid". Auto-create it once on arrival
+  // at the payment step instead; the button remains available afterward as a no-op-safe
+  // "check status now" fallback since /complete is idempotent server-side once an invoice exists.
+  const gatewayInvoiceRequestedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (currentStep !== 4 || isManualTransferPayment) return;
+    if (existingOrder?.qrPayload || existingOrder?.virtualAccount) return;
+
+    const activeLockId = getActiveLockId();
+    if (!activeLockId || gatewayInvoiceRequestedRef.current === activeLockId) return;
+    gatewayInvoiceRequestedRef.current = activeLockId;
+
+    setIsActionLoading(true);
+    (async () => {
+      try {
+        const result = await orderApi.executeOrder(activeLockId, paymentSummary.totalPrice);
+        setCompletedOrder(result);
+        setIsManualTransferPending(false);
+
+        if (isGatewayPaymentSuccessful(result)) {
+          const nextParams = new URLSearchParams(searchParams);
+          nextParams.set("step", "5");
+          nextParams.set("lockId", activeLockId);
+          nextParams.set("orderId", activeLockId);
+          nextParams.delete("manualPending");
+          setSearchParams(nextParams);
+        }
+      } catch (error) {
+        // Leave the placeholder QR/VA state up; the "Bayar Sekarang" button remains as a retry.
+        console.error("Failed to auto-create gateway invoice", error);
+      } finally {
+        setIsActionLoading(false);
+      }
+    })();
+  }, [
+    currentStep,
+    isManualTransferPayment,
+    existingOrder?.qrPayload,
+    existingOrder?.virtualAccount,
+    getActiveLockId,
+    paymentSummary.totalPrice,
+    searchParams,
+    setSearchParams,
+  ]);
 
   const handleNext = useCallback(async () => {
     switch (currentStep) {

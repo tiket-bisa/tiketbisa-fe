@@ -287,11 +287,14 @@ export function PaymentInstruction({
                 </button>
               )}
 
-              <div className="flex flex-wrap justify-center gap-6 opacity-40 grayscale">
-                <img src="/logos/gopay.png" alt="GoPay" className="h-4 w-auto" />
-                <img src="/logos/ovo.png" alt="OVO" className="h-4 w-auto" />
-                <img src="/logos/dana.png" alt="DANA" className="h-4 w-auto" />
-                <img src="/logos/shopeepay.png" alt="ShopeePay" className="h-4 w-auto" />
+              {/* /logos/{gopay,ovo,dana,shopeepay}.png were never added to public/ — text badges
+                  avoid broken-image icons until the official logo assets are sourced. */}
+              <div className="flex flex-wrap justify-center gap-4 opacity-40 grayscale">
+                {["GoPay", "OVO", "DANA", "ShopeePay"].map((name) => (
+                  <span key={name} className="text-xs font-black text-text-primary uppercase tracking-widest">
+                    {name}
+                  </span>
+                ))}
               </div>
             </div>
 
@@ -365,7 +368,6 @@ export function PaymentInstruction({
                 </svg>
               </button>
               <div className="text-center space-y-1">
-                <img src="/logo/qris.png" alt="QRIS" className="h-8 mx-auto" />
                 <p className="text-sm font-black text-text-primary">Pindai Kode QR Untuk Bayar</p>
                 <p className="text-xs font-bold text-text-secondary">{formatIDR(totalAmount)}</p>
               </div>
