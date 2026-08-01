@@ -1,4 +1,3 @@
-import { useSearchParams } from "react-router";
 import { StickyPriceBar } from "~/shared/components";
 import { MAX_TICKETS_PER_TRANSACTION } from "~/shared/constants/transaction";
 import { useTicketSelection } from "~/shared/hooks/use-ticket-selection";
@@ -6,7 +5,7 @@ import { eventApi } from "../infrastructure/event.api";
 
 import { EventDetailHeader } from "./components/event-detail-header";
 import { EventDetailSidebar } from "./components/event-detail-sidebar";
-import { EventDetailTabs } from "./components/event-detail-tabs";
+import { EventDetailContent } from "./components/event-detail-content";
 
 import type { Route } from "./+types/event-detail.page";
 
@@ -33,18 +32,9 @@ export function HydrateFallback() {
 
 export default function EventDetailPage({ loaderData }: Route.ComponentProps) {
   const { event } = loaderData;
-  const [searchParams, setSearchParams] = useSearchParams();
-  
-  // Logic & State Hooks
-  const activeTab = searchParams.get("tab") || "deskripsi";
-  const { quantities, updateQuantity, totalPrice, totalItems } = useTicketSelection(event.tickets);
 
-  const handleTabChange = (val: string) => {
-    setSearchParams(prev => {
-      prev.set("tab", val);
-      return prev;
-    }, { replace: true, preventScrollReset: true });
-  };
+  // Logic & State Hooks
+  const { quantities, updateQuantity, totalPrice, totalItems } = useTicketSelection(event.tickets);
 
   const handleCheckout = () => {
     if (totalItems > MAX_TICKETS_PER_TRANSACTION) {
@@ -69,23 +59,19 @@ export default function EventDetailPage({ loaderData }: Route.ComponentProps) {
   };
 
   return (
-    <div className="min-h-screen bg-surface-primary text-text-primary pb-24" data-theme="dark">
+    <div className="min-h-screen bg-surface-primary text-text-primary pb-24 lg:pb-8" data-theme="dark">
       <EventDetailHeader event={event} />
 
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          <EventDetailTabs 
-            event={event} 
-            activeTab={activeTab} 
-            onTabChange={handleTabChange}
-            quantities={quantities}
-            onQuantityChange={updateQuantity}
-          />
-          <EventDetailSidebar 
-            event={event} 
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <EventDetailContent event={event} />
+          <EventDetailSidebar
+            event={event}
             totalPrice={totalPrice}
             totalItems={totalItems}
             onCheckout={handleCheckout}
+            quantities={quantities}
+            onQuantityChange={updateQuantity}
           />
         </div>
       </div>
