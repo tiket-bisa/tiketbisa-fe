@@ -15,6 +15,7 @@ export interface InternalEventApiData {
   city?: string | null;
   status?: "ONGOING" | "ENDED" | null;
   isPublished?: boolean | null;
+  isFeatured?: boolean | null;
   created?: string | null;
 }
 
@@ -230,6 +231,7 @@ function normalizeEvent(api: InternalEventApiData & Record<string, unknown>): In
     city: (api.city ?? null) as string | null,
     status: (api.status ?? null) as InternalEventApiData["status"],
     isPublished: (api.isPublished ?? api.is_published ?? null) as boolean | null,
+    isFeatured: (api.isFeatured ?? api.is_featured ?? null) as boolean | null,
     created: (api.created ?? null) as string | null,
   };
 }
@@ -395,6 +397,7 @@ export function mapInternalEventToSummary(
     location: normalized.venue ?? normalized.location ?? undefined,
     time: formatTime(normalized.startDate),
     status: feStatus,
+    isFeatured: Boolean(normalized.isFeatured),
   };
 }
 

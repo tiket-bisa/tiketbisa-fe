@@ -12,6 +12,7 @@ export interface EventFilterParams extends PaginationParams {
   price_range?: string;
   search?: string;
   status?: "ONGOING" | "ENDED";
+  is_featured?: boolean;
   start_date?: string;
   end_date?: string;
   min_price?: number;

@@ -21,6 +21,8 @@ export interface EventDto {
   status: string;
   isPublished: boolean;
   is_published?: boolean;
+  isFeatured?: boolean;
+  is_featured?: boolean;
   minPrice: number | null;
   min_price?: number | null;
 }

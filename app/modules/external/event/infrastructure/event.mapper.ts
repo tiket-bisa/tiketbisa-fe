@@ -36,6 +36,21 @@ function formatEventDate(dateStr: string): string {
   }
 }
 
+/** Formats "startTime - endTime"; falls back to "startTime - Selesai" if the end date is missing/invalid. */
+export function formatEventTimeRange(startDateStr: string, endDateStr?: string): string {
+  const formatTime = (d: Date) =>
+    d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false });
+
+  const start = new Date(startDateStr);
+  if (Number.isNaN(start.getTime())) return "";
+  const startTime = formatTime(start);
+
+  const end = endDateStr ? new Date(endDateStr) : null;
+  if (!end || Number.isNaN(end.getTime())) return `${startTime} - Selesai`;
+
+  return `${startTime} - ${formatTime(end)}`;
+}
+
 export function mapEventDtoToEntity(
   dto: EventDto,
   index: number,
@@ -55,6 +70,7 @@ export function mapEventDtoToEntity(
     date: formatEventDate(startDate),
     location: dto.city || dto.location || "Online",
     minPrice: dto.minPrice ?? dto.min_price ?? undefined,
+    isFeatured: dto.isFeatured ?? dto.is_featured ?? false,
     // Tickets are not yet supported by the backend in the list response
     tickets: [],
   };
