@@ -2,14 +2,13 @@ import { useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { Card } from "~/core/design-system/components";
 import { MAX_TICKETS_PER_ORDER } from "../domain/checkout.types";
-import { 
-  OrderDetailsForm, 
-  CheckoutSidebar, 
-  EventInfoHeader, 
-  CheckoutComingSoon, 
-  PaymentMethodSelection, 
-  OrderConfirmation, 
-  CountdownTimer, 
+import {
+  OrderDetailsForm,
+  CheckoutSidebar,
+  EventInfoHeader,
+  CheckoutComingSoon,
+  PaymentMethodSelection,
+  CountdownTimer,
   CheckoutStickyBar,
   OrderSummaryCard,
   PromoSection,
@@ -91,8 +90,9 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
     isManualTransferPending,
     manualTransferProofFile,
     setManualTransferProofFile,
-    isStep2Valid,
+    canProceedToPayment,
     handlePaymentMethodSelect,
+    setBankCode,
     setAgreedToTerms,
     setAgreedToPrivacy,
     applyPromo,
@@ -101,12 +101,14 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
     clearBlockingError
   } = useCheckoutSteps(event, buyerInfo, summary, validate, paymentMethods, order, paymentSelectionState, holders);
 
-  // Add "Biaya Transaksi" once a payment method is chosen (display total).
+  // Adds "Biaya Transaksi" once a payment method is chosen; gracefully has no fee yet
+  // otherwise, so this is safe to use as the one live summary throughout the combined
+  // data+payment-method page (the total updates the instant a method is picked).
   const paymentSummary = useMemo(
     () => buildPaymentOrderSummary(summary, selectedPaymentMethod ?? order?.paymentMethod ?? null),
     [summary, selectedPaymentMethod, order?.paymentMethod],
   );
-  const activeSummary = currentStep >= 2 ? paymentSummary : summary;
+  const activeSummary = paymentSummary;
 
   // After "Bayar Sekarang" creates the Xendit invoice, the fresh QR/VA payload arrives on
   // `completedOrder`. Overlay it onto the loader order so PaymentInstruction renders the QR
@@ -164,13 +166,16 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
           </div>
         </div>
       )}
-      <div className={`mx-auto max-w-7xl py-4 ${(currentStep === 3 || currentStep === 4) ? "space-y-10" : "grid grid-cols-1 gap-12 lg:grid-cols-12 items-start"}`}>
+      <div className={`mx-auto max-w-7xl py-4 ${currentStep === 4 ? "space-y-10" : "grid grid-cols-1 gap-12 lg:grid-cols-12 items-start"}`}>
         {/* Main Content Area */}
-        <div className={(currentStep === 3 || currentStep === 4) ? "w-full" : "lg:col-span-8 space-y-8"}>
+        <div className={currentStep === 4 ? "w-full" : "lg:col-span-8 space-y-8"}>
           <div className="space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-10">
               <EventInfoHeader event={event} />
-              {(currentStep === 3 || currentStep === 4) && (
+              {/* Timer is deliberately absent on step 1 (data + payment method) — it only
+                  starts once the buyer has committed to a payment method and reached the
+                  payment step, so filling in personal data never feels rushed. */}
+              {currentStep === 4 && (
                 <div className="hidden md:block">
                    <CountdownTimer onExpire={handleExpire} />
                 </div>
@@ -179,44 +184,41 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
           </div>
 
           {currentStep === 1 && (
-            <OrderDetailsForm
-              data={buyerInfo}
-              errors={errors}
-              onChange={handleInputChange}
-              className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100"
-              items={summary.items}
-              holders={holders}
-              holderErrors={holderErrors}
-              sameAsMain={sameAsMain}
-              onHolderChange={handleHolderChange}
-              onToggleSameAsMain={handleToggleSameAsMain}
-              ticketCapNotice={
-                totalTicketQuantity > MAX_TICKETS_PER_ORDER
-                  ? `Maksimal ${MAX_TICKETS_PER_ORDER} tiket per transaksi. Kurangi jumlah tiket sebelum melanjutkan.`
-                  : null
-              }
-            />
-          )}
-
-          {currentStep === 2 && (
-            <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
-              <PaymentMethodSelection
-                methods={paymentMethods}
-                selectedMethodId={paymentSelection.methodId}
-                onSelect={handlePaymentMethodSelect}
+            <div className="space-y-8">
+              <OrderDetailsForm
+                data={buyerInfo}
+                errors={errors}
+                onChange={handleInputChange}
+                className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100"
+                items={summary.items}
+                holders={holders}
+                holderErrors={holderErrors}
+                sameAsMain={sameAsMain}
+                onHolderChange={handleHolderChange}
+                onToggleSameAsMain={handleToggleSameAsMain}
+                ticketCapNotice={
+                  totalTicketQuantity > MAX_TICKETS_PER_ORDER
+                    ? `Maksimal ${MAX_TICKETS_PER_ORDER} tiket per transaksi. Kurangi jumlah tiket sebelum melanjutkan.`
+                    : null
+                }
               />
-            </div>
-          )}
 
-          {currentStep === 3 && (
-            <OrderConfirmation
-              buyerInfo={buyerInfo}
-              summary={activeSummary}
-              paymentMethod={selectedPaymentMethod}
-              onNext={() => handleNext()}
-              onBack={handleBack}
-              isLoading={isActionLoading}
-            />
+              <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150">
+                <div className="mb-6">
+                  <h2 className="text-2xl font-extrabold text-text-primary mb-2">Metode Pembayaran</h2>
+                  <p className="text-text-secondary font-medium">
+                    Pilih metode pembayaran yang paling nyaman untukmu.
+                  </p>
+                </div>
+                <PaymentMethodSelection
+                  methods={paymentMethods}
+                  selectedMethodId={paymentSelection.methodId}
+                  onSelect={handlePaymentMethodSelect}
+                  selectedBankCode={paymentSelection.bankCode}
+                  onSelectBank={setBankCode}
+                />
+              </div>
+            </div>
           )}
 
           {currentStep === 4 && order && (
@@ -240,28 +242,26 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
           )}
 
           {/* Mobile Specific Sections */}
-          {currentStep < 3 && (
+          {currentStep === 1 && (
             <div className="lg:hidden space-y-8">
               <OrderSummaryCard summary={activeSummary} />
-              {currentStep === 2 && (
-                <Card className="p-6 bg-white border-gray-100 shadow-sm rounded-3xl">
-                  <PromoSection
-                    eventId={event.id}
-                    subtotal={summary.subtotal}
-                    serviceFee={summary.serviceFee}
-                    appliedPromo={paymentSelection.appliedPromo}
-                    onApply={applyPromo}
-                    onRemove={removePromo}
-                  />
-                  <PaymentConsent
-                    agreedToTerms={paymentSelection.agreedToTerms}
-                    agreedToPrivacy={paymentSelection.agreedToPrivacy}
-                    onToggleTerms={setAgreedToTerms}
-                    onTogglePrivacy={setAgreedToPrivacy}
-                    isMethodSelected={!!paymentSelection.methodId}
-                  />
-                </Card>
-              )}
+              <Card className="p-6 bg-white border-gray-100 shadow-sm rounded-3xl">
+                <PromoSection
+                  eventId={event.id}
+                  subtotal={summary.subtotal}
+                  serviceFee={summary.serviceFee}
+                  appliedPromo={paymentSelection.appliedPromo}
+                  onApply={applyPromo}
+                  onRemove={removePromo}
+                />
+                <PaymentConsent
+                  agreedToTerms={paymentSelection.agreedToTerms}
+                  agreedToPrivacy={paymentSelection.agreedToPrivacy}
+                  onToggleTerms={setAgreedToTerms}
+                  onTogglePrivacy={setAgreedToPrivacy}
+                  isMethodSelected={!!paymentSelection.methodId}
+                />
+              </Card>
             </div>
           )}
 
@@ -269,14 +269,13 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
         </div>
 
         {/* Sidebar - Desktop Only */}
-        {currentStep < 3 && (
+        {currentStep === 1 && (
           <aside className="lg:col-span-4 lg:sticky lg:top-28 hidden lg:block animate-in fade-in slide-in-from-right-8 duration-700 delay-300 overflow-hidden">
             <div className="space-y-6 pb-12">
               <CheckoutSidebar
                 summary={activeSummary}
                 onNext={() => handleNext()}
                 onBack={handleBack}
-                step={currentStep}
                 agreedToTerms={paymentSelection.agreedToTerms}
                 agreedToPrivacy={paymentSelection.agreedToPrivacy}
                 onToggleTerms={setAgreedToTerms}
@@ -301,8 +300,8 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
         onExpire={handleExpire}
         isLoading={isActionLoading}
         canSubmit={
-          currentStep === 2
-            ? isStep2Valid
+          currentStep === 1
+            ? canProceedToPayment
             : currentStep === 4 && (order?.paymentMethod.id === "manual" || order?.paymentMethod.id === "manual_transfer")
               ? !!manualTransferProofFile
               : true

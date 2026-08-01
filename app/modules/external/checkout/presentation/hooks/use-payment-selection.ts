@@ -7,6 +7,7 @@ const DEFAULT_SELECTION: PaymentSelection = {
   agreedToTerms: false,
   agreedToPrivacy: false,
   appliedPromo: null,
+  bankCode: null,
 };
 
 export function usePaymentSelection() {
@@ -31,7 +32,13 @@ export function usePaymentSelection() {
   }, [selection, isStorageReady]);
 
   const setMethodId = (methodId: string) => {
-    setSelection((prev) => ({ ...prev, methodId }));
+    // Clear any previously picked bank when switching methods — re-picking avoids a stale
+    // bank from a prior VA selection silently carrying over.
+    setSelection((prev) => ({ ...prev, methodId, bankCode: null }));
+  };
+
+  const setBankCode = (bankCode: string) => {
+    setSelection((prev) => ({ ...prev, bankCode }));
   };
 
   const setAgreedToTerms = (agreedToTerms: boolean) => {
@@ -53,6 +60,7 @@ export function usePaymentSelection() {
   return {
     selection,
     setMethodId,
+    setBankCode,
     setAgreedToTerms,
     setAgreedToPrivacy,
     applyPromo,

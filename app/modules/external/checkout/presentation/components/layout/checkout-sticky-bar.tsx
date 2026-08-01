@@ -27,7 +27,7 @@ export function CheckoutStickyBar({
   orderMethodId,
 }: CheckoutStickyBarProps) {
   const getButtonLabel = () => {
-    if (currentStep === 3) return "Bayar Sekarang";
+    if (currentStep === 1) return "Lanjut ke Pembayaran";
     if (currentStep === 4) {
       const isManualTransfer = orderMethodId === "manual" || orderMethodId === "manual_transfer";
       return orderCategory === "BANK_TRANSFER" && isManualTransfer ? "Upload Bukti" : "Bayar Sekarang";
@@ -37,13 +37,16 @@ export function CheckoutStickyBar({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[100] lg:hidden animate-in slide-in-from-bottom duration-500">
-      {/* Timer - Full width and attached to the bar */}
-      <div className="w-full bg-white border-t border-gray-100">
-          <CountdownTimer 
-            onExpire={onExpire}
-            className="!py-3 !px-6 !rounded-none !shadow-none border-x-0 border-t-0 border-b border-gray-50" 
-          />
-      </div>
+      {/* Timer - only once the buyer has reached the payment step (no visible countdown
+          while filling in data + picking a payment method). */}
+      {currentStep === 4 && (
+        <div className="w-full bg-white border-t border-gray-100">
+            <CountdownTimer
+              onExpire={onExpire}
+              className="!py-3 !px-6 !rounded-none !shadow-none border-x-0 border-t-0 border-b border-gray-50"
+            />
+        </div>
+      )}
 
       {/* Main Sticky Bar */}
       <div className="bg-white border-t border-gray-100 shadow-[0_-10px_40px_rgba(0,0,0,0.08)] px-5 py-4 pb-8 flex items-center justify-between gap-4">

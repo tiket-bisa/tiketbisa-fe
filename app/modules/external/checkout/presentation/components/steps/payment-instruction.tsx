@@ -41,11 +41,6 @@ function parseVirtualAccount(raw: string | null | undefined): { bankName: string
   return { bankName: null, accountNumber: raw };
 }
 
-function isUrlLike(value: string | null | undefined): value is string {
-  if (!value) return false;
-  return /^https?:\/\//i.test(value.trim());
-}
-
 export function PaymentInstruction({
   order,
   event,
@@ -204,11 +199,11 @@ export function PaymentInstruction({
 
   const { bankName, accountNumber } = parseVirtualAccount(gatewayData.virtualAccount);
   const qrPayload = gatewayData.qrPayload;
-  const qrRedirectUrl = isUrlLike(qrPayload) ? qrPayload : null;
 
-  // --- 1. XENDIT HOSTED-INVOICE LAYOUT (BE restricts the invoice's payment_methods so VA lands on
-  // a bank-selection page and QRIS lands on a QRIS-only page, instead of both showing every channel) ---
-  if (!isManualTransfer) {
+  // --- 1. QRIS LAYOUT — a real scannable qr_string from Xendit's direct QR Code API (not a hosted
+  // checkout URL). VA is handled entirely by layout 2 below: it gets a real bank + account number
+  // straight from Xendit's direct Virtual Account API, so there's no separate "hosted" step for it. ---
+  if (!isManualTransfer && !isBank) {
     return (
       <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
         <Card className="overflow-hidden border-gray-100 rounded-3xl shadow-sm bg-white">
@@ -241,12 +236,10 @@ export function PaymentInstruction({
             <div className="flex flex-col items-center space-y-8 py-4">
               <div className="space-y-3 text-center">
                 <p className="text-sm font-black text-text-primary tracking-tight">
-                  {isBank ? "Pilih Bank Virtual Account via Xendit" : "Selesaikan Pembayaran QRIS via Xendit"}
+                  Selesaikan Pembayaran QRIS
                 </p>
                 <p className="text-xs font-medium text-text-secondary">
-                  {isBank
-                    ? "Buka halaman pembayaran Xendit untuk memilih bank Virtual Account Anda (BCA, Mandiri, BNI, dan lainnya)."
-                    : "Pindai QR di bawah atau buka halaman pembayaran Xendit untuk membayar dengan QRIS."}
+                  Pindai QR di bawah menggunakan aplikasi e-wallet atau mobile banking apa pun yang mendukung QRIS.
                 </p>
               </div>
 
@@ -273,19 +266,6 @@ export function PaymentInstruction({
                   </span>
                 )}
               </button>
-
-              {qrRedirectUrl && (
-                <button
-                  type="button"
-                  onClick={() => { window.open(qrRedirectUrl, "_blank", "noopener"); }}
-                  className="text-sm font-black text-brand-primary hover:underline flex items-center gap-2"
-                >
-                  Buka Halaman Pembayaran Xendit
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                </button>
-              )}
 
               {/* /logos/{gopay,ovo,dana,shopeepay}.png were never added to public/ — text badges
                   avoid broken-image icons until the official logo assets are sourced. */}
@@ -378,14 +358,6 @@ export function PaymentInstruction({
                   <p className="text-sm text-text-tertiary py-20">QR belum tersedia</p>
                 )}
               </div>
-              {qrRedirectUrl && (
-                <Button
-                  onClick={() => { window.location.href = qrRedirectUrl; }}
-                  className="w-full py-4 rounded-2xl font-black"
-                >
-                  Buka di Aplikasi Pembayaran
-                </Button>
-              )}
             </div>
           </div>
         )}
@@ -393,7 +365,8 @@ export function PaymentInstruction({
     );
   }
 
-  // --- 2. BANK TRANSFER LAYOUT (Traditional Style) ---
+  // --- 2. BANK TRANSFER LAYOUT (Traditional Style) — used for both manual transfer and VA. VA's
+  // bankName/accountNumber below come straight from Xendit's direct Virtual Account API. ---
   const manualTransferBankInfo = {
     bankName: import.meta.env.VITE_MANUAL_TRANSFER_BANK_NAME ?? "Mandiri",
     accountNumber: import.meta.env.VITE_MANUAL_TRANSFER_ACCOUNT_NUMBER ?? "1010014855397",

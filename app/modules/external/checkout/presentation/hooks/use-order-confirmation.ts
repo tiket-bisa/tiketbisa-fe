@@ -17,6 +17,7 @@ export function useOrderConfirmation() {
     summary: OrderSummary;
     paymentMethod: PaymentMethod;
     promoCode?: string;
+    bankCode?: string;
   }): Promise<OrderResponse | null> => {
     setIsLoading(true);
     setError(null);
@@ -28,7 +29,8 @@ export function useOrderConfirmation() {
         params.buyerInfo,
         params.summary,
         params.paymentMethod,
-        params.promoCode
+        params.promoCode,
+        params.bankCode
       );
       
       // Phase 3: Prepare the final view (Step 4)

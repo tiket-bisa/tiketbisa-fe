@@ -26,6 +26,7 @@ interface StoreTempTransactionRq {
   paymentMethod: string;
   isComplimentary: boolean;
   promoCode?: string;
+  bankCode?: string;
 }
 
 interface CompleteTransactionPayload {
@@ -266,7 +267,8 @@ export const orderApi = {
     buyerInfo: BuyerInfo,
     summary: OrderSummary,
     paymentMethod: PaymentMethod,
-    promoCode?: string
+    promoCode?: string,
+    bankCode?: string
   ): Promise<void> {
     let backendPaymentMethod = "MANUAL_TRANSFER";
     if (paymentMethod.category === "BANK_TRANSFER") {
@@ -289,6 +291,7 @@ export const orderApi = {
       paymentMethod: backendPaymentMethod,
       isComplimentary: false,
       ...(promoCode ? { promoCode } : {}),
+      ...(bankCode ? { bankCode } : {}),
     };
 
     const response = await apiFetch<ApiResponse<string>>("/transaction/temp", {

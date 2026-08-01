@@ -2,10 +2,20 @@ import { useState } from "react";
 import { Card } from "~/core/design-system/components";
 import type { PaymentMethod, PaymentCategory } from "../../../domain/checkout.types";
 
+/** Banks offered for a direct Virtual Account payment — matches XenditService's supported bank_code values. */
+const VA_BANKS = [
+  { code: "BCA", name: "BCA" },
+  { code: "BNI", name: "BNI" },
+  { code: "BRI", name: "BRI" },
+  { code: "MANDIRI", name: "Mandiri" },
+];
+
 export interface PaymentMethodSelectionProps {
   methods: PaymentMethod[];
   selectedMethodId: string | null;
   onSelect: (methodId: string) => void;
+  selectedBankCode?: string | null;
+  onSelectBank?: (bankCode: string) => void;
   className?: string;
 }
 
@@ -13,6 +23,8 @@ export function PaymentMethodSelection({
   methods,
   selectedMethodId,
   onSelect,
+  selectedBankCode,
+  onSelectBank,
   className = "",
 }: PaymentMethodSelectionProps) {
   const [expandedCategory, setExpandedCategory] = useState<PaymentCategory | null>("BANK_TRANSFER");
@@ -80,6 +92,32 @@ export function PaymentMethodSelection({
               </button>
             ))}
             </div>
+
+            {selectedMethodId === "va" && (
+              <div className="px-8 pb-8 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                <p className="text-xs font-black text-text-tertiary uppercase tracking-widest">
+                  Pilih Bank
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {VA_BANKS.map((bank) => (
+                    <button
+                      key={bank.code}
+                      type="button"
+                      onClick={() => onSelectBank?.(bank.code)}
+                      className={`relative flex items-center justify-center p-4 rounded-xl border-2 transition-all h-16 ${
+                        selectedBankCode === bank.code
+                          ? "border-brand-primary bg-brand-primary/[0.04] ring-1 ring-brand-primary/20"
+                          : "border-gray-200 hover:border-gray-400 bg-white"
+                      }`}
+                    >
+                      <span className={`text-sm font-black uppercase tracking-tighter ${selectedBankCode === bank.code ? "text-brand-primary" : "text-text-primary"}`}>
+                        {bank.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             </div>
             </Card>
 
