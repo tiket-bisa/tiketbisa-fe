@@ -31,12 +31,12 @@ export function NavbarExternal({ className = "" }: NavbarExternalProps) {
 
   return (
     <header className={`sticky top-0 z-50 border-b border-border-default bg-[#1a1245] text-text-primary ${className}`}>
-      <nav className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link to="/" className="shrink-0" aria-label="Tiketbisa home" onClick={() => setIsMenuOpen(false)}>
           <img
             src="/logo/tiketbisa-white.png"
             alt="Tiketbisa"
-            className="w-auto h-8 lg:h-12 cursor-pointer"
+            className="w-auto h-7 lg:h-9 cursor-pointer"
           />
         </Link>
 
@@ -86,8 +86,8 @@ export function NavbarExternal({ className = "" }: NavbarExternalProps) {
           isMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
       >
-        <div className="flex h-20 items-center justify-between px-4 sm:px-6">
-          <img src="/logo/tiketbisa-white.png" alt="Tiketbisa" className="w-auto h-8" />
+        <div className="flex h-16 items-center justify-between px-4 sm:px-6">
+          <img src="/logo/tiketbisa-white.png" alt="Tiketbisa" className="w-auto h-7" />
           <button
             type="button"
             onClick={() => setIsMenuOpen(false)}
@@ -100,7 +100,7 @@ export function NavbarExternal({ className = "" }: NavbarExternalProps) {
           </button>
         </div>
 
-        <div className="px-4 py-6 sm:px-6 space-y-8 h-[calc(100vh-80px)] overflow-y-auto">
+        <div className="px-4 py-6 sm:px-6 space-y-8 h-[calc(100vh-64px)] overflow-y-auto">
           <div className="space-y-3">
             <p className="text-[10px] font-bold text-text-tertiary uppercase tracking-[0.2em] px-3">
               Cari Event
