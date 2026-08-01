@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { Card } from "~/core/design-system/components";
 import { MAX_TICKETS_PER_ORDER } from "../domain/checkout.types";
@@ -8,6 +8,7 @@ import {
   EventInfoHeader,
   CheckoutComingSoon,
   PaymentMethodSelection,
+  ConfirmModal,
   CountdownTimer,
   CheckoutStickyBar,
   OrderSummaryCard,
@@ -101,6 +102,24 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
     clearBlockingError
   } = useCheckoutSteps(event, buyerInfo, summary, validate, paymentMethods, order, paymentSelectionState, holders);
 
+  // Confirmation modals: submitting step 1 locks the reservation and starts the payment
+  // timer, and cancelling from the payment step releases that lock - both are consequential
+  // enough to double-check before firing the real action.
+  const [showProceedConfirm, setShowProceedConfirm] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
+  const requestProceedToPayment = () => setShowProceedConfirm(true);
+  const confirmProceedToPayment = () => {
+    setShowProceedConfirm(false);
+    handleNext();
+  };
+
+  const requestCancelOrder = () => setShowCancelConfirm(true);
+  const confirmCancelOrder = () => {
+    setShowCancelConfirm(false);
+    handleBack();
+  };
+
   // Adds "Biaya Transaksi" once a payment method is chosen; gracefully has no fee yet
   // otherwise, so this is safe to use as the one live summary throughout the combined
   // data+payment-method page (the total updates the instant a method is picked).
@@ -159,7 +178,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
               type="button"
               onClick={clearBlockingError}
               aria-label="Tutup pesan kesalahan"
-              className="shrink-0 font-bold text-red-500 hover:text-red-700"
+              className="shrink-0 font-bold text-red-500 hover:text-red-700 cursor-pointer"
             >
               ✕
             </button>
@@ -233,7 +252,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
               onAction={() => handleNext()}
               proofFile={manualTransferProofFile}
               onProofFileChange={setManualTransferProofFile}
-              onBack={handleBack}
+              onBack={requestCancelOrder}
               onExpire={handleExpire}
               isLoading={isActionLoading}
               transactionId={searchParams.get("orderId") ?? searchParams.get("lockId")}
@@ -274,7 +293,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
             <div className="space-y-6 pb-12">
               <CheckoutSidebar
                 summary={activeSummary}
-                onNext={() => handleNext()}
+                onNext={requestProceedToPayment}
                 onBack={handleBack}
                 agreedToTerms={paymentSelection.agreedToTerms}
                 agreedToPrivacy={paymentSelection.agreedToPrivacy}
@@ -295,8 +314,8 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
       <CheckoutStickyBar
         summary={activeSummary}
         currentStep={displayStep}
-        onNext={() => handleNext()}
-        onBack={handleBack}
+        onNext={() => (currentStep === 1 ? requestProceedToPayment() : handleNext())}
+        onBack={() => (currentStep === 4 ? requestCancelOrder() : handleBack())}
         onExpire={handleExpire}
         isLoading={isActionLoading}
         canSubmit={
@@ -308,6 +327,28 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
         }
         orderCategory={order?.paymentMethod.category}
         orderMethodId={order?.paymentMethod.id}
+      />
+
+      <ConfirmModal
+        isOpen={showProceedConfirm}
+        title="Lanjutkan ke Pembayaran?"
+        message="Tiketmu akan dikunci dan batas waktu pembayaran mulai berjalan setelah ini. Pastikan data yang kamu isi sudah benar."
+        confirmLabel="Ya, Lanjutkan"
+        cancelLabel="Batal"
+        onConfirm={confirmProceedToPayment}
+        onCancel={() => setShowProceedConfirm(false)}
+        isLoading={isActionLoading}
+      />
+
+      <ConfirmModal
+        isOpen={showCancelConfirm}
+        title="Batalkan Pesanan?"
+        message="Tiket yang sudah dikunci untukmu akan dilepas. Kamu perlu memesan ulang dari awal jika berubah pikiran."
+        confirmLabel="Ya, Batalkan"
+        cancelLabel="Kembali"
+        variant="danger"
+        onConfirm={confirmCancelOrder}
+        onCancel={() => setShowCancelConfirm(false)}
       />
     </div>
   );

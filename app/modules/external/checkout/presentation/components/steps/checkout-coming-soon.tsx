@@ -14,7 +14,7 @@ export function CheckoutComingSoon() {
       <p className="text-text-secondary font-medium mb-10 max-w-sm">Tahapan ini sedang dalam proses pengembangan oleh tim kami.</p>
       <button 
         onClick={() => navigate(-1)}
-        className="px-8 py-3 bg-brand-primary font-black rounded-xl hover:scale-105 transition-all shadow-lg shadow-brand-primary/20"
+        className="px-8 py-3 bg-brand-primary font-black rounded-xl hover:scale-105 transition-all shadow-lg shadow-brand-primary/20 cursor-pointer"
       >
         Kembali ke Detail Pesanan
       </button>

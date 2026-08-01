@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { Badge, Button, Card } from "~/core/design-system/components";
+import { Badge, Button, Card, useToast } from "~/core/design-system/components";
 import { useApiQuery } from "~/core/api";
 import { transactionApi } from "~/core/api/services/transaction.api";
 import { formatIDR } from "~/core/utils";
@@ -32,6 +32,7 @@ export default function TransactionDetailsPage() {
   const navigate = useNavigate();
   const [isReviewLoading, setIsReviewLoading] = useState(false);
   const [isProofLoading, setIsProofLoading] = useState(false);
+  const { error: errorToast } = useToast();
   const returnTo = "/internal-tb/partner";
 
   const { data: detail, loading, refetch } = useApiQuery(
@@ -91,7 +92,7 @@ export default function TransactionDetailsPage() {
       }
       navigate(returnTo, { replace: true });
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Gagal memproses approval");
+      errorToast(error instanceof Error ? error.message : "Gagal memproses approval");
     } finally {
       setIsReviewLoading(false);
     }
@@ -154,7 +155,7 @@ export default function TransactionDetailsPage() {
 
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Gagal membuka bukti transfer");
+      errorToast(error instanceof Error ? error.message : "Gagal membuka bukti transfer");
     } finally {
       setIsProofLoading(false);
     }

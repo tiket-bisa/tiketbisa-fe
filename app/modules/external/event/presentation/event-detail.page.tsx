@@ -1,4 +1,5 @@
 import { StickyPriceBar } from "~/shared/components";
+import { useToast } from "~/core/design-system/components";
 import { MAX_TICKETS_PER_TRANSACTION } from "~/shared/constants/transaction";
 import { useTicketSelection } from "~/shared/hooks/use-ticket-selection";
 import { eventApi } from "../infrastructure/event.api";
@@ -35,10 +36,11 @@ export default function EventDetailPage({ loaderData }: Route.ComponentProps) {
 
   // Logic & State Hooks
   const { quantities, updateQuantity, totalPrice, totalItems } = useTicketSelection(event.tickets);
+  const { warning: warningToast } = useToast();
 
   const handleCheckout = () => {
     if (totalItems > MAX_TICKETS_PER_TRANSACTION) {
-      alert(`Maksimum ${MAX_TICKETS_PER_TRANSACTION} tiket per transaksi.`);
+      warningToast(`Maksimum ${MAX_TICKETS_PER_TRANSACTION} tiket per transaksi.`);
       return;
     }
 

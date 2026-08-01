@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { useNavigate, useParams, Link, useSearchParams } from "react-router";
-import { Badge, Button, Card } from "~/core/design-system/components";
+import { Badge, Button, Card, useToast } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
 import { useApiQuery } from "~/core/api";
 import { transactionApi } from "~/core/api/services/transaction.api";
@@ -32,6 +32,7 @@ export default function AdminTransactionDetailsPage() {
   const [searchParams] = useSearchParams();
   const [isReviewLoading, setIsReviewLoading] = useState(false);
   const [isProofLoading, setIsProofLoading] = useState(false);
+  const { error: errorToast } = useToast();
   const rawReturnTo = searchParams.get("returnTo");
   const returnTo = rawReturnTo?.startsWith("/internal-tb/admin")
     ? rawReturnTo
@@ -100,7 +101,7 @@ export default function AdminTransactionDetailsPage() {
       }
       navigate(returnTo, { replace: true });
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Gagal memproses approval");
+      errorToast(error instanceof Error ? error.message : "Gagal memproses approval");
     } finally {
       setIsReviewLoading(false);
     }
@@ -163,7 +164,7 @@ export default function AdminTransactionDetailsPage() {
 
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Gagal membuka bukti transfer");
+      errorToast(error instanceof Error ? error.message : "Gagal membuka bukti transfer");
     } finally {
       setIsProofLoading(false);
     }

@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate, useParams } from "react-router";
+import { useToast } from "~/core/design-system/components";
 import { orderApi, isGatewayPaymentSuccessful } from "../../infrastructure/order.api";
 import type { CompleteOrderResponse } from "../../infrastructure/order.api";
 import { useOrderConfirmation } from "./use-order-confirmation";
@@ -35,6 +36,7 @@ export function useCheckoutSteps(
 ) {
   const navigate = useNavigate();
   const params = useParams();
+  const { warning: warningToast, error: errorToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentStep = parseInt(searchParams.get("step") || "1", 10);
 
@@ -89,9 +91,9 @@ export function useCheckoutSteps(
 
   const redirectForTicketLimit = useCallback(() => {
     clearCheckoutStorage();
-    alert(`Maksimum ${MAX_TICKETS_PER_TRANSACTION} tiket per transaksi.`);
+    warningToast(`Maksimum ${MAX_TICKETS_PER_TRANSACTION} tiket per transaksi.`);
     navigate(`/event/${params.eventId ?? event.id}`);
-  }, [clearCheckoutStorage, event.id, navigate, params.eventId]);
+  }, [clearCheckoutStorage, event.id, navigate, params.eventId, warningToast]);
 
   const expireCheckoutSession = useCallback((showMessage = true) => {
     clearCheckoutStorage();
@@ -99,10 +101,10 @@ export function useCheckoutSteps(
     setManualTransferProofFile(null);
     setIsManualTransferPending(false);
     if (showMessage) {
-      alert("Sesi checkout kamu sudah kedaluwarsa. Silakan pilih tiket ulang.");
+      warningToast("Sesi checkout kamu sudah kedaluwarsa. Silakan pilih tiket ulang.");
     }
     navigate(`/event/${params.eventId ?? event.id}`);
-  }, [clearCheckoutStorage, event.id, navigate, params.eventId]);
+  }, [clearCheckoutStorage, event.id, navigate, params.eventId, warningToast]);
 
   const setDeadlineFromRemainingSeconds = useCallback((remainingSeconds: number) => {
     if (remainingSeconds > 0) {
@@ -330,7 +332,7 @@ export function useCheckoutSteps(
         if (!validateForm()) break;
 
         if (baseSummary.items.length === 0) {
-          alert("Pilih tiket dulu sebelum lanjut ke pembayaran.");
+          warningToast("Pilih tiket dulu sebelum lanjut ke pembayaran.");
           navigate(`/event/${event.id}`);
           break;
         }
@@ -393,7 +395,7 @@ export function useCheckoutSteps(
             }
             if (isManualTransferPayment) {
               if (!manualTransferProofFile) {
-                alert("Silakan unggah bukti transfer terlebih dahulu.");
+                warningToast("Silakan unggah bukti transfer terlebih dahulu.");
                 return;
               }
 
@@ -436,7 +438,7 @@ export function useCheckoutSteps(
               // "Menunggu pembayaran..." state until the payment is confirmed.
             }
           } else {
-            alert("Sesi checkout tidak ditemukan. Silakan ulangi dari halaman event.");
+            errorToast("Sesi checkout tidak ditemukan. Silakan ulangi dari halaman event.");
             navigate(`/event/${params.eventId}`);
           }
         } catch (error: any) {
@@ -444,12 +446,12 @@ export function useCheckoutSteps(
           console.error("Failed to execute final order", error);
 
           if (message.includes("404") || message.toLowerCase().includes("expired") || message.toLowerCase().includes("not found")) {
-            alert("Sesi transaksi kamu sudah tidak valid atau kedaluwarsa. Silakan checkout ulang.");
+            errorToast("Sesi transaksi kamu sudah tidak valid atau kedaluwarsa. Silakan checkout ulang.");
             sessionStorage.removeItem(CHECKOUT_DEADLINE_STORAGE_KEY);
             navigate(`/event/${params.eventId}`);
           } else {
             // Hard validation failure (e.g. KTP domicile block): surface it inline instead of a
-            // blocking alert() — the buyer stays on the payment step and can fix their data.
+            // toast — the buyer stays on the payment step and can fix their data.
             setBlockingError(message);
           }
         } finally {
@@ -461,7 +463,7 @@ export function useCheckoutSteps(
         navigate("/event");
         break;
     }
-  }, [currentStep, event.id, buyerInfo, baseSummary, paymentSummary, validateForm, searchParams, setSearchParams, confirmOrder, navigate, selectedPaymentMethod, canProceedToPayment, holders, lockId, isManualTransferPayment, manualTransferProofFile, ensureCheckoutSessionActive, clearCheckoutStorage, params.eventId, exceedsTicketLimit, redirectForTicketLimit, setDeadlineFromRemainingSeconds, selection.appliedPromo?.code, selection.bankCode]);
+  }, [currentStep, event.id, buyerInfo, baseSummary, paymentSummary, validateForm, searchParams, setSearchParams, confirmOrder, navigate, selectedPaymentMethod, canProceedToPayment, holders, lockId, isManualTransferPayment, manualTransferProofFile, ensureCheckoutSessionActive, clearCheckoutStorage, params.eventId, exceedsTicketLimit, redirectForTicketLimit, setDeadlineFromRemainingSeconds, selection.appliedPromo?.code, selection.bankCode, warningToast, errorToast]);
 
   const handleBack = useCallback(() => {
     if (currentStep === 1) {

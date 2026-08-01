@@ -64,7 +64,7 @@ export function CheckoutStickyBar({
         <div className="flex items-center gap-2">
           <button
             onClick={onBack}
-            className="p-4 border-2 border-gray-100 rounded-2xl bg-gray-50/50 hover:bg-gray-100 transition-all active:scale-95"
+            className="p-4 border-2 border-gray-100 rounded-2xl bg-gray-50/50 hover:bg-gray-100 transition-all active:scale-95 cursor-pointer"
           >
             <svg className="h-5 w-5 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />

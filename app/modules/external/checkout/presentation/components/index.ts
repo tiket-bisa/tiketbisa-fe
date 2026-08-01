@@ -3,6 +3,7 @@ export * from "./layout/checkout-sticky-bar";
 export * from "./layout/event-info-header";
 
 export * from "./shared/checkout-form-field";
+export * from "./shared/confirm-modal";
 export * from "./shared/countdown-timer";
 export * from "./shared/order-summary-card";
 export * from "./shared/payment-extras";

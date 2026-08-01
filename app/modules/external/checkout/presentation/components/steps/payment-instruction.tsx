@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { Card, Button } from "~/core/design-system/components";
+import { Card, Button, useToast } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils/currency";
 import { orderApi, validateManualTransferProofFile } from "../../../infrastructure/order.api";
 import type { TransactionStatusResult } from "../../../infrastructure/order.api";
 import { usePublicRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 import type { OrderResponse } from "../../../domain/checkout.types";
 import type { Event } from "../../../../event/domain/event.entity";
-import { CountdownTimer } from "../shared/countdown-timer";
 
 const STATUS_POLL_INTERVAL_MS = 5000;
 const CHECKOUT_DEADLINE_STORAGE_KEY = "tiketbisa_checkout_deadline";
@@ -54,6 +53,7 @@ export function PaymentInstruction({
   transactionId,
   onPaymentCompleted,
 }: PaymentInstructionProps) {
+  const { warning: warningToast } = useToast();
   const isBank = order.paymentMethod.category === "BANK_TRANSFER";
   const isManualTransfer = order.paymentMethod.id === "manual" || order.paymentMethod.id === "manual_transfer";
   const totalAmount =
@@ -174,7 +174,7 @@ export function PaymentInstruction({
     }
     const validationError = validateManualTransferProofFile(file);
     if (validationError) {
-      alert(validationError);
+      warningToast(validationError);
       onProofFileChange?.(null);
       return;
     }
@@ -210,13 +210,8 @@ export function PaymentInstruction({
           <div className="p-6 md:p-12 space-y-12">
             {/* Top Section: Timer & Deadline */}
             <div className="flex flex-col items-center text-center space-y-6">
-              <div className="w-full max-w-sm">
-                <CountdownTimer
-                  onExpire={onExpire}
-                  deadlineTimestamp={paymentDeadlineTimestamp}
-                  className="!shadow-none border-2 border-orange-100"
-                />
-              </div>
+              {/* The countdown widget itself lives in the page header (checkout.page.tsx) -
+                  rendering a second one here duplicated it. This keeps just the deadline text. */}
               <div className="space-y-1">
                 <p className="text-sm font-medium text-text-secondary">Batas Waktu Pembayaran</p>
                 <p className="text-lg font-black text-text-primary">{deadline} WIB</p>
@@ -246,7 +241,7 @@ export function PaymentInstruction({
               <button
                 type="button"
                 onClick={() => setIsQrModalOpen(true)}
-                className="p-6 bg-white border-4 border-gray-100 rounded-[3rem] shadow-xl relative hover:border-brand-primary/30 transition-colors"
+                className="p-6 bg-white border-4 border-gray-100 rounded-[3rem] shadow-xl relative hover:border-brand-primary/30 transition-colors cursor-pointer"
               >
                 <div className="w-64 h-64 md:w-72 md:h-72 bg-gray-50 rounded-3xl flex items-center justify-center border-2 border-dashed border-gray-200 overflow-hidden">
                   {qrPayload ? (
@@ -280,7 +275,7 @@ export function PaymentInstruction({
 
             {/* Actions */}
             <div className="flex flex-col md:flex-row gap-4 pt-4">
-              <button onClick={onBack} className="flex-1 py-6 rounded-2xl border-2 border-gray-100 text-text-secondary font-black text-lg hover:bg-gray-50 transition-all">
+              <button onClick={onBack} className="flex-1 py-6 rounded-2xl border-2 border-gray-100 text-text-secondary font-black text-lg hover:bg-gray-50 transition-all cursor-pointer">
                 Batalkan Pesanan
               </button>
               <Button onClick={onAction} isLoading={isLoading} className="flex-[2] py-6 rounded-2xl text-xl font-black shadow-xl shadow-brand-primary/20 hover:shadow-brand-primary/30 transition-all">
@@ -340,7 +335,7 @@ export function PaymentInstruction({
               <button
                 type="button"
                 onClick={() => setIsQrModalOpen(false)}
-                className="absolute top-4 right-4 text-text-tertiary hover:text-text-primary transition-colors"
+                className="absolute top-4 right-4 text-text-tertiary hover:text-text-primary transition-colors cursor-pointer"
                 aria-label="Tutup"
               >
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -406,7 +401,7 @@ export function PaymentInstruction({
               <h2 className="text-4xl md:text-5xl font-black text-brand-primary tracking-tighter">
                 {formatIDR(totalAmount)}
               </h2>
-              <button className="text-xs font-black text-brand-primary uppercase tracking-widest hover:underline flex items-center gap-2">
+              <button className="text-xs font-black text-brand-primary uppercase tracking-widest hover:underline flex items-center gap-2 cursor-pointer">
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                 </svg>
@@ -479,7 +474,7 @@ export function PaymentInstruction({
                     }
                   }}
                   disabled={!accountNumber}
-                  className="block mx-auto px-6 py-2 bg-brand-primary/10 text-brand-primary rounded-full text-xs font-black uppercase tracking-widest hover:bg-brand-primary/20 transition-all disabled:opacity-40"
+                  className="block mx-auto px-6 py-2 bg-brand-primary/10 text-brand-primary rounded-full text-xs font-black uppercase tracking-widest hover:bg-brand-primary/20 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Salin Nomor VA
                 </button>
@@ -538,7 +533,7 @@ export function PaymentInstruction({
       </Card>
 
       <div className="hidden lg:flex flex-col sm:flex-row gap-4 md:gap-6">
-        <button onClick={onBack} className="flex-1 py-5 md:py-6 px-8 border-2 border-gray-200 rounded-2xl text-text-secondary font-bold text-lg hover:bg-gray-50 transition-all">
+        <button onClick={onBack} className="flex-1 py-5 md:py-6 px-8 border-2 border-gray-200 rounded-2xl text-text-secondary font-bold text-lg hover:bg-gray-50 transition-all cursor-pointer">
           Kembali
         </button>
         <Button
