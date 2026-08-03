@@ -32,8 +32,33 @@ const MOCK_BANNERS: Banner[] = [
   },
 ];
 
+function resolveTimeRange(value?: string): { startDate: string; endDate?: string } {
+  const start = new Date();
+  const end = new Date(start);
+  if (value === "today") {
+    end.setHours(23, 59, 59, 999);
+  } else if (value === "this_week") {
+    end.setDate(end.getDate() + 7);
+  } else if (value === "this_month") {
+    end.setMonth(end.getMonth() + 1);
+  } else {
+    return { startDate: start.toISOString() };
+  }
+  return { startDate: start.toISOString(), endDate: end.toISOString() };
+}
+
+function resolvePriceRange(value?: string): { minPrice?: number; maxPrice?: number } {
+  if (value === "0-50000") return { minPrice: 0, maxPrice: 50_000 };
+  if (value === "50000-100000") return { minPrice: 50_000, maxPrice: 100_000 };
+  if (value === "100000-plus") return { minPrice: 100_000 };
+  return {};
+}
+
 export const landingApi: LandingRepository = {
   async getLandingData(params: LandingParams): Promise<LandingData> {
+    const featuredStart = new Date().toISOString();
+    const timeRange = resolveTimeRange(params.eventFilters?.time);
+    const priceRange = resolvePriceRange(params.eventFilters?.price);
     const [brandRes, featuredRes, upcomingRes] = await Promise.all([
       brandApi.getBrands({ 
         limit: 5, 
@@ -45,21 +70,39 @@ export const landingApi: LandingRepository = {
         offset: 0,
         order_by: "date_asc",
         is_featured: true,
+        status: "ONGOING",
+        start_date: featuredStart,
       }),
       eventApi.getEvents({
         limit: 8,
         offset: 0,
-        time_range: params.eventFilters?.time,
+        order_by: "date_asc",
+        status: "ONGOING",
         city: params.eventFilters?.city,
         category: params.eventFilters?.category,
-        price_range: params.eventFilters?.price,
+        start_date: timeRange.startDate,
+        end_date: timeRange.endDate,
+        min_price: priceRange.minPrice,
+        max_price: priceRange.maxPrice,
       }),
     ]);
+
+    let featuredEvents = featuredRes.data.event_list as Event[];
+    if (featuredEvents.length === 0) {
+      const fallback = await eventApi.getEvents({
+        limit: 1,
+        offset: 0,
+        order_by: "date_asc",
+        status: "ONGOING",
+        start_date: featuredStart,
+      });
+      featuredEvents = fallback.data.event_list as Event[];
+    }
 
     return {
       banners: MOCK_BANNERS,
       partners: brandRes.data.brand_list as Brand[],
-      featuredEvents: featuredRes.data.event_list as Event[],
+      featuredEvents,
       upcomingEvents: upcomingRes.data.event_list as Event[],
       totalUpcoming: upcomingRes.data.count,
     };

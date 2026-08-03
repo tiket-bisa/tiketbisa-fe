@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate, useParams } from "react-router";
 import { useToast } from "~/core/design-system/components";
 import { orderApi, isGatewayPaymentSuccessful } from "../../infrastructure/order.api";
-import type { CompleteOrderResponse } from "../../infrastructure/order.api";
+import type { CheckoutTtl, CompleteOrderResponse } from "../../infrastructure/order.api";
 import { useOrderConfirmation } from "./use-order-confirmation";
 import type { usePaymentSelection } from "./use-payment-selection";
 import { buildPaymentOrderSummary } from "../../domain/checkout.pricing";
@@ -106,13 +106,16 @@ export function useCheckoutSteps(
     navigate(`/event/${params.eventId ?? event.id}`);
   }, [clearCheckoutStorage, event.id, navigate, params.eventId, warningToast]);
 
-  const setDeadlineFromRemainingSeconds = useCallback((remainingSeconds: number) => {
-    if (remainingSeconds > 0) {
+  const setDeadlineFromTtl = useCallback((ttl: CheckoutTtl) => {
+    if (ttl.status === "ACTIVE" && ttl.remainingSeconds > 0) {
       sessionStorage.setItem(
         CHECKOUT_DEADLINE_STORAGE_KEY,
-        String(Date.now() + remainingSeconds * 1000),
+        String(Date.now() + ttl.remainingSeconds * 1000),
       );
+      return true;
     }
+    sessionStorage.removeItem(CHECKOUT_DEADLINE_STORAGE_KEY);
+    return false;
   }, []);
 
   const getActiveLockId = useCallback(() => (
@@ -147,23 +150,27 @@ export function useCheckoutSteps(
       return false;
     }
 
-    const remainingSeconds = currentStep >= 4
+    const ttl = currentStep >= 4
       ? await orderApi.getTempTransactionTtl(activeLockId)
-      : await getCheckoutLockRemainingSeconds(activeLockId);
+      : null;
+    const remainingSeconds = ttl?.remainingSeconds
+      ?? await getCheckoutLockRemainingSeconds(activeLockId);
 
-    if (remainingSeconds <= 0) {
+    if (remainingSeconds <= 0 || (ttl && ttl.status !== "ACTIVE")) {
       expireCheckoutSession(true);
       return false;
     }
 
-    setDeadlineFromRemainingSeconds(remainingSeconds);
+    if (ttl) {
+      setDeadlineFromTtl(ttl);
+    }
     return true;
   }, [
     currentStep,
     expireCheckoutSession,
     getActiveLockId,
     getCheckoutLockRemainingSeconds,
-    setDeadlineFromRemainingSeconds,
+    setDeadlineFromTtl,
   ]);
 
   /**
@@ -239,6 +246,21 @@ export function useCheckoutSteps(
     };
   }, [currentStep, ensureCheckoutSessionActive]);
 
+  useEffect(() => {
+    if (currentStep !== 4) return;
+    const resync = () => {
+      if (document.visibilityState === "visible") {
+        void ensureCheckoutSessionActive();
+      }
+    };
+    window.addEventListener("focus", resync);
+    document.addEventListener("visibilitychange", resync);
+    return () => {
+      window.removeEventListener("focus", resync);
+      document.removeEventListener("visibilitychange", resync);
+    };
+  }, [currentStep, ensureCheckoutSessionActive]);
+
   // Persist the completed order while on the success step so a browser reload can restore
   // it. In-memory React state is wiped on reload, and without this OrderSuccess would fall
   // back to the "Segera Hadir" (CheckoutComingSoon) placeholder even though the purchase
@@ -291,6 +313,7 @@ export function useCheckoutSteps(
     setIsActionLoading(true);
     (async () => {
       try {
+        if (!(await ensureCheckoutSessionActive())) return;
         const result = await orderApi.executeOrder(activeLockId, paymentSummary.totalPrice);
         setCompletedOrder(result);
         setIsManualTransferPending(false);
@@ -316,6 +339,7 @@ export function useCheckoutSteps(
     existingOrder?.qrPayload,
     existingOrder?.virtualAccount,
     getActiveLockId,
+    ensureCheckoutSessionActive,
     paymentSummary.totalPrice,
     searchParams,
     setSearchParams,
@@ -353,7 +377,7 @@ export function useCheckoutSteps(
           // the final commit and fail validation there. Re-locking (even if a lockId already
           // exists) guarantees the lock Redis is holding always matches what the buyer just
           // filled in on this step.
-          const lock = await orderApi.acquireLock(event.id, baseSummary, holders);
+          const lock = await orderApi.acquireLock(event.id, baseSummary, holders, lockId ?? undefined);
           setLockId(lock.userId);
 
           const result = await confirmOrder({
@@ -367,13 +391,14 @@ export function useCheckoutSteps(
           });
 
           if (result) {
-            // Timer starts now — the buyer has committed to a payment method.
-            const paymentRemainingSeconds = await orderApi.getTempTransactionTtl(lock.userId);
-            setDeadlineFromRemainingSeconds(paymentRemainingSeconds);
+            if (!setDeadlineFromTtl(result.ttl)) {
+              expireCheckoutSession(true);
+              break;
+            }
             setSearchParams({
               ...Object.fromEntries(searchParams),
               step: "4",
-              orderId: result.orderId,
+              orderId: result.order.orderId,
               lockId: lock.userId,
             });
           }
@@ -463,7 +488,7 @@ export function useCheckoutSteps(
         navigate("/event");
         break;
     }
-  }, [currentStep, event.id, buyerInfo, baseSummary, paymentSummary, validateForm, searchParams, setSearchParams, confirmOrder, navigate, selectedPaymentMethod, canProceedToPayment, holders, lockId, isManualTransferPayment, manualTransferProofFile, ensureCheckoutSessionActive, clearCheckoutStorage, params.eventId, exceedsTicketLimit, redirectForTicketLimit, setDeadlineFromRemainingSeconds, selection.appliedPromo?.code, selection.bankCode, warningToast, errorToast]);
+  }, [currentStep, event.id, buyerInfo, baseSummary, paymentSummary, validateForm, searchParams, setSearchParams, confirmOrder, navigate, selectedPaymentMethod, canProceedToPayment, holders, lockId, isManualTransferPayment, manualTransferProofFile, ensureCheckoutSessionActive, clearCheckoutStorage, params.eventId, exceedsTicketLimit, redirectForTicketLimit, setDeadlineFromTtl, expireCheckoutSession, selection.appliedPromo?.code, selection.bankCode, warningToast, errorToast]);
 
   const handleBack = useCallback(() => {
     if (currentStep === 1) {

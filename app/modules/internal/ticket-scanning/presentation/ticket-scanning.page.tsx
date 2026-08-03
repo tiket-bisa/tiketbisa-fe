@@ -3,13 +3,8 @@ import { Link } from "react-router";
 import { Card, Tabs, Button } from "~/core/design-system/components";
 import { useAuth } from "~/core/auth";
 import { useApiQuery } from "~/core/api";
-import { eventApi } from "~/core/api/services/event.api";
-import { brandApi, mapBrandApiToFe } from "~/core/api/services/brand.api";
-import {
-  ticketCategoryApi,
-  aggregateTicketDashboard,
-} from "~/core/api/services/ticket-category.api";
 import type { TicketDashboardSummary } from "~/core/types";
+import { analyticsApi } from "~/modules/internal/analytics/analytics.api";
 import { ScanSection, QrGeneratorSection } from "./components";
 import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 
@@ -25,42 +20,21 @@ export default function TicketScanningPage() {
   const { user } = useAuth(); // <-- Added this to fix the missing user reference
 
   // Fetch ticket dashboard from API, filtered by partner's brand events
-  const { data: ticketDashboard, loading, refetch } = useApiQuery(
+  const { data: ticketDashboard, loading, error, refetch } = useApiQuery(
     async () => {
-      // Resolve brand ID
-      const brandsRes = await brandApi.getList({ limit: 100, offset: 0 });
-      if (!brandsRes.success || !brandsRes.data) return [] as TicketDashboardSummary[];
-      let brandId: string | null = null;
-      let brandSlug: string | undefined;
-      for (const b of brandsRes.data.brands ?? []) {
-        const fe = mapBrandApiToFe(b);
-        if (fe.slug === user?.brand_slug) {
-          brandId = b.id;
-          brandSlug = fe.slug;
-          break;
-        }
-      }
-      if (!brandId) return [] as TicketDashboardSummary[];
-
-      // Fetch events for this brand
-      const eventsRes = await eventApi.getList({ limit: 100, offset: 0, brandId });
-      if (!eventsRes.success || !eventsRes.data) return [] as TicketDashboardSummary[];
-
-      const summaries: TicketDashboardSummary[] = [];
-      for (const evt of eventsRes.data.events ?? []) {
-        const catRes = await ticketCategoryApi.getByEvent(evt.id);
-        if (catRes.success && catRes.data) {
-          const categories = Array.isArray(catRes.data) ? catRes.data : [];
-          if (categories.length > 0) {
-            summaries.push(
-              aggregateTicketDashboard(evt.id, evt.name, categories, brandSlug),
-            );
-          }
-        }
-      }
-      return summaries;
+      if (!user?.brand_id) return [] as TicketDashboardSummary[];
+      const summaries = await analyticsApi.getTicketScanningDashboard(user.brand_id);
+      return summaries.map((summary): TicketDashboardSummary => ({
+        event_id: summary.eventId,
+        event_name: summary.eventName,
+        brand_slug: user.brand_slug,
+        total_tickets: Number(summary.totalTickets || 0),
+        available_tickets: Number(summary.availableTickets || 0),
+        sold_tickets: Number(summary.soldTickets || 0),
+        checked_in_tickets: Number(summary.checkedInTickets || 0),
+      }));
     },
-    [user?.brand_slug],
+    [user?.brand_id, user?.brand_slug],
   );
 
   const dashboard = ticketDashboard ?? [];
@@ -86,10 +60,10 @@ export default function TicketScanningPage() {
 
       <Tabs items={tabItems} value={tab} onChange={setTab} />
 
-      {tab === "scan" && <ScanSection brandSlug={user?.brand_slug} />}
+      {tab === "scan" && <ScanSection brandId={user?.brand_id} />}
       {tab === "generate" && <QrGeneratorSection />}
       {tab === "dashboard" && (
-        <DashboardSection dashboard={dashboard} loading={loading} />
+        <DashboardSection dashboard={dashboard} loading={loading} error={error} />
       )}
     </div>
   );
@@ -99,9 +73,11 @@ export default function TicketScanningPage() {
 function DashboardSection({
   dashboard,
   loading,
+  error,
 }: {
   dashboard: TicketDashboardSummary[];
   loading: boolean;
+  error?: string | null;
 }) {
   if (loading) {
     return (
@@ -109,6 +85,10 @@ function DashboardSection({
         <p className="text-text-tertiary">Memuat data tiket...</p>
       </div>
     );
+  }
+
+  if (error) {
+    return <div className="py-12 text-center text-destructive-text">Gagal memuat dashboard: {error}</div>;
   }
 
   return (

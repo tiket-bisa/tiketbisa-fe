@@ -68,7 +68,10 @@ describe("orderApi", () => {
   });
 
   it("storeTempTransaction sends backend-compatible payload without tickets", async () => {
-    mockApiFetch.mockResolvedValueOnce({ success: true, data: "ok" } as any);
+    mockApiFetch.mockResolvedValueOnce({
+      success: true,
+      data: { status: "ACTIVE", remaining_seconds: 1800, expires_at: Date.now() + 1_800_000, server_time: Date.now() },
+    } as any);
 
     await orderApi.storeTempTransaction(
       "lock-001",
@@ -90,7 +93,7 @@ describe("orderApi", () => {
           eventId: mockEventId,
           customerName: "John Doe",
           customerEmail: "john@example.com",
-          customerPhone: "08123456789",
+          customerPhone: "+628123456789",
           customerIdentityNumber: "1234567890123456",
           source: "WEBSITE",
           paymentMethod: "MANUAL_TRANSFER",

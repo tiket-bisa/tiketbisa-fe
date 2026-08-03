@@ -31,7 +31,7 @@ export function FeaturedEvents({ events }: FeaturedEventsProps) {
           <div>
             <SectionHeader title="Featured Event" className="mb-0 text-base-white font-bold" />
             <p className="mt-1 text-sm text-base-white font-medium opacity-90">
-              Pilihan event terbaik minggu ini hanya untukmu
+              Event pilihan yang akan datang untukmu
             </p>
           </div>
           <Link

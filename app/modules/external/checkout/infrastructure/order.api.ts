@@ -1,6 +1,7 @@
 import { apiFetch } from "~/core/api";
 import type { ApiResponse } from "~/core/api";
 import type { BuyerInfo, GatewayStatus, OrderItem, OrderResponse, OrderSummary, PaymentMethod, TicketHolder } from "../domain/checkout.types";
+import { normalizeIndonesianPhone } from "../domain/phone";
 
 interface TicketRequest {
   categoryId: string;
@@ -11,6 +12,7 @@ interface TicketRequest {
 }
 
 interface LockTicketRq {
+  userId?: string;
   eventId: string;
   tickets: TicketRequest[];
 }
@@ -151,8 +153,32 @@ interface TransactionStatusFromApi {
 }
 
 interface TtlResponse {
+  status?: "ACTIVE" | "EXPIRED";
   remainingSeconds?: number;
   remaining_seconds?: number;
+  expiresAt?: number;
+  expires_at?: number;
+  serverTime?: number;
+  server_time?: number;
+}
+
+export interface CheckoutTtl {
+  status: "ACTIVE" | "EXPIRED";
+  remainingSeconds: number;
+  expiresAt: number;
+  serverTime: number;
+}
+
+function normalizeTtl(data: TtlResponse | null | undefined): CheckoutTtl {
+  const remainingSeconds = Number(data?.remainingSeconds ?? data?.remaining_seconds ?? 0);
+  const serverTime = Number(data?.serverTime ?? data?.server_time ?? Date.now());
+  const expiresAt = Number(data?.expiresAt ?? data?.expires_at ?? serverTime + remainingSeconds * 1000);
+  return {
+    status: data?.status === "ACTIVE" && remainingSeconds > 0 ? "ACTIVE" : "EXPIRED",
+    remainingSeconds: Math.max(0, remainingSeconds),
+    expiresAt,
+    serverTime,
+  };
 }
 
 function getApiErrorMessage(response: unknown, fallback: string): string {
@@ -224,7 +250,7 @@ export const orderApi = {
    * details step. It's optional because the very first lock (fired on mount,
    * before the buyer has filled the form) has no holder data yet.
    */
-  async acquireLock(eventId: string, summary: OrderSummary, holders?: TicketHolder[]): Promise<LockResponse> {
+  async acquireLock(eventId: string, summary: OrderSummary, holders?: TicketHolder[], existingLockId?: string): Promise<LockResponse> {
     let holderCursor = 0;
     const tickets: TicketRequest[] = summary.items.map((item: OrderItem) => {
       const quantity = item.quantity;
@@ -242,6 +268,7 @@ export const orderApi = {
     });
 
     const payload: LockTicketRq = {
+      ...(existingLockId ? { userId: existingLockId } : {}),
       eventId,
       tickets
     };
@@ -269,7 +296,7 @@ export const orderApi = {
     paymentMethod: PaymentMethod,
     promoCode?: string,
     bankCode?: string
-  ): Promise<void> {
+  ): Promise<CheckoutTtl> {
     let backendPaymentMethod = "MANUAL_TRANSFER";
     if (paymentMethod.category === "BANK_TRANSFER") {
       const paymentMethodId = paymentMethod.id.toLowerCase();
@@ -280,12 +307,17 @@ export const orderApi = {
       backendPaymentMethod = "QRIS";
     }
 
+    const normalizedPhone = normalizeIndonesianPhone(buyerInfo.phoneNumber);
+    if (!normalizedPhone) {
+      throw new Error("Nomor telepon harus menggunakan format 08… atau +628…");
+    }
+
     const payload: StoreTempTransactionRq = {
       userId: lockId,
       eventId,
       customerName: buyerInfo.fullName,
       customerEmail: buyerInfo.email,
-      customerPhone: buyerInfo.phoneNumber,
+      customerPhone: normalizedPhone,
       customerIdentityNumber: buyerInfo.identityNumber,
       source: "WEBSITE",
       paymentMethod: backendPaymentMethod,
@@ -294,7 +326,7 @@ export const orderApi = {
       ...(bankCode ? { bankCode } : {}),
     };
 
-    const response = await apiFetch<ApiResponse<string>>("/transaction/temp", {
+    const response = await apiFetch<ApiResponse<TtlResponse>>("/transaction/temp", {
       method: "POST",
       headers: {
         "x-tb-identifier": lockId,
@@ -305,6 +337,11 @@ export const orderApi = {
     if (!response.success) {
       throw new Error(getApiErrorMessage(response, "Failed to store temporary transaction"));
     }
+    const ttl = normalizeTtl(response.data);
+    if (ttl.status !== "ACTIVE") {
+      throw new Error("Sesi checkout sudah kedaluwarsa. Silakan pilih tiket ulang.");
+    }
+    return ttl;
   },
 
   /**
@@ -399,12 +436,12 @@ export const orderApi = {
     }
   },
 
-  async getTempTransactionTtl(lockId: string): Promise<number> {
+  async getTempTransactionTtl(lockId: string): Promise<CheckoutTtl> {
     const response = await apiFetch<ApiResponse<TtlResponse>>(`/transaction/ttl/temp/${encodeURIComponent(lockId)}`);
     if (!response.success || !response.data) {
-      return 0;
+      return normalizeTtl(null);
     }
-    return Number(response.data.remainingSeconds ?? response.data.remaining_seconds ?? 0);
+    return normalizeTtl(response.data);
   },
 
   async getTicketLockTtl(eventId: string, categoryId: string, userId: string): Promise<number> {
@@ -495,7 +532,7 @@ export const orderApi = {
         status: "PENDING",
         totalAmount,
         paymentMethod,
-        expiryTime: gatewayExpiry || new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        expiryTime: gatewayExpiry || "",
         paymentInstructions: paymentMethod.category === "BANK_TRANSFER"
           ? "Silakan transfer tepat sesuai nominal hingga 3 digit terakhir."
           : "Pindai kode QR menggunakan aplikasi pembayaran Anda.",

@@ -157,9 +157,9 @@ export default function EventTicketDashboardPage() {
           <Button type="button" variant="ghost" onClick={() => navigate(`${basePath}/events`)} className="mb-2">
             Kembali
           </Button>
-          <h1 className="text-text-primary text-2xl font-bold">Kelola Tiket & Penjualan</h1>
-          <p className="text-text-tertiary text-sm">
-            {data.event.name} · Kuota, tiket terjual, sisa tiket, dan status check-in
+          <h1 className="text-text-primary text-3xl font-extrabold">{data.event.name}</h1>
+          <p className="text-text-tertiary text-sm font-medium">
+            Kelola Tiket &amp; Penjualan · Kuota, tiket terjual, sisa tiket, dan status check-in
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

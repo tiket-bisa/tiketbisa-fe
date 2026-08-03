@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { EventCard, SectionHeader, FilterBar } from "~/shared/components";
+import { EmptyState, EventCard, SectionHeader, FilterBar } from "~/shared/components";
 import { EVENT_FILTERS } from "../../../event/presentation/constants";
 import type { Event } from "../../../event/domain/event.entity";
 
@@ -45,8 +45,9 @@ export function UpcomingEvents({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-        {events.map((event) => (
+      {events.length > 0 ? (
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {events.map((event) => (
           <EventCard
             key={event.id}
             event={{
@@ -60,8 +61,14 @@ export function UpcomingEvents({
               brandName: event.brand,
             }}
           />
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          title="Tidak ada event ditemukan"
+          description="Coba ubah filter untuk melihat event upcoming lainnya."
+        />
+      )}
     </section>
   );
 }

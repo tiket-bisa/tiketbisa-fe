@@ -5,13 +5,33 @@ import { httpClient, internalHttpClient } from "../http-client";
 export interface TicketCategoryApiData {
     id: string;
     event_id: string;
+    eventId?: string;
     name: string;
     description: string | null;
     total_ticket: number;
+    totalTicket?: number;
     issued_ticket: number;
+    issuedTicket?: number;
     checked_in_ticket: number;
+    checkedInTicket?: number;
     price: number;
     created: string | null;
+}
+
+type RawTicketCategory = Partial<TicketCategoryApiData>;
+
+export function normalizeTicketCategory(api: RawTicketCategory): TicketCategoryApiData {
+    return {
+        id: String(api.id ?? ""),
+        event_id: String(api.event_id ?? api.eventId ?? ""),
+        name: String(api.name ?? ""),
+        description: (api.description ?? null) as string | null,
+        total_ticket: Number(api.total_ticket ?? api.totalTicket ?? 0),
+        issued_ticket: Number(api.issued_ticket ?? api.issuedTicket ?? 0),
+        checked_in_ticket: Number(api.checked_in_ticket ?? api.checkedInTicket ?? 0),
+        price: Number(api.price ?? 0),
+        created: (api.created ?? null) as string | null,
+    };
 }
 
 export interface TicketCategoryListResponse {
@@ -24,11 +44,15 @@ export interface TicketCategoryListResponse {
 /* ── API functions ── */
 
 export const ticketCategoryApi = {
-    getByEvent: (eventId: string) =>
-        httpClient.get<TicketCategoryApiData[]>(`/ticket-category/event/${eventId}`),
+    getByEvent: async (eventId: string) => {
+        const response = await httpClient.get<RawTicketCategory[]>(`/ticket-category/event/${eventId}`);
+        return { ...response, data: response.data ? response.data.map(normalizeTicketCategory) : response.data };
+    },
 
-    getById: (id: string) =>
-        httpClient.get<TicketCategoryApiData>(`/ticket-category/${id}`),
+    getById: async (id: string) => {
+        const response = await httpClient.get<RawTicketCategory>(`/ticket-category/${id}`);
+        return { ...response, data: response.data ? normalizeTicketCategory(response.data) : response.data };
+    },
 
     getList: (params?: { limit?: number; offset?: number }) => {
         const qs = new URLSearchParams();
@@ -37,7 +61,13 @@ export const ticketCategoryApi = {
         const str = qs.toString();
         return httpClient.get<TicketCategoryListResponse>(
             `/ticket-category${str ? `?${str}` : ""}`,
-        );
+        ).then((response) => ({
+            ...response,
+            data: response.data ? {
+                ...response.data,
+                ticket_categories: (response.data.ticket_categories ?? []).map(normalizeTicketCategory),
+            } : response.data,
+        }));
     },
 
     create: (data: { eventId: string; name: string; description?: string; categoryCode: string; totalTicket: number; price: number }) =>

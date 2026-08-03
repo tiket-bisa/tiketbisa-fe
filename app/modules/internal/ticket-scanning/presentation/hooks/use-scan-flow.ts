@@ -15,7 +15,7 @@ import { useAuth } from "~/core/auth";
  *  2. When status is VALID, the operator explicitly clicks "Check In" which calls
  *     `confirmCheckIn` (the existing mutating checkin endpoint).
  */
-export function useScanFlow(expectedCategoryId?: string) {
+export function useScanFlow(expectedEventId?: string, expectedCategoryId?: string) {
   const { user } = useAuth();
   const [validateResult, setValidateResult] = useState<ScanValidateResult | null>(null);
   const [checkInResult, setCheckInResult] = useState<ScanCheckInResult | null>(null);
@@ -36,7 +36,9 @@ export function useScanFlow(expectedCategoryId?: string) {
       const codeType = detectCodeType(normalizedCode);
 
       try {
-        const response = await checkinApi.validate(normalizedCode, codeType, expectedCategoryId);
+        const response = await checkinApi.validate(
+          normalizedCode, codeType, expectedEventId, expectedCategoryId,
+        );
 
         if (response.success && response.data) {
           const data = response.data as ValidateResponse;
@@ -68,7 +70,7 @@ export function useScanFlow(expectedCategoryId?: string) {
         setIsValidating(false);
       }
     },
-    [expectedCategoryId],
+    [expectedEventId, expectedCategoryId],
   );
 
   const confirmCheckIn = useCallback(async () => {
@@ -83,6 +85,7 @@ export function useScanFlow(expectedCategoryId?: string) {
         code_hash: validateResult.codeHash,
         code_type: validateResult.codeType,
         verify_by: user?.email ?? "unknown",
+        expected_event_id: expectedEventId,
         expected_category_id: expectedCategoryId,
       });
 
@@ -108,7 +111,7 @@ export function useScanFlow(expectedCategoryId?: string) {
       isBusyRef.current = false;
       setIsCheckingIn(false);
     }
-  }, [validateResult, user?.email, expectedCategoryId]);
+  }, [validateResult, user?.email, expectedEventId, expectedCategoryId]);
 
   const clearResult = useCallback(() => {
     setValidateResult(null);

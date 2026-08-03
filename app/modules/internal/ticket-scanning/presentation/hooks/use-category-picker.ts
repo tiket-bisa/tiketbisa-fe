@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { useApiQuery } from "~/core/api";
-import { eventApi } from "~/core/api/services/event.api";
-import { brandApi, mapBrandApiToFe } from "~/core/api/services/brand.api";
+import { internalEventApi, normalizeInternalEvent } from "~/core/api/services/internal-event.api";
 import { ticketCategoryApi, type TicketCategoryApiData } from "~/core/api/services/ticket-category.api";
 
 export interface CategoryPickerEvent {
@@ -17,39 +16,18 @@ export interface CategoryPickerEvent {
  * 1–2 requests instead of firing one getByEvent call per event (which for an admin with dozens or
  * hundreds of events would flood the backend and stall the browser's connection pool).
  */
-export function useCategoryPicker(brandSlug?: string) {
+export function useCategoryPicker(brandId?: string) {
   const { data, loading, error, refetch } = useApiQuery(async () => {
-    const brandsRes = await brandApi.getList({ limit: 100, offset: 0 });
-    const brandsMap = new Map<string, { name: string; slug: string }>();
-    if (brandsRes.success && brandsRes.data) {
-      for (const b of brandsRes.data.brands ?? []) {
-        const fe = mapBrandApiToFe(b);
-        brandsMap.set(b.id, { name: fe.name, slug: fe.slug });
-      }
-    }
-
-    let brandId: string | undefined;
-    if (brandSlug) {
-      for (const [id, info] of brandsMap.entries()) {
-        if (info.slug === brandSlug) {
-          brandId = id;
-          break;
-        }
-      }
-      if (!brandId) return [] as CategoryPickerEvent[];
-    }
-
-    const eventsRes = await eventApi.getList({ limit: 100, offset: 0, brandId });
+    const eventsRes = await internalEventApi.getList({ limit: 100, offset: 0, brandId });
     if (!eventsRes.success || !eventsRes.data) return [] as CategoryPickerEvent[];
 
     return (eventsRes.data.events ?? []).map(
-      (evt): CategoryPickerEvent => ({
-        id: evt.id,
-        name: evt.name,
-        brandName: brandsMap.get(evt.brand_id)?.name,
-      }),
+      (raw): CategoryPickerEvent => {
+        const evt = normalizeInternalEvent(raw);
+        return { id: evt.id, name: evt.name };
+      },
     );
-  }, [brandSlug]);
+  }, [brandId]);
 
   const events = useMemo(() => data ?? [], [data]);
 
