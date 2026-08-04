@@ -108,9 +108,16 @@ export function useCheckoutSteps(
 
   const setDeadlineFromTtl = useCallback((ttl: CheckoutTtl) => {
     if (ttl.status === "ACTIVE" && ttl.remainingSeconds > 0) {
+      const backendDeadline = ttl.expiresAt > 0
+        ? ttl.expiresAt
+        : Date.now() + ttl.remainingSeconds * 1000;
+      const storedDeadline = Number(sessionStorage.getItem(CHECKOUT_DEADLINE_STORAGE_KEY));
+      const deadline = Number.isFinite(storedDeadline) && storedDeadline > Date.now()
+        ? Math.min(storedDeadline, backendDeadline)
+        : backendDeadline;
       sessionStorage.setItem(
         CHECKOUT_DEADLINE_STORAGE_KEY,
-        String(Date.now() + ttl.remainingSeconds * 1000),
+        String(deadline),
       );
       return true;
     }
