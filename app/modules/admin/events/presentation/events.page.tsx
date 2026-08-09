@@ -440,7 +440,7 @@ export default function AdminEventsPage() {
                   { value: "ENDED", label: "Selesai" },
                 ]}
               />
-              <label className="flex items-center gap-2 text-sm font-medium text-text-primary mt-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-text-primary mt-2 cursor-pointer">
                 <input
                   type="checkbox"
                   name="isPublished"
@@ -450,7 +450,7 @@ export default function AdminEventsPage() {
                 />
                 Publish event
               </label>
-              <label className="flex items-center gap-2 text-sm font-medium text-text-primary mt-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-text-primary mt-2 cursor-pointer">
                 <input
                   type="checkbox"
                   name="isFeatured"

@@ -6,6 +6,7 @@ import { useApiQuery } from "~/core/api";
 import { transactionApi } from "~/core/api/services/transaction.api";
 import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 import { TicketDeliveryActions } from "~/modules/internal/ticket-delivery/presentation/ticket-delivery-actions";
+import { PaymentProofActions } from "~/modules/internal/common/presentation/payment-proof-actions";
 
 const STATUS_MAP: Record<string, { label: string; variant: "success" | "warning" | "destructive" | "default" }> = {
   WAITING_PAYMENT: { label: "Menunggu Pembayaran", variant: "warning" },
@@ -17,21 +18,11 @@ const STATUS_MAP: Record<string, { label: string; variant: "success" | "warning"
   EXPIRED: { label: "Expired", variant: "destructive" },
 };
 
-function base64ToBlob(base64: string, mimeType: string): Blob {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i += 1) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return new Blob([bytes], { type: mimeType });
-}
-
 export default function AdminTransactionDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isReviewLoading, setIsReviewLoading] = useState(false);
-  const [isProofLoading, setIsProofLoading] = useState(false);
   const { error: errorToast } = useToast();
   const rawReturnTo = searchParams.get("returnTo");
   const returnTo = rawReturnTo?.startsWith("/internal-tb/admin")
@@ -104,69 +95,6 @@ export default function AdminTransactionDetailsPage() {
       errorToast(error instanceof Error ? error.message : "Gagal memproses approval");
     } finally {
       setIsReviewLoading(false);
-    }
-  };
-
-  const handleOpenProof = async (download: boolean) => {
-    if (!id) return;
-    setIsProofLoading(true);
-    try {
-      const response = await transactionApi.getPaymentProof(id);
-      if (!response.success || !response.data) {
-        throw new Error(response.error ?? "Bukti transfer tidak ditemukan");
-      }
-
-      const file = response.data;
-
-      if (file.signedUrl) {
-        if (download) {
-          const response = await transactionApi.downloadPaymentProof(id);
-          if (!response.success || !response.data) {
-            throw new Error(response.error ?? "Gagal download bukti transfer");
-          }
-          
-          const url = URL.createObjectURL(response.data.blob);
-          const anchor = document.createElement("a");
-          anchor.href = url;
-          anchor.download = response.data.fileName || `payment-proof-${id}`;
-          document.body.appendChild(anchor);
-          anchor.click();
-          anchor.remove();
-          setTimeout(() => URL.revokeObjectURL(url), 60_000);
-        } else {
-          const anchor = document.createElement("a");
-          anchor.href = file.signedUrl;
-          anchor.target = "_blank";
-          document.body.appendChild(anchor);
-          anchor.click();
-          anchor.remove();
-        }
-        return;
-      }
-
-      if (!file.base64Content) {
-        throw new Error("Bukti transfer tidak tersedia");
-      }
-
-      const blob = base64ToBlob(file.base64Content, file.mimeType || "application/octet-stream");
-      const url = URL.createObjectURL(blob);
-
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.target = "_blank";
-      anchor.rel = "noopener noreferrer";
-      if (download) {
-        anchor.download = file.fileName || `payment-proof-${id}`;
-      }
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch (error) {
-      errorToast(error instanceof Error ? error.message : "Gagal membuka bukti transfer");
-    } finally {
-      setIsProofLoading(false);
     }
   };
 
@@ -266,22 +194,7 @@ export default function AdminTransactionDetailsPage() {
               <span className="material-symbols-outlined text-brand-primary">upload_file</span>
               Bukti Transfer
             </h2>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                variant="secondary"
-                onClick={() => handleOpenProof(false)}
-                isLoading={isProofLoading}
-              >
-                Buka Bukti Transfer
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => handleOpenProof(true)}
-                isLoading={isProofLoading}
-              >
-                Download Bukti Transfer
-              </Button>
-            </div>
+            <PaymentProofActions transactionId={tx.id} />
           </Card>
         )}
 

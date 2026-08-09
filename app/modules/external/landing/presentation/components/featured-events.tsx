@@ -49,7 +49,7 @@ export function FeaturedEvents({ events }: FeaturedEventsProps) {
               <button
                 onClick={prev}
                 disabled={currentIndex === 0}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md text-base-white shadow-2xl pointer-events-auto transition-all hover:bg-white hover:text-brand-primary disabled:opacity-0"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md text-base-white shadow-2xl pointer-events-auto transition-all hover:bg-white hover:text-brand-primary cursor-pointer disabled:cursor-default disabled:opacity-0"
                 aria-label="Event sebelumnya"
               >
                 <span className="material-symbols-outlined text-[22px]">chevron_left</span>
@@ -57,7 +57,7 @@ export function FeaturedEvents({ events }: FeaturedEventsProps) {
               <button
                 onClick={next}
                 disabled={currentIndex >= maxIndex}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md text-base-white shadow-2xl pointer-events-auto transition-all hover:bg-white hover:text-brand-primary disabled:opacity-0"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md text-base-white shadow-2xl pointer-events-auto transition-all hover:bg-white hover:text-brand-primary cursor-pointer disabled:cursor-default disabled:opacity-0"
                 aria-label="Event berikutnya"
               >
                 <span className="material-symbols-outlined text-[22px]">chevron_right</span>
@@ -87,7 +87,7 @@ export function FeaturedEvents({ events }: FeaturedEventsProps) {
                   key={event.id}
                   onClick={() => setCurrentIndex(idx)}
                   aria-label={`Ke event ${idx + 1}`}
-                  className={`h-1.5 rounded-full transition-all ${
+                  className={`h-1.5 rounded-full transition-all cursor-pointer ${
                     idx === currentIndex ? "w-6 bg-base-white" : "w-1.5 bg-base-white/40 hover:bg-base-white/60"
                   }`}
                 />
