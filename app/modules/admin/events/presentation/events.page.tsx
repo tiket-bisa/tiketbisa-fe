@@ -69,6 +69,7 @@ export default function AdminEventsPage() {
     termAndCondition: "",
     status: "ONGOING",
     isPublished: false,
+    isFeatured: false,
   });
 
   // Fetch brands for mapping brandId → brandName
@@ -159,6 +160,7 @@ export default function AdminEventsPage() {
       termAndCondition: "",
       status: "ONGOING",
       isPublished: false,
+      isFeatured: false,
     });
   };
 
@@ -193,6 +195,7 @@ export default function AdminEventsPage() {
       termAndCondition: event.termAndCondition ?? "",
       status: event.status ?? "ONGOING",
       isPublished: Boolean(event.isPublished),
+      isFeatured: Boolean(event.isFeatured),
     });
   };
 
@@ -252,6 +255,7 @@ export default function AdminEventsPage() {
         city: formData.city.trim(),
         status: formData.status as InternalEventApiData["status"],
         isPublished: formData.isPublished,
+        isFeatured: formData.isFeatured,
       };
 
       const result = formMode === "edit" && editingEvent
@@ -436,7 +440,7 @@ export default function AdminEventsPage() {
                   { value: "ENDED", label: "Selesai" },
                 ]}
               />
-              <label className="flex items-center gap-2 text-sm font-medium text-text-primary mt-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-text-primary mt-2 cursor-pointer">
                 <input
                   type="checkbox"
                   name="isPublished"
@@ -445,6 +449,16 @@ export default function AdminEventsPage() {
                   className="h-4 w-4 rounded border-border-default"
                 />
                 Publish event
+              </label>
+              <label className="flex items-center gap-2 text-sm font-medium text-text-primary mt-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="isFeatured"
+                  checked={formData.isFeatured}
+                  onChange={handleChange}
+                  className="h-4 w-4 rounded border-border-default"
+                />
+                Tampilkan di Featured Event (homepage)
               </label>
             </div>
 
@@ -552,7 +566,10 @@ export default function AdminEventsPage() {
                     )}
                   </div>
                 </div>
-                <Badge variant={status.variant}>{status.label}</Badge>
+                <div className="flex flex-col items-end gap-1.5">
+                  <Badge variant={status.variant}>{status.label}</Badge>
+                  {evt.isFeatured && <Badge variant="brand">Featured</Badge>}
+                </div>
               </div>
               <div className="mt-4 space-y-3 border-t border-border-subtle pt-3">
                 <Button

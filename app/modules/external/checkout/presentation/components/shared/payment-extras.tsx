@@ -50,7 +50,7 @@ export function PromoSection({ eventId, subtotal, serviceFee, appliedPromo, onAp
         </div>
         <button
           onClick={onRemove}
-          className="text-xs font-black text-text-tertiary hover:text-destructive-text uppercase tracking-widest transition-colors flex-shrink-0"
+          className="text-xs font-black text-text-tertiary hover:text-destructive-text uppercase tracking-widest transition-colors flex-shrink-0 cursor-pointer"
         >
           Hapus
         </button>
@@ -123,7 +123,7 @@ export function PaymentConsent({
             onChange={(e) => onToggleTerms?.(e.target.checked)}
             className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border-2 border-gray-200 checked:border-brand-primary checked:bg-brand-primary transition-all"
           />
-          <svg className="absolute h-3.5 w-3.5 opacity-0 peer-checked:opacity-100 left-0.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
+          <svg className="absolute h-3.5 w-3.5 text-white opacity-0 peer-checked:opacity-100 left-0.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         </div>
@@ -140,7 +140,7 @@ export function PaymentConsent({
             onChange={(e) => onTogglePrivacy?.(e.target.checked)}
             className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border-2 border-gray-200 checked:border-brand-primary checked:bg-brand-primary transition-all"
           />
-          <svg className="absolute h-3.5 w-3.5 opacity-0 peer-checked:opacity-100 left-0.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
+          <svg className="absolute h-3.5 w-3.5 text-white opacity-0 peer-checked:opacity-100 left-0.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         </div>

@@ -3,6 +3,8 @@ import { Card, Button, Input, Select } from "~/core/design-system/components";
 import { useAuth } from "~/core/auth";
 import { useApiQuery } from "~/core/api";
 import { brandApi, mapBrandApiToFe } from "~/core/api/services/brand.api";
+import { internalEventApi, normalizeInternalEvent } from "~/core/api/services/internal-event.api";
+import { ticketCategoryApi } from "~/core/api/services/ticket-category.api";
 import { partnerTicketApi } from "../infrastructure/partner-ticket.api";
 
 /** Max codes per ingest request; mirrors the backend PARTNER_TICKET_MAX_INGEST default. */
@@ -32,6 +34,8 @@ export default function PartnerTicketIngestPage() {
   }, [isAdmin]);
 
   const [brandId, setBrandId] = useState("");
+  const [eventId, setEventId] = useState("");
+  const [ticketCategoryId, setTicketCategoryId] = useState("");
   const [partner, setPartner] = useState("");
   const [codesRaw, setCodesRaw] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,6 +44,24 @@ export default function PartnerTicketIngestPage() {
 
   const brandOptions = (brandsData ?? []).map((b) => ({ value: b.id, label: b.name }));
   const effectiveBrandId = isAdmin ? brandId : user?.brand_id ?? "";
+
+  const { data: eventsData, loading: loadingEvents } = useApiQuery(async () => {
+    if (!effectiveBrandId) return [];
+    const res = await internalEventApi.getList({
+      brandId: effectiveBrandId, limit: 100, offset: 0, sortBy: "start_date:DESC",
+    });
+    if (!res.success || !res.data) return [];
+    return (res.data.events ?? []).map(normalizeInternalEvent);
+  }, [effectiveBrandId]);
+
+  const { data: categoriesData, loading: loadingCategories } = useApiQuery(async () => {
+    if (!eventId) return [];
+    const res = await ticketCategoryApi.getByEvent(eventId);
+    return res.success && res.data ? res.data : [];
+  }, [eventId]);
+
+  const eventOptions = (eventsData ?? []).map((event) => ({ value: event.id, label: event.name }));
+  const categoryOptions = (categoriesData ?? []).map((category) => ({ value: category.id, label: category.name }));
 
   // parseCodes (split/trim/dedupe) is O(n) and can lag on a huge paste, so the live "detected"
   // count is computed on a debounce rather than on every keystroke; the authoritative parse runs
@@ -56,6 +78,14 @@ export default function PartnerTicketIngestPage() {
 
     if (!effectiveBrandId) {
       setError("Pilih brand terlebih dahulu.");
+      return;
+    }
+    if (!eventId) {
+      setError("Pilih event terlebih dahulu.");
+      return;
+    }
+    if (!ticketCategoryId) {
+      setError("Pilih kategori tiket terlebih dahulu.");
       return;
     }
     if (!partner.trim()) {
@@ -80,6 +110,8 @@ export default function PartnerTicketIngestPage() {
     try {
       const res = await partnerTicketApi.ingest({
         brand_id: effectiveBrandId,
+        event_id: eventId,
+        ticket_category_id: ticketCategoryId,
         partner: partner.trim(),
         codes,
       });
@@ -114,10 +146,35 @@ export default function PartnerTicketIngestPage() {
               placeholder={loadingBrands ? "Memuat brand..." : "Pilih brand"}
               options={brandOptions}
               value={brandId}
-              onChange={(e) => setBrandId(e.target.value)}
+              onChange={(e) => {
+                setBrandId(e.target.value);
+                setEventId("");
+                setTicketCategoryId("");
+              }}
               disabled={loadingBrands || isSubmitting}
             />
           )}
+
+          <Select
+            label="Event"
+            placeholder={loadingEvents ? "Memuat event..." : "Pilih event"}
+            options={eventOptions}
+            value={eventId}
+            onChange={(e) => {
+              setEventId(e.target.value);
+              setTicketCategoryId("");
+            }}
+            disabled={!effectiveBrandId || loadingEvents || isSubmitting}
+          />
+
+          <Select
+            label="Kategori Tiket"
+            placeholder={loadingCategories ? "Memuat kategori..." : "Pilih kategori"}
+            options={categoryOptions}
+            value={ticketCategoryId}
+            onChange={(e) => setTicketCategoryId(e.target.value)}
+            disabled={!eventId || loadingCategories || isSubmitting}
+          />
 
           <Input
             label="Nama Partner"

@@ -59,6 +59,8 @@ export interface PaymentSelection {
   agreedToPrivacy: boolean;
   promoCode?: string;
   appliedPromo?: AppliedPromo | null;
+  /** Bank picked for a Virtual Account payment (e.g. "BCA"); only relevant when methodId === "va". */
+  bankCode?: string | null;
 }
 
 export type OrderStatus = "PENDING" | "PAID" | "EXPIRED" | "CANCELLED";

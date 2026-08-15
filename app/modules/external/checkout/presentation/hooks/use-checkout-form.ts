@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import type { BuyerInfo, TicketHolder } from "../../domain/checkout.types";
+import { normalizeIndonesianPhone } from "../../domain/phone";
 
 const STORAGE_KEY = "tiketbisa_buyer_info";
 const HOLDERS_STORAGE_KEY = "tiketbisa_ticket_holders";
@@ -115,13 +116,10 @@ export function useCheckoutForm() {
       newErrors.email = "Format email tidak valid";
     }
 
-    const phoneRegex = /^[0-9]+$/;
     if (!buyerInfo.phoneNumber.trim()) {
       newErrors.phoneNumber = "Nomor telepon wajib diisi";
-    } else if (!phoneRegex.test(buyerInfo.phoneNumber)) {
-      newErrors.phoneNumber = "Hanya boleh angka";
-    } else if (buyerInfo.phoneNumber.length < 10 || buyerInfo.phoneNumber.length > 13) {
-      newErrors.phoneNumber = "Harus 10-13 digit";
+    } else if (!normalizeIndonesianPhone(buyerInfo.phoneNumber)) {
+      newErrors.phoneNumber = "Gunakan format 08… atau +628…";
     }
 
     if (!buyerInfo.identityNumber.trim()) {

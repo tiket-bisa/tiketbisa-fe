@@ -859,7 +859,7 @@ export default function AdminBrandsPage() {
                           <Input
                             label="Username Scanner"
                             value={scannerUsername}
-                            onChange={(event) => setScannerUsername(event.target.value)}
+                            onChange={(event) => setScannerUsername(event.target.value.toLowerCase())}
                             placeholder="scanner_brand_a"
                           />
                           <Input

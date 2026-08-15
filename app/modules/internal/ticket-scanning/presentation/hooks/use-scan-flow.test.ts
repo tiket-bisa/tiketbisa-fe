@@ -71,7 +71,7 @@ describe("useScanFlow state machine", () => {
       status_code: 200,
     });
 
-    const { result } = renderHook(() => useScanFlow("cat-1"));
+    const { result } = renderHook(() => useScanFlow("event-1", "cat-1"));
 
     // Calling confirmCheckIn before any validate result is a no-op.
     await act(async () => {
@@ -87,7 +87,7 @@ describe("useScanFlow state machine", () => {
     await waitFor(() => {
       expect(result.current.validateResult?.status).toBe("VALID");
     });
-    expect(mockValidate).toHaveBeenCalledWith("TKBsomecode123", "QR_CODE", "cat-1");
+    expect(mockValidate).toHaveBeenCalledWith("TKBsomecode123", "QR_CODE", "event-1", "cat-1");
 
     await act(async () => {
       await result.current.confirmCheckIn();
@@ -97,6 +97,7 @@ describe("useScanFlow state machine", () => {
       expect.objectContaining({
         code_hash: "TKBsomecode123",
         code_type: "QR_CODE",
+        expected_event_id: "event-1",
         expected_category_id: "cat-1",
       }),
     );

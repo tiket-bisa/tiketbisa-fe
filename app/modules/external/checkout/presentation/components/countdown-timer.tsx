@@ -8,7 +8,7 @@ export interface CountdownTimerProps {
   className?: string;
 }
 
-export function CountdownTimer({ initialMinutes = 15, onExpire, className = "" }: CountdownTimerProps) {
+export function CountdownTimer({ onExpire, className = "" }: CountdownTimerProps) {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   useEffect(() => {
@@ -16,9 +16,8 @@ export function CountdownTimer({ initialMinutes = 15, onExpire, className = "" }
 
     let deadline = sessionStorage.getItem(STORAGE_KEY);
     if (!deadline) {
-      const newDeadline = Date.now() + initialMinutes * 60 * 1000;
-      sessionStorage.setItem(STORAGE_KEY, newDeadline.toString());
-      deadline = newDeadline.toString();
+      setTimeLeft(null);
+      return;
     }
 
     const calculateTimeLeft = () => {
@@ -39,7 +38,7 @@ export function CountdownTimer({ initialMinutes = 15, onExpire, className = "" }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [initialMinutes, onExpire]);
+  }, [onExpire]);
 
   if (timeLeft === null) return null;
 

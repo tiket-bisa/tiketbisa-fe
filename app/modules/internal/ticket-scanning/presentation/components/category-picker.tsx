@@ -11,14 +11,14 @@ export interface SelectedCategory {
 
 interface CategoryPickerProps {
   /** Restrict events to a single brand (partner/scanner). Omit for admin (all brands). */
-  brandSlug?: string;
+  brandId?: string;
   selected: SelectedCategory | null;
   onChange: (selection: SelectedCategory | null) => void;
 }
 
 /** Event → ticket category picker used to scope scan/check-in to one category. */
-export function CategoryPicker({ brandSlug, selected, onChange }: CategoryPickerProps) {
-  const { events, loading, error } = useCategoryPicker(brandSlug);
+export function CategoryPicker({ brandId, selected, onChange }: CategoryPickerProps) {
+  const { events, loading, error } = useCategoryPicker(brandId);
   const [eventId, setEventId] = useState("");
   const [categoryId, setCategoryId] = useState("");
 

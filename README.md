@@ -42,7 +42,12 @@ The checkout flow stays on the public `/checkout/*` path.
 ## E2E Smoke Tests (Local)
 
 Prerequisites:
-- Backend compose is running (local compose enables `TB_E2E_MODE` by default).
+- Backend compose is running with E2E mode explicitly enabled and the local E2E seeder allowed:
+
+  ```bash
+  cd ../tiketbisa-be
+  TB_E2E_MODE=true SUPER_ADMIN_EMAIL=e2e-admin@tiketbisa.local docker compose up -d --build
+  ```
 - Frontend dev server is running.
 
 ```bash

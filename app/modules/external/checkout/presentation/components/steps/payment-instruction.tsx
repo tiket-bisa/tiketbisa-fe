@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { Card, Button } from "~/core/design-system/components";
+import { Card, Button, useToast } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils/currency";
 import { orderApi, validateManualTransferProofFile } from "../../../infrastructure/order.api";
 import type { TransactionStatusResult } from "../../../infrastructure/order.api";
 import { usePublicRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 import type { OrderResponse } from "../../../domain/checkout.types";
 import type { Event } from "../../../../event/domain/event.entity";
-import { CountdownTimer } from "../shared/countdown-timer";
 
 const STATUS_POLL_INTERVAL_MS = 5000;
 const CHECKOUT_DEADLINE_STORAGE_KEY = "tiketbisa_checkout_deadline";
@@ -41,11 +40,6 @@ function parseVirtualAccount(raw: string | null | undefined): { bankName: string
   return { bankName: null, accountNumber: raw };
 }
 
-function isUrlLike(value: string | null | undefined): value is string {
-  if (!value) return false;
-  return /^https?:\/\//i.test(value.trim());
-}
-
 export function PaymentInstruction({
   order,
   event,
@@ -59,6 +53,7 @@ export function PaymentInstruction({
   transactionId,
   onPaymentCompleted,
 }: PaymentInstructionProps) {
+  const { warning: warningToast } = useToast();
   const isBank = order.paymentMethod.category === "BANK_TRANSFER";
   const isManualTransfer = order.paymentMethod.id === "manual" || order.paymentMethod.id === "manual_transfer";
   const totalAmount =
@@ -179,7 +174,7 @@ export function PaymentInstruction({
     }
     const validationError = validateManualTransferProofFile(file);
     if (validationError) {
-      alert(validationError);
+      warningToast(validationError);
       onProofFileChange?.(null);
       return;
     }
@@ -204,23 +199,19 @@ export function PaymentInstruction({
 
   const { bankName, accountNumber } = parseVirtualAccount(gatewayData.virtualAccount);
   const qrPayload = gatewayData.qrPayload;
-  const qrRedirectUrl = isUrlLike(qrPayload) ? qrPayload : null;
 
-  // --- 1. XENDIT HOSTED-INVOICE LAYOUT (VA + QRIS both resolve to one hosted checkout page) ---
-  if (!isManualTransfer) {
+  // --- 1. QRIS LAYOUT — a real scannable qr_string from Xendit's direct QR Code API (not a hosted
+  // checkout URL). VA is handled entirely by layout 2 below: it gets a real bank + account number
+  // straight from Xendit's direct Virtual Account API, so there's no separate "hosted" step for it. ---
+  if (!isManualTransfer && !isBank) {
     return (
       <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
         <Card className="overflow-hidden border-gray-100 rounded-3xl shadow-sm bg-white">
           <div className="p-6 md:p-12 space-y-12">
             {/* Top Section: Timer & Deadline */}
             <div className="flex flex-col items-center text-center space-y-6">
-              <div className="w-full max-w-sm">
-                <CountdownTimer
-                  onExpire={onExpire}
-                  deadlineTimestamp={paymentDeadlineTimestamp}
-                  className="!shadow-none border-2 border-orange-100"
-                />
-              </div>
+              {/* The countdown widget itself lives in the page header (checkout.page.tsx) -
+                  rendering a second one here duplicated it. This keeps just the deadline text. */}
               <div className="space-y-1">
                 <p className="text-sm font-medium text-text-secondary">Batas Waktu Pembayaran</p>
                 <p className="text-lg font-black text-text-primary">{deadline} WIB</p>
@@ -239,14 +230,18 @@ export function PaymentInstruction({
             {/* QR Area */}
             <div className="flex flex-col items-center space-y-8 py-4">
               <div className="space-y-3 text-center">
-                <p className="text-sm font-black text-text-primary tracking-tight">Selesaikan Pembayaran via Xendit</p>
-                <p className="text-xs font-medium text-text-secondary">Pindai QR atau buka halaman pembayaran Xendit untuk memilih metode (VA / QRIS / e-wallet).</p>
+                <p className="text-sm font-black text-text-primary tracking-tight">
+                  Selesaikan Pembayaran QRIS
+                </p>
+                <p className="text-xs font-medium text-text-secondary">
+                  Pindai QR di bawah menggunakan aplikasi e-wallet atau mobile banking apa pun yang mendukung QRIS.
+                </p>
               </div>
 
               <button
                 type="button"
                 onClick={() => setIsQrModalOpen(true)}
-                className="p-6 bg-white border-4 border-gray-100 rounded-[3rem] shadow-xl relative hover:border-brand-primary/30 transition-colors"
+                className="p-6 bg-white border-4 border-gray-100 rounded-[3rem] shadow-xl relative hover:border-brand-primary/30 transition-colors cursor-pointer"
               >
                 <div className="w-64 h-64 md:w-72 md:h-72 bg-gray-50 rounded-3xl flex items-center justify-center border-2 border-dashed border-gray-200 overflow-hidden">
                   {qrPayload ? (
@@ -267,30 +262,20 @@ export function PaymentInstruction({
                 )}
               </button>
 
-              {qrRedirectUrl && (
-                <button
-                  type="button"
-                  onClick={() => { window.open(qrRedirectUrl, "_blank", "noopener"); }}
-                  className="text-sm font-black text-brand-primary hover:underline flex items-center gap-2"
-                >
-                  Buka Halaman Pembayaran Xendit
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                </button>
-              )}
-
-              <div className="flex flex-wrap justify-center gap-6 opacity-40 grayscale">
-                <img src="/logos/gopay.png" alt="GoPay" className="h-4 w-auto" />
-                <img src="/logos/ovo.png" alt="OVO" className="h-4 w-auto" />
-                <img src="/logos/dana.png" alt="DANA" className="h-4 w-auto" />
-                <img src="/logos/shopeepay.png" alt="ShopeePay" className="h-4 w-auto" />
+              {/* /logos/{gopay,ovo,dana,shopeepay}.png were never added to public/ — text badges
+                  avoid broken-image icons until the official logo assets are sourced. */}
+              <div className="flex flex-wrap justify-center gap-4 opacity-40 grayscale">
+                {["GoPay", "OVO", "DANA", "ShopeePay"].map((name) => (
+                  <span key={name} className="text-xs font-black text-text-primary uppercase tracking-widest">
+                    {name}
+                  </span>
+                ))}
               </div>
             </div>
 
             {/* Actions */}
             <div className="flex flex-col md:flex-row gap-4 pt-4">
-              <button onClick={onBack} className="flex-1 py-6 rounded-2xl border-2 border-gray-100 text-text-secondary font-black text-lg hover:bg-gray-50 transition-all">
+              <button onClick={onBack} className="flex-1 py-6 rounded-2xl border-2 border-gray-100 text-text-secondary font-black text-lg hover:bg-gray-50 transition-all cursor-pointer">
                 Batalkan Pesanan
               </button>
               <Button onClick={onAction} isLoading={isLoading} className="flex-[2] py-6 rounded-2xl text-xl font-black shadow-xl shadow-brand-primary/20 hover:shadow-brand-primary/30 transition-all">
@@ -350,7 +335,7 @@ export function PaymentInstruction({
               <button
                 type="button"
                 onClick={() => setIsQrModalOpen(false)}
-                className="absolute top-4 right-4 text-text-tertiary hover:text-text-primary transition-colors"
+                className="absolute top-4 right-4 text-text-tertiary hover:text-text-primary transition-colors cursor-pointer"
                 aria-label="Tutup"
               >
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -358,7 +343,6 @@ export function PaymentInstruction({
                 </svg>
               </button>
               <div className="text-center space-y-1">
-                <img src="/logo/qris.png" alt="QRIS" className="h-8 mx-auto" />
                 <p className="text-sm font-black text-text-primary">Pindai Kode QR Untuk Bayar</p>
                 <p className="text-xs font-bold text-text-secondary">{formatIDR(totalAmount)}</p>
               </div>
@@ -369,14 +353,6 @@ export function PaymentInstruction({
                   <p className="text-sm text-text-tertiary py-20">QR belum tersedia</p>
                 )}
               </div>
-              {qrRedirectUrl && (
-                <Button
-                  onClick={() => { window.location.href = qrRedirectUrl; }}
-                  className="w-full py-4 rounded-2xl font-black"
-                >
-                  Buka di Aplikasi Pembayaran
-                </Button>
-              )}
             </div>
           </div>
         )}
@@ -384,7 +360,8 @@ export function PaymentInstruction({
     );
   }
 
-  // --- 2. BANK TRANSFER LAYOUT (Traditional Style) ---
+  // --- 2. BANK TRANSFER LAYOUT (Traditional Style) — used for both manual transfer and VA. VA's
+  // bankName/accountNumber below come straight from Xendit's direct Virtual Account API. ---
   const manualTransferBankInfo = {
     bankName: import.meta.env.VITE_MANUAL_TRANSFER_BANK_NAME ?? "Mandiri",
     accountNumber: import.meta.env.VITE_MANUAL_TRANSFER_ACCOUNT_NUMBER ?? "1010014855397",
@@ -424,7 +401,7 @@ export function PaymentInstruction({
               <h2 className="text-4xl md:text-5xl font-black text-brand-primary tracking-tighter">
                 {formatIDR(totalAmount)}
               </h2>
-              <button className="text-xs font-black text-brand-primary uppercase tracking-widest hover:underline flex items-center gap-2">
+              <button className="text-xs font-black text-brand-primary uppercase tracking-widest hover:underline flex items-center gap-2 cursor-pointer">
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                 </svg>
@@ -497,7 +474,7 @@ export function PaymentInstruction({
                     }
                   }}
                   disabled={!accountNumber}
-                  className="block mx-auto px-6 py-2 bg-brand-primary/10 text-brand-primary rounded-full text-xs font-black uppercase tracking-widest hover:bg-brand-primary/20 transition-all disabled:opacity-40"
+                  className="block mx-auto px-6 py-2 bg-brand-primary/10 text-brand-primary rounded-full text-xs font-black uppercase tracking-widest hover:bg-brand-primary/20 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Salin Nomor VA
                 </button>
@@ -556,7 +533,7 @@ export function PaymentInstruction({
       </Card>
 
       <div className="hidden lg:flex flex-col sm:flex-row gap-4 md:gap-6">
-        <button onClick={onBack} className="flex-1 py-5 md:py-6 px-8 border-2 border-gray-200 rounded-2xl text-text-secondary font-bold text-lg hover:bg-gray-50 transition-all">
+        <button onClick={onBack} className="flex-1 py-5 md:py-6 px-8 border-2 border-gray-200 rounded-2xl text-text-secondary font-bold text-lg hover:bg-gray-50 transition-all cursor-pointer">
           Kembali
         </button>
         <Button

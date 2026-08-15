@@ -1,7 +1,8 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate, useParams } from "react-router";
+import { useToast } from "~/core/design-system/components";
 import { orderApi, isGatewayPaymentSuccessful } from "../../infrastructure/order.api";
-import type { CompleteOrderResponse } from "../../infrastructure/order.api";
+import type { CheckoutTtl, CompleteOrderResponse } from "../../infrastructure/order.api";
 import { useOrderConfirmation } from "./use-order-confirmation";
 import type { usePaymentSelection } from "./use-payment-selection";
 import { buildPaymentOrderSummary } from "../../domain/checkout.pricing";
@@ -35,6 +36,7 @@ export function useCheckoutSteps(
 ) {
   const navigate = useNavigate();
   const params = useParams();
+  const { warning: warningToast, error: errorToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentStep = parseInt(searchParams.get("step") || "1", 10);
 
@@ -48,7 +50,7 @@ export function useCheckoutSteps(
   const [blockingError, setBlockingError] = useState<string | null>(null);
 
   const { confirmOrder, isLoading: isConfirming, error: confirmOrderError } = useOrderConfirmation();
-  const { selection, setMethodId, setAgreedToTerms, setAgreedToPrivacy, applyPromo, removePromo } = paymentSelectionState;
+  const { selection, setMethodId, setBankCode, setAgreedToTerms, setAgreedToPrivacy, applyPromo, removePromo } = paymentSelectionState;
 
   // Surface a rejection from confirmOrder (e.g. domicile/NIK validation) as the blocking error.
   useEffect(() => {
@@ -70,7 +72,13 @@ export function useCheckoutSteps(
   const activePaymentMethod = selectedPaymentMethod ?? existingOrder?.paymentMethod ?? null;
   const isManualTransferPayment = activePaymentMethod?.id === "manual" || activePaymentMethod?.id === "manual_transfer";
 
-  const isStep2Valid = !!(selection.methodId && selection.agreedToTerms && selection.agreedToPrivacy);
+  /** Payment method chosen + both consents checked — required before submitting the combined data+payment page. */
+  const canProceedToPayment = !!(
+    selection.methodId
+    && selection.agreedToTerms
+    && selection.agreedToPrivacy
+    && (selection.methodId !== "va" || !!selection.bankCode)
+  );
   const exceedsTicketLimit = baseSummary.ticketCount > MAX_TICKETS_PER_TRANSACTION;
 
   const handlePaymentMethodSelect = useCallback((methodId: string) => {
@@ -83,9 +91,9 @@ export function useCheckoutSteps(
 
   const redirectForTicketLimit = useCallback(() => {
     clearCheckoutStorage();
-    alert(`Maksimum ${MAX_TICKETS_PER_TRANSACTION} tiket per transaksi.`);
+    warningToast(`Maksimum ${MAX_TICKETS_PER_TRANSACTION} tiket per transaksi.`);
     navigate(`/event/${params.eventId ?? event.id}`);
-  }, [clearCheckoutStorage, event.id, navigate, params.eventId]);
+  }, [clearCheckoutStorage, event.id, navigate, params.eventId, warningToast]);
 
   const expireCheckoutSession = useCallback((showMessage = true) => {
     clearCheckoutStorage();
@@ -93,18 +101,28 @@ export function useCheckoutSteps(
     setManualTransferProofFile(null);
     setIsManualTransferPending(false);
     if (showMessage) {
-      alert("Sesi checkout kamu sudah kedaluwarsa. Silakan pilih tiket ulang.");
+      warningToast("Sesi checkout kamu sudah kedaluwarsa. Silakan pilih tiket ulang.");
     }
     navigate(`/event/${params.eventId ?? event.id}`);
-  }, [clearCheckoutStorage, event.id, navigate, params.eventId]);
+  }, [clearCheckoutStorage, event.id, navigate, params.eventId, warningToast]);
 
-  const setDeadlineFromRemainingSeconds = useCallback((remainingSeconds: number) => {
-    if (remainingSeconds > 0) {
+  const setDeadlineFromTtl = useCallback((ttl: CheckoutTtl) => {
+    if (ttl.status === "ACTIVE" && ttl.remainingSeconds > 0) {
+      const backendDeadline = ttl.expiresAt > 0
+        ? ttl.expiresAt
+        : Date.now() + ttl.remainingSeconds * 1000;
+      const storedDeadline = Number(sessionStorage.getItem(CHECKOUT_DEADLINE_STORAGE_KEY));
+      const deadline = Number.isFinite(storedDeadline) && storedDeadline > Date.now()
+        ? Math.min(storedDeadline, backendDeadline)
+        : backendDeadline;
       sessionStorage.setItem(
         CHECKOUT_DEADLINE_STORAGE_KEY,
-        String(Date.now() + remainingSeconds * 1000),
+        String(deadline),
       );
+      return true;
     }
+    sessionStorage.removeItem(CHECKOUT_DEADLINE_STORAGE_KEY);
+    return false;
   }, []);
 
   const getActiveLockId = useCallback(() => (
@@ -139,28 +157,35 @@ export function useCheckoutSteps(
       return false;
     }
 
-    const remainingSeconds = currentStep >= 4
+    const ttl = currentStep >= 4
       ? await orderApi.getTempTransactionTtl(activeLockId)
-      : await getCheckoutLockRemainingSeconds(activeLockId);
+      : null;
+    const remainingSeconds = ttl?.remainingSeconds
+      ?? await getCheckoutLockRemainingSeconds(activeLockId);
 
-    if (remainingSeconds <= 0) {
+    if (remainingSeconds <= 0 || (ttl && ttl.status !== "ACTIVE")) {
       expireCheckoutSession(true);
       return false;
     }
 
-    setDeadlineFromRemainingSeconds(remainingSeconds);
+    if (ttl) {
+      setDeadlineFromTtl(ttl);
+    }
     return true;
   }, [
     currentStep,
     expireCheckoutSession,
     getActiveLockId,
     getCheckoutLockRemainingSeconds,
-    setDeadlineFromRemainingSeconds,
+    setDeadlineFromTtl,
   ]);
 
   /**
    * Phase 1: Ticket Locking (DDD - Intent Acquisition)
-   * Ensures tickets are reserved before user spends too much time on the form.
+   * Ensures tickets are reserved before user spends too much time on the form. Deliberately
+   * silent — no visible countdown yet, so filling in buyer data doesn't feel rushed. The
+   * timer only starts once the buyer submits the combined data+payment page (see handleNext
+   * case 1), by which point they've committed to a payment method.
    */
   const acquireInitialLock = useCallback(async () => {
     if (lockId || currentStep > 1) return;
@@ -168,7 +193,7 @@ export function useCheckoutSteps(
       redirectForTicketLimit();
       return;
     }
-    
+
     setIsActionLoading(true);
     try {
       const lock = await orderApi.acquireLock(event.id, baseSummary);
@@ -178,9 +203,6 @@ export function useCheckoutSteps(
         newParams.set("lockId", lock.userId);
         return newParams;
       }, { replace: true });
-      
-      // Store deadline in session for UI timer sync (epoch milliseconds)
-      sessionStorage.setItem(CHECKOUT_DEADLINE_STORAGE_KEY, String(lock.expiresAt));
     } catch (error) {
       console.error("Failed to acquire initial ticket lock", error);
     } finally {
@@ -231,6 +253,21 @@ export function useCheckoutSteps(
     };
   }, [currentStep, ensureCheckoutSessionActive]);
 
+  useEffect(() => {
+    if (currentStep !== 4) return;
+    const resync = () => {
+      if (document.visibilityState === "visible") {
+        void ensureCheckoutSessionActive();
+      }
+    };
+    window.addEventListener("focus", resync);
+    document.addEventListener("visibilitychange", resync);
+    return () => {
+      window.removeEventListener("focus", resync);
+      document.removeEventListener("visibilitychange", resync);
+    };
+  }, [currentStep, ensureCheckoutSessionActive]);
+
   // Persist the completed order while on the success step so a browser reload can restore
   // it. In-memory React state is wiped on reload, and without this OrderSuccess would fall
   // back to the "Segera Hadir" (CheckoutComingSoon) placeholder even though the purchase
@@ -266,82 +303,119 @@ export function useCheckoutSteps(
     }
   }, [currentStep, isManualTransferPending, completedOrder, searchParams]);
 
+  // Gateway payments (QRIS/VA) need an invoice created before there's anything to show, but
+  // the buyer previously had to click "Bayar Sekarang" first just to *generate* the QR —
+  // confusing, since that label reads as "I've already paid". Auto-create it once on arrival
+  // at the payment step instead; the button remains available afterward as a no-op-safe
+  // "check status now" fallback since /complete is idempotent server-side once an invoice exists.
+  const gatewayInvoiceRequestedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (currentStep !== 4 || isManualTransferPayment) return;
+    if (existingOrder?.qrPayload || existingOrder?.virtualAccount) return;
+
+    const activeLockId = getActiveLockId();
+    if (!activeLockId || gatewayInvoiceRequestedRef.current === activeLockId) return;
+    gatewayInvoiceRequestedRef.current = activeLockId;
+
+    setIsActionLoading(true);
+    (async () => {
+      try {
+        if (!(await ensureCheckoutSessionActive())) return;
+        const result = await orderApi.executeOrder(activeLockId, paymentSummary.totalPrice);
+        setCompletedOrder(result);
+        setIsManualTransferPending(false);
+
+        if (isGatewayPaymentSuccessful(result)) {
+          const nextParams = new URLSearchParams(searchParams);
+          nextParams.set("step", "5");
+          nextParams.set("lockId", activeLockId);
+          nextParams.set("orderId", activeLockId);
+          nextParams.delete("manualPending");
+          setSearchParams(nextParams);
+        }
+      } catch (error) {
+        // Leave the placeholder QR/VA state up; the "Bayar Sekarang" button remains as a retry.
+        console.error("Failed to auto-create gateway invoice", error);
+      } finally {
+        setIsActionLoading(false);
+      }
+    })();
+  }, [
+    currentStep,
+    isManualTransferPayment,
+    existingOrder?.qrPayload,
+    existingOrder?.virtualAccount,
+    getActiveLockId,
+    ensureCheckoutSessionActive,
+    paymentSummary.totalPrice,
+    searchParams,
+    setSearchParams,
+  ]);
+
   const handleNext = useCallback(async () => {
     switch (currentStep) {
-      case 1:
+      case 1: {
+        // Combined step: buyer data + payment method + consent, all on one page (no separate
+        // confirmation screen). Submitting re-locks with holder data, attaches identity +
+        // payment method to that lock, and only THEN starts the visible countdown — up to
+        // this point the buyer could still be filling in fields without a clock pressuring them.
         setBlockingError(null);
-        if (validateForm()) {
-          if (baseSummary.items.length === 0) {
-            alert("Pilih tiket dulu sebelum lanjut ke pembayaran.");
-            navigate(`/event/${event.id}`);
-            return;
-          }
-          if (exceedsTicketLimit) {
-            redirectForTicketLimit();
-            return;
-          }
+        if (!validateForm()) break;
 
+        if (baseSummary.items.length === 0) {
+          warningToast("Pilih tiket dulu sebelum lanjut ke pembayaran.");
+          navigate(`/event/${event.id}`);
+          break;
+        }
+        if (exceedsTicketLimit) {
+          redirectForTicketLimit();
+          break;
+        }
+        if (!canProceedToPayment || !selectedPaymentMethod) {
+          setBlockingError("Pilih metode pembayaran dan setujui syarat & ketentuan terlebih dahulu.");
+          break;
+        }
+
+        setIsActionLoading(true);
+        try {
           // Always (re-)acquire the lock here with the buyer's current holder data. The
           // preliminary "intent" lock made on mount (see acquireInitialLock) has no holders
           // yet - reusing that lockId as-is would carry an empty holders array all the way to
           // the final commit and fail validation there. Re-locking (even if a lockId already
           // exists) guarantees the lock Redis is holding always matches what the buyer just
           // filled in on this step.
-          setIsActionLoading(true);
-          try {
-            const lock = await orderApi.acquireLock(event.id, baseSummary, holders);
-            setLockId(lock.userId);
-            sessionStorage.setItem(CHECKOUT_DEADLINE_STORAGE_KEY, String(lock.expiresAt));
-            setSearchParams({ ...Object.fromEntries(searchParams), step: "2", lockId: lock.userId });
-          } catch (e: any) {
-            setBlockingError(e?.message || "Maaf, tiket tidak tersedia atau gagal dikunci. Silakan coba lagi.");
-            return;
-          } finally {
-            setIsActionLoading(false);
-          }
-        }
-        break;
-      case 2:
-        if (isStep2Valid) {
-          if (await ensureCheckoutSessionActive()) {
-            setSearchParams({ ...Object.fromEntries(searchParams), step: "3" });
-          }
-        }
-        break;
-      case 3:
-        {
-          setBlockingError(null);
-          const activeLockId = getActiveLockId();
-          if (selectedPaymentMethod && activeLockId) {
-            if (!(await ensureCheckoutSessionActive())) {
-              return;
-            }
-            setLockId(activeLockId);
-            // DDD Phase 2: Store Identity on existing Lock
-            const result = await confirmOrder({
-              lockId: activeLockId,
-              eventId: event.id,
-              buyerInfo,
-              summary: paymentSummary,
-              paymentMethod: selectedPaymentMethod,
-              promoCode: selection.appliedPromo?.code,
-            });
+          const lock = await orderApi.acquireLock(event.id, baseSummary, holders, lockId ?? undefined);
+          setLockId(lock.userId);
 
-            if (result) {
-              const paymentRemainingSeconds = await orderApi.getTempTransactionTtl(activeLockId);
-              setDeadlineFromRemainingSeconds(paymentRemainingSeconds);
-              setSearchParams({
-                ...Object.fromEntries(searchParams),
-                step: "4",
-                orderId: result.orderId,
-                lockId: activeLockId,
-              });
+          const result = await confirmOrder({
+            lockId: lock.userId,
+            eventId: event.id,
+            buyerInfo,
+            summary: paymentSummary,
+            paymentMethod: selectedPaymentMethod,
+            promoCode: selection.appliedPromo?.code,
+            bankCode: selection.bankCode ?? undefined,
+          });
+
+          if (result) {
+            if (!setDeadlineFromTtl(result.ttl)) {
+              expireCheckoutSession(true);
+              break;
             }
-          } else {
-            console.warn("Missing lockId or payment method for confirmation");
+            setSearchParams({
+              ...Object.fromEntries(searchParams),
+              step: "4",
+              orderId: result.order.orderId,
+              lockId: lock.userId,
+            });
           }
-          break;
+        } catch (e: any) {
+          setBlockingError(e?.message || "Maaf, tiket tidak tersedia atau gagal dikunci. Silakan coba lagi.");
+        } finally {
+          setIsActionLoading(false);
         }
+        break;
+      }
       case 4:
         setIsActionLoading(true);
         try {
@@ -353,7 +427,7 @@ export function useCheckoutSteps(
             }
             if (isManualTransferPayment) {
               if (!manualTransferProofFile) {
-                alert("Silakan unggah bukti transfer terlebih dahulu.");
+                warningToast("Silakan unggah bukti transfer terlebih dahulu.");
                 return;
               }
 
@@ -396,7 +470,7 @@ export function useCheckoutSteps(
               // "Menunggu pembayaran..." state until the payment is confirmed.
             }
           } else {
-            alert("Sesi checkout tidak ditemukan. Silakan ulangi dari halaman event.");
+            errorToast("Sesi checkout tidak ditemukan. Silakan ulangi dari halaman event.");
             navigate(`/event/${params.eventId}`);
           }
         } catch (error: any) {
@@ -404,12 +478,12 @@ export function useCheckoutSteps(
           console.error("Failed to execute final order", error);
 
           if (message.includes("404") || message.toLowerCase().includes("expired") || message.toLowerCase().includes("not found")) {
-            alert("Sesi transaksi kamu sudah tidak valid atau kedaluwarsa. Silakan checkout ulang.");
+            errorToast("Sesi transaksi kamu sudah tidak valid atau kedaluwarsa. Silakan checkout ulang.");
             sessionStorage.removeItem(CHECKOUT_DEADLINE_STORAGE_KEY);
             navigate(`/event/${params.eventId}`);
           } else {
             // Hard validation failure (e.g. KTP domicile block): surface it inline instead of a
-            // blocking alert() — the buyer stays on the payment step and can fix their data.
+            // toast — the buyer stays on the payment step and can fix their data.
             setBlockingError(message);
           }
         } finally {
@@ -421,7 +495,7 @@ export function useCheckoutSteps(
         navigate("/event");
         break;
     }
-  }, [currentStep, event.id, buyerInfo, baseSummary, paymentSummary, validateForm, searchParams, setSearchParams, confirmOrder, navigate, selectedPaymentMethod, isStep2Valid, lockId, isManualTransferPayment, manualTransferProofFile, ensureCheckoutSessionActive, clearCheckoutStorage, params.eventId, getActiveLockId, exceedsTicketLimit, redirectForTicketLimit, setDeadlineFromRemainingSeconds]);
+  }, [currentStep, event.id, buyerInfo, baseSummary, paymentSummary, validateForm, searchParams, setSearchParams, confirmOrder, navigate, selectedPaymentMethod, canProceedToPayment, holders, lockId, isManualTransferPayment, manualTransferProofFile, ensureCheckoutSessionActive, clearCheckoutStorage, params.eventId, exceedsTicketLimit, redirectForTicketLimit, setDeadlineFromTtl, expireCheckoutSession, selection.appliedPromo?.code, selection.bankCode, warningToast, errorToast]);
 
   const handleBack = useCallback(() => {
     if (currentStep === 1) {
@@ -486,9 +560,10 @@ export function useCheckoutSteps(
     handlePaymentConfirmed,
     paymentSelection: selection,
     selectedPaymentMethod,
-    isStep2Valid,
+    canProceedToPayment,
     handlePaymentMethodSelect,
     setMethodId,
+    setBankCode,
     setAgreedToTerms,
     setAgreedToPrivacy,
     applyPromo,

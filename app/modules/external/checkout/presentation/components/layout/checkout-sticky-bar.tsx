@@ -27,7 +27,7 @@ export function CheckoutStickyBar({
   orderMethodId,
 }: CheckoutStickyBarProps) {
   const getButtonLabel = () => {
-    if (currentStep === 3) return "Bayar Sekarang";
+    if (currentStep === 1) return "Lanjut ke Pembayaran";
     if (currentStep === 4) {
       const isManualTransfer = orderMethodId === "manual" || orderMethodId === "manual_transfer";
       return orderCategory === "BANK_TRANSFER" && isManualTransfer ? "Upload Bukti" : "Bayar Sekarang";
@@ -37,13 +37,16 @@ export function CheckoutStickyBar({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[100] lg:hidden animate-in slide-in-from-bottom duration-500">
-      {/* Timer - Full width and attached to the bar */}
-      <div className="w-full bg-white border-t border-gray-100">
-          <CountdownTimer 
-            onExpire={onExpire}
-            className="!py-3 !px-6 !rounded-none !shadow-none border-x-0 border-t-0 border-b border-gray-50" 
-          />
-      </div>
+      {/* Timer - only once the buyer has reached the payment step (no visible countdown
+          while filling in data + picking a payment method). */}
+      {currentStep === 4 && (
+        <div className="w-full bg-white border-t border-gray-100">
+            <CountdownTimer
+              onExpire={onExpire}
+              className="!py-3 !px-6 !rounded-none !shadow-none border-x-0 border-t-0 border-b border-gray-50"
+            />
+        </div>
+      )}
 
       {/* Main Sticky Bar */}
       <div className="bg-white border-t border-gray-100 shadow-[0_-10px_40px_rgba(0,0,0,0.08)] px-5 py-4 pb-8 flex items-center justify-between gap-4">
@@ -61,7 +64,7 @@ export function CheckoutStickyBar({
         <div className="flex items-center gap-2">
           <button
             onClick={onBack}
-            className="p-4 border-2 border-gray-100 rounded-2xl bg-gray-50/50 hover:bg-gray-100 transition-all active:scale-95"
+            className="p-4 border-2 border-gray-100 rounded-2xl bg-gray-50/50 hover:bg-gray-100 transition-all active:scale-95 cursor-pointer"
           >
             <svg className="h-5 w-5 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />

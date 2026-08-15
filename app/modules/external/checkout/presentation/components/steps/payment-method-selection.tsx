@@ -2,10 +2,20 @@ import { useState } from "react";
 import { Card } from "~/core/design-system/components";
 import type { PaymentMethod, PaymentCategory } from "../../../domain/checkout.types";
 
+/** Banks offered for a direct Virtual Account payment — matches XenditService's supported bank_code values. */
+const VA_BANKS = [
+  { code: "BCA", name: "BCA" },
+  { code: "BNI", name: "BNI" },
+  { code: "BRI", name: "BRI" },
+  { code: "MANDIRI", name: "Mandiri" },
+];
+
 export interface PaymentMethodSelectionProps {
   methods: PaymentMethod[];
   selectedMethodId: string | null;
   onSelect: (methodId: string) => void;
+  selectedBankCode?: string | null;
+  onSelectBank?: (bankCode: string) => void;
   className?: string;
 }
 
@@ -13,6 +23,8 @@ export function PaymentMethodSelection({
   methods,
   selectedMethodId,
   onSelect,
+  selectedBankCode,
+  onSelectBank,
   className = "",
 }: PaymentMethodSelectionProps) {
   const [expandedCategory, setExpandedCategory] = useState<PaymentCategory | null>("BANK_TRANSFER");
@@ -28,9 +40,9 @@ export function PaymentMethodSelection({
     <div className={`space-y-4 ${className}`}>
       {/* Bank Transfer Section */}
       <Card className="overflow-hidden border-gray-100 rounded-3xl shadow-sm bg-white">
-        <button 
+        <button
           onClick={() => toggleCategory("BANK_TRANSFER")}
-          className="w-full p-8 flex items-center justify-between hover:bg-gray-50/50 transition-colors text-left"
+          className="w-full p-8 flex items-center justify-between hover:bg-gray-50/50 transition-colors text-left cursor-pointer"
         >
           <div className="flex items-center gap-4">
             <div className="p-3 bg-gray-50 rounded-2xl border border-gray-100">
@@ -59,7 +71,7 @@ export function PaymentMethodSelection({
               <button
                 key={method.id}
                 onClick={() => onSelect(method.id)}
-                className={`relative flex items-center justify-center p-6 rounded-2xl border-2 transition-all h-24 ${
+                className={`relative flex items-center justify-center p-6 rounded-2xl border-2 transition-all h-24 cursor-pointer ${
                   selectedMethodId === method.id
                     ? "border-brand-primary bg-brand-primary/[0.04] ring-1 ring-brand-primary/20"
                     : "border-gray-200 hover:border-gray-400 bg-white"
@@ -80,15 +92,41 @@ export function PaymentMethodSelection({
               </button>
             ))}
             </div>
+
+            {selectedMethodId === "va" && (
+              <div className="px-8 pb-8 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                <p className="text-xs font-black text-text-tertiary uppercase tracking-widest">
+                  Pilih Bank
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {VA_BANKS.map((bank) => (
+                    <button
+                      key={bank.code}
+                      type="button"
+                      onClick={() => onSelectBank?.(bank.code)}
+                      className={`relative flex items-center justify-center p-4 rounded-xl border-2 transition-all h-16 cursor-pointer ${
+                        selectedBankCode === bank.code
+                          ? "border-brand-primary bg-brand-primary/[0.04] ring-1 ring-brand-primary/20"
+                          : "border-gray-200 hover:border-gray-400 bg-white"
+                      }`}
+                    >
+                      <span className={`text-sm font-black uppercase tracking-tighter ${selectedBankCode === bank.code ? "text-brand-primary" : "text-text-primary"}`}>
+                        {bank.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             </div>
             </Card>
 
 
       {/* E-Wallet / QRIS Section */}
       <Card className="overflow-hidden border-gray-100 rounded-3xl shadow-sm bg-white">
-        <button 
+        <button
           onClick={() => toggleCategory("E_WALLET_QRIS")}
-          className="w-full p-8 flex items-center justify-between hover:bg-gray-50/50 transition-colors text-left"
+          className="w-full p-8 flex items-center justify-between hover:bg-gray-50/50 transition-colors text-left cursor-pointer"
         >
           <div className="flex items-center gap-4">
             <div className="p-3 bg-gray-50 rounded-2xl border border-gray-200">
@@ -118,7 +156,7 @@ export function PaymentMethodSelection({
                   <button
                     key={method.id}
                     onClick={() => onSelect(method.id)}
-                    className={`relative px-6 py-3 rounded-xl border-2 transition-all font-black text-xs uppercase tracking-widest ${
+                    className={`relative px-6 py-3 rounded-xl border-2 transition-all font-black text-xs uppercase tracking-widest cursor-pointer ${
                       selectedMethodId === method.id
                         ? "border-brand-primary bg-brand-primary/5 text-brand-primary ring-1 ring-brand-primary/10"
                         : "border-gray-200 bg-white text-text-secondary hover:border-gray-400"

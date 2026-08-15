@@ -30,6 +30,7 @@ export interface EventSummary extends AuditableEntity {
   location?: string;
   time?: string;
   status?: "draft" | "published" | "completed" | "cancelled";
+  isFeatured?: boolean;
 }
 
 /** Ticket */

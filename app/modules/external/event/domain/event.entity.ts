@@ -18,6 +18,7 @@ export interface Event {
   date: string;
   location: string;
   minPrice?: number;
+  isFeatured?: boolean;
   time?: string;
   tickets: EventTicket[];
   terms?: string[];

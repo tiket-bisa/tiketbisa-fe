@@ -82,6 +82,10 @@ export default [
       "modules/admin/analytics/presentation/analytics.page.tsx",
     ),
     route(
+      "internal-tb/admin/promos",
+      "modules/admin/promos/presentation/promos.page.tsx",
+    ),
+    route(
       "internal-tb/admin/scan",
       "modules/admin/scan/presentation/scan.page.tsx",
     ),

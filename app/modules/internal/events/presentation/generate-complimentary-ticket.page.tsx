@@ -7,6 +7,7 @@ import { internalEventApi, normalizeInternalEvent } from "~/core/api/services/in
 import { useApiQuery } from "~/core/api";
 import { useAuth } from "~/core/auth";
 import { formatIDR } from "~/core/utils";
+import { normalizeIndonesianPhone } from "~/modules/external/checkout/domain/phone";
 
 interface GeneratedTicketRow extends IssuedTicketDetail {
   categoryName: string;
@@ -95,6 +96,16 @@ export default function GenerateComplimentaryTicketPage() {
       setErrorMsg("Jumlah tiket minimal 1.");
       return;
     }
+    const selectedCategory = categories.find((category) => category.id === formData.categoryId);
+    if (selectedCategory && quantity > selectedCategory.available) {
+      setErrorMsg(`Jumlah melebihi sisa stok kategori (${selectedCategory.available}).`);
+      return;
+    }
+    const normalizedPhone = normalizeIndonesianPhone(formData.customerPhone);
+    if (!normalizedPhone) {
+      setErrorMsg("Nomor HP harus menggunakan format 08… atau +628…");
+      return;
+    }
 
     setLoading(true);
     setErrorMsg(null);
@@ -107,7 +118,7 @@ export default function GenerateComplimentaryTicketPage() {
         eventId,
         customerName: formData.customerName.trim(),
         customerEmail: formData.customerEmail.trim(),
-        customerPhone: formData.customerPhone.trim(),
+        customerPhone: normalizedPhone,
         paymentMethod: "COMPLIMENTARY",
         codeType: formData.codeType,
         tickets: [{ categoryId: formData.categoryId, quantity }],

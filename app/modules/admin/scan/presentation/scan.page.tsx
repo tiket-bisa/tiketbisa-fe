@@ -3,10 +3,8 @@ import { Link } from "react-router";
 import { Card, Tabs, Badge, Button } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
 import { useApiQuery } from "~/core/api";
-import { eventApi, mapEventApiToFe } from "~/core/api/services/event.api";
-import { brandApi, mapBrandApiToFe } from "~/core/api/services/brand.api";
-import { ticketCategoryApi, aggregateTicketDashboard } from "~/core/api/services/ticket-category.api";
 import type { TicketDashboardSummary } from "~/core/types";
+import { analyticsApi } from "~/modules/internal/analytics/analytics.api";
 import { ScanSection, QrGeneratorSection } from "~/modules/internal/ticket-scanning/presentation/components";
 import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 
@@ -14,36 +12,15 @@ import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 export default function AdminScanPage() {
   const { data: ticketDashboard, loading, error, refetch } = useApiQuery(
     async () => {
-      // 1. Fetch brands
-      const brandsRes = await brandApi.getList({ limit: 100, offset: 0 });
-      const brandsMap = new Map<string, { name: string; slug: string }>();
-      if (brandsRes.success && brandsRes.data) {
-        for (const b of brandsRes.data.brands ?? []) {
-          const fe = mapBrandApiToFe(b);
-          brandsMap.set(b.id, { name: fe.name, slug: fe.slug });
-        }
-      }
-
-      // 2. Fetch events
-      const eventsRes = await eventApi.getList({ limit: 100, offset: 0 });
-      if (!eventsRes.success || !eventsRes.data) return [] as TicketDashboardSummary[];
-
-      const events = eventsRes.data.events ?? [];
-
-      // 3. Fetch ticket categories in parallel and aggregate
-      const summaries = await Promise.all(events.map(async (evt) => {
-        const brand = brandsMap.get(evt.brand_id);
-        const catRes = await ticketCategoryApi.getByEvent(evt.id);
-        if (catRes.success && catRes.data) {
-          const categories = Array.isArray(catRes.data) ? catRes.data : [];
-          if (categories.length > 0) {
-            return aggregateTicketDashboard(evt.id, evt.name, categories, brand?.slug);
-          }
-        }
-        return null;
+      const summaries = await analyticsApi.getTicketScanningDashboard();
+      return summaries.map((summary): TicketDashboardSummary => ({
+        event_id: summary.eventId,
+        event_name: summary.eventName,
+        total_tickets: Number(summary.totalTickets || 0),
+        available_tickets: Number(summary.availableTickets || 0),
+        sold_tickets: Number(summary.soldTickets || 0),
+        checked_in_tickets: Number(summary.checkedInTickets || 0),
       }));
-
-      return summaries.filter((summary): summary is TicketDashboardSummary => summary !== null);
     },
     [],
   );

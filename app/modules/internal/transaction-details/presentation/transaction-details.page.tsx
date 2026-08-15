@@ -1,11 +1,12 @@
 import { useCallback, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { Badge, Button, Card } from "~/core/design-system/components";
+import { Badge, Button, Card, useToast } from "~/core/design-system/components";
 import { useApiQuery } from "~/core/api";
 import { transactionApi } from "~/core/api/services/transaction.api";
 import { formatIDR } from "~/core/utils";
 import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 import { TicketDeliveryActions } from "~/modules/internal/ticket-delivery/presentation/ticket-delivery-actions";
+import { PaymentProofActions } from "~/modules/internal/common/presentation/payment-proof-actions";
 
 const STATUS_MAP: Record<string, { label: string; variant: "success" | "warning" | "destructive" | "default" }> = {
   WAITING_PAYMENT: { label: "Menunggu Pembayaran", variant: "warning" },
@@ -17,21 +18,12 @@ const STATUS_MAP: Record<string, { label: string; variant: "success" | "warning"
   EXPIRED: { label: "Expired", variant: "destructive" },
 };
 
-function base64ToBlob(base64: string, mimeType: string): Blob {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i += 1) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return new Blob([bytes], { type: mimeType });
-}
-
 /** Partner — Transaction Details (only shows partner-accessible transactions) */
 export default function TransactionDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [isReviewLoading, setIsReviewLoading] = useState(false);
-  const [isProofLoading, setIsProofLoading] = useState(false);
+  const { error: errorToast } = useToast();
   const returnTo = "/internal-tb/partner";
 
   const { data: detail, loading, refetch } = useApiQuery(
@@ -91,72 +83,9 @@ export default function TransactionDetailsPage() {
       }
       navigate(returnTo, { replace: true });
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Gagal memproses approval");
+      errorToast(error instanceof Error ? error.message : "Gagal memproses approval");
     } finally {
       setIsReviewLoading(false);
-    }
-  };
-
-  const handleOpenProof = async (download: boolean) => {
-    if (!id) return;
-    setIsProofLoading(true);
-    try {
-      const response = await transactionApi.getPaymentProof(id);
-      if (!response.success || !response.data) {
-        throw new Error(response.error ?? "Bukti transfer tidak ditemukan");
-      }
-
-      const file = response.data;
-
-      if (file.signedUrl) {
-        if (download) {
-          const downloadResponse = await transactionApi.downloadPaymentProof(id);
-          if (!downloadResponse.success || !downloadResponse.data) {
-            throw new Error(downloadResponse.error ?? "Gagal download bukti transfer");
-          }
-
-          const url = URL.createObjectURL(downloadResponse.data.blob);
-          const anchor = document.createElement("a");
-          anchor.href = url;
-          anchor.download = downloadResponse.data.fileName || `payment-proof-${id}`;
-          document.body.appendChild(anchor);
-          anchor.click();
-          anchor.remove();
-          setTimeout(() => URL.revokeObjectURL(url), 60_000);
-        } else {
-          const anchor = document.createElement("a");
-          anchor.href = file.signedUrl;
-          anchor.target = "_blank";
-          anchor.rel = "noopener noreferrer";
-          document.body.appendChild(anchor);
-          anchor.click();
-          anchor.remove();
-        }
-        return;
-      }
-
-      if (!file.base64Content) {
-        throw new Error("Bukti transfer tidak tersedia");
-      }
-
-      const blob = base64ToBlob(file.base64Content, file.mimeType || "application/octet-stream");
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.target = "_blank";
-      anchor.rel = "noopener noreferrer";
-      if (download) {
-        anchor.download = file.fileName || `payment-proof-${id}`;
-      }
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "Gagal membuka bukti transfer");
-    } finally {
-      setIsProofLoading(false);
     }
   };
 
@@ -253,22 +182,7 @@ export default function TransactionDetailsPage() {
               <span className="material-symbols-outlined text-brand-primary">upload_file</span>
               Bukti Transfer
             </h2>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                variant="secondary"
-                onClick={() => handleOpenProof(false)}
-                isLoading={isProofLoading}
-              >
-                Buka Bukti Transfer
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => handleOpenProof(true)}
-                isLoading={isProofLoading}
-              >
-                Download Bukti Transfer
-              </Button>
-            </div>
+            <PaymentProofActions transactionId={tx.id} />
           </Card>
         )}
 

@@ -2,6 +2,8 @@ import { internalHttpClient } from "~/core/api";
 
 export interface PartnerTicketIngestRequest {
   brand_id: string;
+  event_id: string;
+  ticket_category_id: string;
   partner: string;
   codes: string[];
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, Badge, Button } from "~/core/design-system/components";
 import { useQrScanner } from "../hooks/use-qr-scanner";
 import { useScanFlow } from "../hooks/use-scan-flow";
@@ -25,10 +25,10 @@ const CHECKIN_STATUS_MAP: Record<
 
 interface ScanSectionProps {
   /** Restrict the category picker to a single brand (partner/scanner). Omit for admin. */
-  brandSlug?: string;
+  brandId?: string;
 }
 
-export function ScanSection({ brandSlug }: ScanSectionProps) {
+export function ScanSection({ brandId }: ScanSectionProps) {
   const [category, setCategory] = useState<SelectedCategory | null>(null);
   const {
     validateResult,
@@ -39,7 +39,7 @@ export function ScanSection({ brandSlug }: ScanSectionProps) {
     handleScan,
     confirmCheckIn,
     clearResult,
-  } = useScanFlow(category?.categoryId);
+  } = useScanFlow(category?.eventId, category?.categoryId);
 
   const {
     cameras,
@@ -59,6 +59,14 @@ export function ScanSection({ brandSlug }: ScanSectionProps) {
   const [manualCode, setManualCode] = useState("");
   const backgroundClass = getScanBackgroundClass(validateResult, checkInResult, error);
 
+  // Freeze the scanner after the first result so the same camera frame cannot immediately replace
+  // VALID/SUCCESS with another scan. The operator explicitly closes the result before continuing.
+  useEffect(() => {
+    if (validateResult && isScanning) {
+      void stopScanning();
+    }
+  }, [isScanning, stopScanning, validateResult]);
+
   const handleManualSubmit = () => {
     const code = manualCode.trim();
     if (!code) return;
@@ -69,7 +77,7 @@ export function ScanSection({ brandSlug }: ScanSectionProps) {
   return (
     <div className={`space-y-6 rounded-2xl p-3 transition-colors duration-300 ${backgroundClass}`}>
       {/* Category scope gate */}
-      <CategoryPicker brandSlug={brandSlug} selected={category} onChange={setCategory} />
+      <CategoryPicker brandId={brandId} selected={category} onChange={setCategory} />
 
       {!category && (
         <Card padding="md">
@@ -268,7 +276,7 @@ function ScanResultCard({
             {isPartnerSourced && validateResult.partner && (
               <ScanDetail label="Partner" value={validateResult.partner} />
             )}
-            {!isPartnerSourced && validateResult.ticketCategoryName && (
+            {validateResult.ticketCategoryName && (
               <ScanDetail label="Kategori" value={validateResult.ticketCategoryName} />
             )}
             {validateResult.checkInTime && (

@@ -14,24 +14,24 @@ export interface CountdownTimerProps {
   deadlineTimestamp?: number | null;
 }
 
-export function CountdownTimer({ initialMinutes = 15, onExpire, className = "", deadlineTimestamp }: CountdownTimerProps) {
+export function CountdownTimer({ onExpire, className = "", deadlineTimestamp }: CountdownTimerProps) {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    let deadline: string;
+    let deadline: string | null;
     if (deadlineTimestamp != null) {
       deadline = String(deadlineTimestamp);
     } else {
-      const stored = sessionStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        deadline = stored;
-      } else {
-        const newDeadline = Date.now() + initialMinutes * 60 * 1000;
-        sessionStorage.setItem(STORAGE_KEY, newDeadline.toString());
-        deadline = newDeadline.toString();
-      }
+      deadline = sessionStorage.getItem(STORAGE_KEY);
+    }
+
+    // A missing deadline means the backend has not confirmed an active payment window yet.
+    // Never invent a browser-local timer: refreshes and copied URLs must first resync from the API.
+    if (!deadline) {
+      setTimeLeft(null);
+      return;
     }
 
     const calculateTimeLeft = () => {
@@ -54,7 +54,7 @@ export function CountdownTimer({ initialMinutes = 15, onExpire, className = "", 
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [initialMinutes, onExpire, deadlineTimestamp]);
+  }, [onExpire, deadlineTimestamp]);
 
   if (timeLeft === null) return null;
 

@@ -4,7 +4,7 @@ import type { Event } from "../domain/event.entity";
 import type { EventRepository } from "../domain/event.repository";
 import type { EventFilterParams } from "./event-filter.params";
 import type { EventDto, EventImageDto } from "./event.dto";
-import { mapEventDtoToEntity } from "./event.mapper";
+import { mapEventDtoToEntity, formatEventTimeRange } from "./event.mapper";
 
 interface EventListResponseData {
   limit: number;
@@ -93,6 +93,7 @@ export const eventApi: EventRepository = {
     if (params.city) queryParams.append("city", params.city);
     if (params.brand_id) queryParams.append("brandId", params.brand_id);
     if (params.status) queryParams.append("status", params.status);
+    if (params.is_featured !== undefined) queryParams.append("isFeatured", String(params.is_featured));
     if (params.category) queryParams.append("category", params.category);
     if (params.start_date) queryParams.append("startDate", params.start_date);
     if (params.end_date) queryParams.append("endDate", params.end_date);
@@ -177,7 +178,10 @@ export const eventApi: EventRepository = {
       brandAdminFee: brandDetails.adminFee,
       imageUrl: galleryImages[0] ?? baseEvent.imageUrl,
       galleryImages,
-      time: "19:00 - Selesai",
+      time: formatEventTimeRange(
+        eventResponse.data.startDate ?? eventResponse.data.start_date ?? "",
+        eventResponse.data.endDate ?? eventResponse.data.end_date,
+      ),
       terms: termsText
         ? termsText.split("\n")
         : [

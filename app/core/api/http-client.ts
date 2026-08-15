@@ -100,12 +100,13 @@ async function request<T>(
 
     const json = await response.json();
 
-    // Auto-logout on 401/403 for internal API requests (e.g. expired Google token)
+    // Only authentication failures invalidate the session. A 403 is a scoped authorization
+    // failure and must remain visible on the current page instead of logging the operator out.
     // Skip token endpoints to avoid redirect loops during login/refresh flows
     if (
       isInternalRequest &&
       !json.success &&
-      (json.status_code === 401 || json.status_code === 403) &&
+      json.status_code === 401 &&
       !path.includes("/token/request") &&
       !path.includes("/token/refresh") &&
       !path.includes("/user/me")

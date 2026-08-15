@@ -1,4 +1,5 @@
 import { Button } from "~/core/design-system/components";
+import { TicketRow } from "~/shared/components";
 import { formatIDR } from "~/core/utils";
 import { MAX_TICKETS_PER_TRANSACTION } from "~/shared/constants/transaction";
 import type { Event } from "../../domain/event.entity";
@@ -8,16 +9,21 @@ interface EventDetailSidebarProps {
   totalPrice?: number;
   totalItems?: number;
   onCheckout?: () => void;
+  quantities: Record<string, number>;
+  onQuantityChange: (id: string, qty: number) => void;
 }
 
 /**
- * Sidebar component for Event Detail page.
+ * Sidebar component for Event Detail page — event info, ticket category picker,
+ * and checkout CTA all in one sticky card so it stays visible while scrolling.
  */
 export function EventDetailSidebar({
   event,
   totalPrice = 0,
   totalItems = 0,
   onCheckout,
+  quantities,
+  onQuantityChange,
 }: EventDetailSidebarProps) {
   const hasSelectedTickets = totalPrice > 0;
 
@@ -29,12 +35,12 @@ export function EventDetailSidebar({
 
   return (
     <aside className="lg:col-span-1">
-      <div className="sticky top-24 rounded-2xl border border-border-default bg-surface-alt p-8 space-y-8">
-        <h2 className="text-2xl font-extrabold text-text-primary leading-tight">
+      <div className="sticky top-20 rounded-2xl border border-border-default bg-surface-alt p-6 space-y-6">
+        <h2 className="text-lg font-extrabold text-text-primary leading-tight">
           {event.name}
         </h2>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           <SidebarInfo
             icon="location_on"
             label="Lokasi"
@@ -53,8 +59,22 @@ export function EventDetailSidebar({
           />
         </div>
 
-        <div className="pt-6 border-t border-border-default">
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+        <div className="pt-4 border-t border-border-default space-y-3">
+          <h3 className="text-sm font-bold text-text-primary">Kategori Tiket</h3>
+          <div className="max-h-72 overflow-y-auto pr-1 space-y-3">
+            {event.tickets.map((ticket) => (
+              <TicketRow
+                key={ticket.id}
+                ticket={ticket}
+                quantity={quantities[ticket.id] || 0}
+                onQuantityChange={onQuantityChange}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-border-default">
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
             <div className="space-y-2">
               <PriceDisplay
                 isTotal={hasSelectedTickets}
@@ -69,7 +89,7 @@ export function EventDetailSidebar({
             {hasSelectedTickets && (
               <div className="hidden lg:block animate-in fade-in slide-in-from-right-4 duration-300">
                 <Button
-                  className="px-8 py-4 text-base font-bold whitespace-nowrap shadow-none border-2 border-brand-primary hover:border-brand-primary-hover"
+                  className="px-6 py-3 text-sm font-bold whitespace-nowrap shadow-none border-2 border-brand-primary hover:border-brand-primary-hover"
                   onClick={onCheckout}
                   variant="primary"
                 >
@@ -134,7 +154,7 @@ function PriceDisplay({ isTotal, amount }: { isTotal: boolean; amount: number })
   return (
     <div className="flex flex-col gap-1">
       <p className="text-sm text-text-tertiary font-medium">{label}</p>
-      <p className="text-2xl xl:text-3xl font-black text-brand-primary tracking-tight">
+      <p className="text-xl xl:text-2xl font-black text-brand-primary tracking-tight">
         {formatIDR(amount)}
       </p>
     </div>

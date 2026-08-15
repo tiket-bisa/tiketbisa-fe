@@ -1,6 +1,8 @@
 import { ScanSection } from "~/modules/internal/ticket-scanning/presentation/components/scan-section";
+import { useAuth } from "~/core/auth";
 
 export default function ScannerScanPage() {
+  const { user } = useAuth();
   return (
     <div className="space-y-6">
       <div>
@@ -9,7 +11,7 @@ export default function ScannerScanPage() {
           Gunakan kamera atau unggah QR/barcode untuk melakukan check-in tiket.
         </p>
       </div>
-      <ScanSection />
+      <ScanSection brandId={user?.brand_id} />
     </div>
   );
 }

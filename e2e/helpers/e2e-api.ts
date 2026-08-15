@@ -4,6 +4,7 @@ import {
   E2E_ADMIN_EMAIL,
   E2E_PARTNER_EMAIL,
   E2E_INTERNAL_TOKEN,
+  E2E_SEED_EMAIL,
 } from "./e2e-env";
 
 interface ApiError {
@@ -153,7 +154,7 @@ export async function seedE2eData(request: APIRequestContext): Promise<E2eSeedRe
       email: buyerEmail,
       phone: "081234567890",
       identityType: "KTP",
-      identityNumber: `ID${seedSuffix}`,
+      identityNumber: "6271010101010001",
     },
   };
 }
@@ -192,7 +193,7 @@ async function seedRoles(
   payload: { adminEmail?: string; partnerEmail?: string; brandId?: string },
 ): Promise<void> {
   await requestJson<Record<string, unknown>>(request, "post", "/internal-tb/e2e/seed", {
-    headers: buildInternalHeaders(payload.adminEmail || payload.partnerEmail || "e2e@tiketbisa.local"),
+    headers: buildInternalHeaders(E2E_SEED_EMAIL),
     data: payload,
   });
 }
