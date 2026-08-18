@@ -3,6 +3,8 @@ import type { CompleteOrderResponse } from "../../../infrastructure/order.api";
 import type { Event } from "../../../../event/domain/event.entity";
 import { CheckoutComingSoon } from "./checkout-coming-soon";
 import { OrderEmailNotice } from "../shared/checkout-extras";
+import { useTicketArchiveActions } from "../../hooks/use-ticket-archive-actions";
+import { getTicketCategoryName } from "./order-success.utils";
 
 interface OrderSuccessProps {
   event: Event;
@@ -11,6 +13,9 @@ interface OrderSuccessProps {
 }
 
 export function OrderSuccess({ event, order, onAction }: OrderSuccessProps) {
+  const ticketCode = order?.tickets.find((ticket) => ticket.status?.toUpperCase() === "ISSUED")?.code;
+  const { activeAction, download, share } = useTicketArchiveActions(order?.transactionId ?? "", ticketCode);
+
   if (!order) return <CheckoutComingSoon />;
 
   return (
@@ -54,7 +59,9 @@ export function OrderSuccess({ event, order, onAction }: OrderSuccessProps) {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <div className="text-[10px] font-black text-text-tertiary uppercase tracking-widest mb-1">KATEGORI</div>
-                          <div className="text-sm font-black text-text-primary">Tiket #{index + 1}</div>
+                          <div className="text-sm font-black text-text-primary">
+                            {getTicketCategoryName(event.tickets, ticket.categoryId)}
+                          </div>
                         </div>
                         <div>
                           <div className="text-[10px] font-black text-text-tertiary uppercase tracking-widest mb-1">STATUS</div>
@@ -69,17 +76,28 @@ export function OrderSuccess({ event, order, onAction }: OrderSuccessProps) {
              </div>
 
              <div className="mt-8 flex flex-col sm:flex-row gap-3">
-               <Button className="flex-1 rounded-2xl py-6 font-black gap-2">
+               <Button
+                 type="button"
+                 onClick={download}
+                 disabled={activeAction !== null || !ticketCode}
+                 className="flex-1 rounded-2xl py-6 font-black gap-2"
+               >
                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                  </svg>
-                 Unduh Semua Tiket
+                 {activeAction === "download" ? "Menyiapkan Tiket..." : "Unduh Semua Tiket"}
                </Button>
-               <Button variant="secondary" className="flex-1 rounded-2xl py-6 font-black gap-2 border-gray-200">
+               <Button
+                 type="button"
+                 variant="secondary"
+                 onClick={share}
+                 disabled={activeAction !== null || !ticketCode}
+                 className="flex-1 rounded-2xl py-6 font-black gap-2 border-gray-200"
+               >
                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                  </svg>
-                 Bagikan
+                 {activeAction === "share" ? "Menyiapkan Tiket..." : "Bagikan"}
                </Button>
              </div>
           </Card>
@@ -112,9 +130,9 @@ export function OrderSuccess({ event, order, onAction }: OrderSuccessProps) {
           <Card className="p-8 border-gray-100 shadow-sm rounded-3xl bg-white">
             <h3 className="text-xs font-black text-text-tertiary mb-6 uppercase tracking-[0.2em]">Detail Transaksi</h3>
             <div className="space-y-6">
-              <div className="flex justify-between items-center pb-6 border-b border-gray-100">
+              <div className="flex flex-col gap-2 pb-6 border-b border-gray-100">
                 <div className="text-xs font-bold text-text-secondary">ID Transaksi</div>
-                <div className="text-sm font-mono font-bold text-text-primary">{order.transactionId.substring(0, 8)}...</div>
+                <div className="break-all text-sm font-mono font-bold text-text-primary">{order.transactionId}</div>
               </div>
               
               <div className="space-y-4">
