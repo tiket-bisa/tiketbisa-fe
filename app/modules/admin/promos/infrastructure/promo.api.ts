@@ -16,6 +16,11 @@ export interface PromoData {
   recordFlag?: number;
 }
 
+export type PromoUpsertPayload = Pick<
+  PromoData,
+  "code" | "brandId" | "type" | "value" | "maxDiscount" | "quota" | "startsAt" | "endsAt"
+>;
+
 interface PromoListResponse {
   promos: PromoData[];
   totalCount?: number;
@@ -28,7 +33,7 @@ export const promoAdminApi = {
     if (!response.success || !response.data) throw new Error(response.error || "Gagal memuat promo");
     return response.data.promos ?? [];
   },
-  create: (data: PromoData) => internalHttpClient.post<PromoData>("/promo", data),
-  update: (id: string, data: PromoData) => internalHttpClient.put<PromoData>(`/promo/${id}`, data),
+  create: (data: PromoUpsertPayload) => internalHttpClient.post<PromoData>("/promo", data),
+  update: (id: string, data: PromoUpsertPayload) => internalHttpClient.put<PromoData>(`/promo/${id}`, data),
   deactivate: (id: string) => internalHttpClient.delete<null>(`/promo/${id}`),
 };
