@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
-import { Card } from "~/core/design-system/components";
+import { Card, useToast } from "~/core/design-system/components";
 import { MAX_TICKETS_PER_ORDER } from "../domain/checkout.types";
 import {
   OrderDetailsForm,
@@ -50,6 +50,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
   const { event, paymentMethods, order } = loaderData;
   const [searchParams] = useSearchParams();
+  const { warning: warningToast } = useToast();
 
   // Application/Domain hooks
   const paymentSelectionState = usePaymentSelection();
@@ -77,6 +78,10 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
     syncHolderCount(totalTicketQuantity);
   }, [totalTicketQuantity, syncHolderCount]);
 
+  // Validation must use the quantity selected in the URL as its source of truth. After a
+  // refresh, holder state is restored/sized in an effect and can briefly still be empty.
+  const validateCheckoutForm = () => validate(totalTicketQuantity);
+
   // Steps orchestration hook (now managing payment state too)
   const {
     currentStep,
@@ -91,7 +96,6 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
     isManualTransferPending,
     manualTransferProofFile,
     setManualTransferProofFile,
-    canProceedToPayment,
     handlePaymentMethodSelect,
     setBankCode,
     setAgreedToTerms,
@@ -100,7 +104,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
     removePromo,
     blockingError,
     clearBlockingError
-  } = useCheckoutSteps(event, buyerInfo, summary, validate, paymentMethods, order, paymentSelectionState, holders);
+  } = useCheckoutSteps(event, buyerInfo, summary, validateCheckoutForm, paymentMethods, order, paymentSelectionState, holders);
 
   // Confirmation modals: submitting step 1 locks the reservation and starts the payment
   // timer, and cancelling from the payment step releases that lock - both are consequential
@@ -108,10 +112,65 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
   const [showProceedConfirm, setShowProceedConfirm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
-  const requestProceedToPayment = () => setShowProceedConfirm(true);
+  const revealElement = (element: HTMLElement | null) => {
+    if (!element) return;
+
+    let hasFocused = false;
+    const focusAfterScroll = () => {
+      if (hasFocused) return;
+      hasFocused = true;
+      window.removeEventListener("scrollend", focusAfterScroll);
+      element.focus({ preventScroll: true });
+    };
+
+    window.addEventListener("scrollend", focusAfterScroll, { once: true });
+    element.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(focusAfterScroll, 700);
+  };
+
+  const validateBeforeProceed = (): boolean => {
+    const validation = validateCheckoutForm();
+    if (!validation.isValid) {
+      warningToast(
+        validation.errorCount === 1
+          ? "Periksa kembali 1 data yang belum benar."
+          : `Periksa kembali ${validation.errorCount} data yang belum benar.`,
+      );
+      if (validation.firstInvalidFieldId) {
+        const firstInvalidFieldId = validation.firstInvalidFieldId;
+        requestAnimationFrame(() => {
+          revealElement(document.getElementById(firstInvalidFieldId));
+        });
+      }
+      return false;
+    }
+    if (!selectedPaymentMethod) {
+      warningToast("Pilih metode pembayaran terlebih dahulu.");
+      requestAnimationFrame(() => revealElement(document.getElementById("payment-method-section")));
+      return false;
+    }
+    if (!paymentSelection.agreedToTerms || !paymentSelection.agreedToPrivacy) {
+      warningToast("Setujui syarat dan kebijakan privasi terlebih dahulu.");
+      requestAnimationFrame(() => {
+        const consent = Array.from(
+          document.querySelectorAll<HTMLElement>("[data-checkout-consent]"),
+        ).find((element) => element.offsetParent !== null);
+        revealElement(consent ?? null);
+      });
+      return false;
+    }
+    return true;
+  };
+
+  const requestProceedToPayment = () => {
+    setShowProceedConfirm(true);
+  };
+
   const confirmProceedToPayment = () => {
     setShowProceedConfirm(false);
-    handleNext();
+    requestAnimationFrame(() => {
+      if (validateBeforeProceed()) handleNext();
+    });
   };
 
   const requestCancelOrder = () => setShowCancelConfirm(true);
@@ -222,7 +281,11 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
                 }
               />
 
-              <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150">
+              <div
+                id="payment-method-section"
+                tabIndex={-1}
+                className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150"
+              >
                 <div className="mb-6">
                   <h2 className="text-2xl font-extrabold text-text-primary mb-2">Metode Pembayaran</h2>
                   <p className="text-text-secondary font-medium">
@@ -320,7 +383,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
         isLoading={isActionLoading}
         canSubmit={
           currentStep === 1
-            ? canProceedToPayment
+            ? true
             : currentStep === 4 && (order?.paymentMethod.id === "manual" || order?.paymentMethod.id === "manual_transfer")
               ? !!manualTransferProofFile
               : true

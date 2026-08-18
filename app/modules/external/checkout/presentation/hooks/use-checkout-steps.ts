@@ -5,7 +5,9 @@ import { orderApi, isGatewayPaymentSuccessful } from "../../infrastructure/order
 import type { CheckoutTtl, CompleteOrderResponse } from "../../infrastructure/order.api";
 import { useOrderConfirmation } from "./use-order-confirmation";
 import type { usePaymentSelection } from "./use-payment-selection";
+import type { CheckoutValidationResult } from "./use-checkout-form";
 import { buildPaymentOrderSummary } from "../../domain/checkout.pricing";
+import { canProceedWithPayment } from "../../domain/checkout.validation";
 import { MAX_TICKETS_PER_TRANSACTION } from "~/shared/constants/transaction";
 
 import type { BuyerInfo, OrderSummary, PaymentMethod, OrderResponse, TicketHolder } from "../../domain/checkout.types";
@@ -28,7 +30,7 @@ export function useCheckoutSteps(
   event: EventSummary,
   buyerInfo: BuyerInfo,
   baseSummary: OrderSummary,
-  validateForm: () => boolean,
+  validateForm: () => CheckoutValidationResult,
   paymentMethods: PaymentMethod[],
   existingOrder: OrderResponse | null | undefined,
   paymentSelectionState: ReturnType<typeof usePaymentSelection>,
@@ -73,12 +75,7 @@ export function useCheckoutSteps(
   const isManualTransferPayment = activePaymentMethod?.id === "manual" || activePaymentMethod?.id === "manual_transfer";
 
   /** Payment method chosen + both consents checked — required before submitting the combined data+payment page. */
-  const canProceedToPayment = !!(
-    selection.methodId
-    && selection.agreedToTerms
-    && selection.agreedToPrivacy
-    && (selection.methodId !== "va" || !!selection.bankCode)
-  );
+  const canProceedToPayment = canProceedWithPayment(selection);
   const exceedsTicketLimit = baseSummary.ticketCount > MAX_TICKETS_PER_TRANSACTION;
 
   const handlePaymentMethodSelect = useCallback((methodId: string) => {
@@ -360,7 +357,7 @@ export function useCheckoutSteps(
         // payment method to that lock, and only THEN starts the visible countdown — up to
         // this point the buyer could still be filling in fields without a clock pressuring them.
         setBlockingError(null);
-        if (!validateForm()) break;
+        if (!validateForm().isValid) break;
 
         if (baseSummary.items.length === 0) {
           warningToast("Pilih tiket dulu sebelum lanjut ke pembayaran.");

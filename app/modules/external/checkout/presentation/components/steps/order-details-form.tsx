@@ -137,12 +137,14 @@ function IdentityField({ data, error, onChange }: IdentityFieldProps) {
             inputMode="numeric"
             maxLength={16}
             value={data.identityNumber}
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? "identityNumber-error" : undefined}
             onChange={(e) => onChange("identityNumber", e.target.value.replace(/[^0-9]/g, ""))}
             className={`${inputBaseStyles} ${getFieldBg(data.identityNumber)} ${error ? "border-destructive bg-destructive-bg" : ""}`}
           />
         </div>
       </div>
-      {error && <p className="text-xs font-bold text-destructive-text ml-1 mt-1">{error}</p>}
+      {error && <p id="identityNumber-error" className="text-xs font-bold text-destructive-text ml-1 mt-1">{error}</p>}
     </div>
   );
 }

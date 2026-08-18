@@ -32,6 +32,32 @@ export interface HolderFieldErrors {
   identityNumber?: string;
 }
 
+export interface CheckoutValidationResult {
+  isValid: boolean;
+  errorCount: number;
+  firstInvalidFieldId: string | null;
+}
+
+export function getFirstInvalidFieldId(
+  errors: Partial<Record<keyof BuyerInfo, string>>,
+  holderErrors: HolderFieldErrors[],
+): string | null {
+  const buyerFieldOrder: (keyof BuyerInfo)[] = [
+    "fullName",
+    "email",
+    "phoneNumber",
+    "identityNumber",
+  ];
+  const firstBuyerField = buyerFieldOrder.find((field) => errors[field]);
+  if (firstBuyerField) return firstBuyerField;
+
+  for (let index = 0; index < holderErrors.length; index++) {
+    if (holderErrors[index]?.name) return `holder-${index}-name`;
+    if (holderErrors[index]?.identityNumber) return `holder-${index}-identityNumber`;
+  }
+  return null;
+}
+
 export function useCheckoutForm() {
   const [buyerInfo, setBuyerInfo] = useState<BuyerInfo>(DEFAULT_BUYER_INFO);
   const [holders, setHolders] = useState<TicketHolder[]>([]);
@@ -100,7 +126,7 @@ export function useCheckoutForm() {
     });
   }, []);
 
-  const validate = useCallback((): boolean => {
+  const validate = useCallback((expectedHolderCount = holders.length): CheckoutValidationResult => {
     const newErrors: Partial<Record<keyof BuyerInfo, string>> = {};
 
     if (!buyerInfo.fullName.trim()) {
@@ -130,7 +156,10 @@ export function useCheckoutForm() {
 
     setErrors(newErrors);
 
-    const newHolderErrors: HolderFieldErrors[] = holders.map((holder) => {
+    const newHolderErrors: HolderFieldErrors[] = Array.from(
+      { length: expectedHolderCount },
+      (_, index) => holders[index] ?? emptyHolder(),
+    ).map((holder) => {
       const holderError: HolderFieldErrors = {};
       if (!holder.name.trim()) {
         holderError.name = "Nama pemegang tiket wajib diisi";
@@ -148,11 +177,17 @@ export function useCheckoutForm() {
     });
     setHolderErrors(newHolderErrors);
 
-    const hasHolderErrors = newHolderErrors.some(
-      (holderError) => holderError.name || holderError.identityNumber,
+    const errorCount = Object.keys(newErrors).length + newHolderErrors.reduce(
+      (count, holderError) => count + Number(Boolean(holderError.name))
+        + Number(Boolean(holderError.identityNumber)),
+      0,
     );
 
-    return Object.keys(newErrors).length === 0 && !hasHolderErrors;
+    return {
+      isValid: errorCount === 0,
+      errorCount,
+      firstInvalidFieldId: getFirstInvalidFieldId(newErrors, newHolderErrors),
+    };
   }, [buyerInfo, holders]);
 
   const handleInputChange = useCallback((field: keyof BuyerInfo, value: string) => {
