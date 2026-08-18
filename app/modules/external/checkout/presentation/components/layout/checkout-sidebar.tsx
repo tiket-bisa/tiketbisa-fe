@@ -41,8 +41,6 @@ export function CheckoutSidebar({
   onApplyPromo = () => {},
   onRemovePromo = () => {},
 }: CheckoutSidebarProps) {
-  const canSubmit = agreedToTerms && agreedToPrivacy && isMethodSelected;
-
   return (
     <div className={`space-y-6 ${className}`}>
       {/* Summary Section */}
@@ -80,12 +78,7 @@ export function CheckoutSidebar({
           <Button
             onClick={onNext}
             isLoading={isLoading}
-            disabled={!canSubmit}
-            className={`flex-1 py-7 rounded-2xl text-lg font-black shadow-xl transition-all ${
-              canSubmit 
-                ? "shadow-brand-primary/20 hover:shadow-brand-primary/30 hover:-translate-y-0.5" 
-                : "bg-brand-primary/30 shadow-none cursor-not-allowed"
-            }`}
+            className="flex-1 py-7 rounded-2xl text-lg font-black shadow-xl transition-all shadow-brand-primary/20 hover:shadow-brand-primary/30 hover:-translate-y-0.5"
           >
             Lanjut ke Pembayaran
           </Button>
