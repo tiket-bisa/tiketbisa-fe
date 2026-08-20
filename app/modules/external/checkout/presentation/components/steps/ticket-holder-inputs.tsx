@@ -91,34 +91,40 @@ export function TicketHolderInputs({
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-text-secondary ml-1">Nama Pemegang Tiket</label>
                   <Input
+                    id={`holder-${index}-name`}
                     placeholder="Nama sesuai KTP"
                     value={holder.name}
                     disabled={sameAsMain}
+                    aria-invalid={Boolean(holderError.name)}
+                    aria-describedby={holderError.name ? `holder-${index}-name-error` : undefined}
                     onChange={(e) => onHolderChange(index, "name", e.target.value)}
                     className={`h-12 rounded-xl border-gray-200 text-text-primary font-bold ${
                       holderError.name ? "border-destructive bg-destructive-bg" : ""
                     }`}
                   />
                   {holderError.name && (
-                    <p className="text-xs font-bold text-destructive-text ml-1">{holderError.name}</p>
+                    <p id={`holder-${index}-name-error`} className="text-xs font-bold text-destructive-text ml-1">{holderError.name}</p>
                   )}
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-text-secondary ml-1">NIK (KTP)</label>
                   <Input
+                    id={`holder-${index}-identityNumber`}
                     placeholder="16 digit NIK"
                     inputMode="numeric"
                     maxLength={16}
                     value={holder.identityNumber}
                     disabled={sameAsMain}
+                    aria-invalid={Boolean(holderError.identityNumber)}
+                    aria-describedby={holderError.identityNumber ? `holder-${index}-identityNumber-error` : undefined}
                     onChange={(e) => onHolderChange(index, "identityNumber", e.target.value.replace(/[^0-9]/g, ""))}
                     className={`h-12 rounded-xl border-gray-200 text-text-primary font-bold ${
                       holderError.identityNumber ? "border-destructive bg-destructive-bg" : ""
                     }`}
                   />
                   {holderError.identityNumber && (
-                    <p className="text-xs font-bold text-destructive-text ml-1">{holderError.identityNumber}</p>
+                    <p id={`holder-${index}-identityNumber-error`} className="text-xs font-bold text-destructive-text ml-1">{holderError.identityNumber}</p>
                   )}
                 </div>
               </div>

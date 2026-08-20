@@ -30,6 +30,7 @@ export function CheckoutFormField({
   );
 
   const errorClass = error ? "border-destructive bg-destructive-bg" : "";
+  const errorId = `${id}-error`;
 
   return (
     <div className={`space-y-2 ${className}`}>
@@ -41,11 +42,13 @@ export function CheckoutFormField({
         type={type}
         placeholder={placeholder}
         value={value}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? errorId : undefined}
         onChange={(e) => onChange(e.target.value)}
         className={`${inputBaseStyles} ${bgClass} ${errorClass}`}
       />
       {error && (
-        <p className="text-xs font-bold text-destructive-text ml-1 mt-1">
+        <p id={errorId} className="text-xs font-bold text-destructive-text ml-1 mt-1">
           {error}
         </p>
       )}

@@ -1,7 +1,9 @@
-import { useState } from "react";
-import { Link } from "react-router";
+import { useCallback, useId, useState } from "react";
 import { Input, Button } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils/currency";
+import { LegalModal } from "~/modules/external/static/components/legal-modal";
+import { PRIVACY_SECTIONS } from "~/modules/external/static/content/privacy.content";
+import { TERMS_SECTIONS } from "~/modules/external/static/content/terms.content";
 import { promoApi } from "../../../infrastructure/promo.api";
 import type { AppliedPromo } from "../../../domain/checkout.types";
 
@@ -107,17 +109,24 @@ export function PaymentConsent({
   onTogglePrivacy,
   isMethodSelected,
 }: PaymentConsentProps) {
+  const consentId = useId();
+  const termsConsentId = `${consentId}-terms`;
+  const privacyConsentId = `${consentId}-privacy`;
+  const [openDocument, setOpenDocument] = useState<"terms" | "privacy" | null>(null);
+  const closeDocument = useCallback(() => setOpenDocument(null), []);
+
   return (
-    <div className="mb-10 space-y-4">
+    <div data-checkout-consent tabIndex={-1} className="mb-10 space-y-4 focus:outline-none">
       {!isMethodSelected && (
         <p className="text-[10px] font-bold text-text-tertiary text-center uppercase tracking-widest mb-4">
           Silakan pilih metode pembayaran terlebih dahulu
         </p>
       )}
       
-      <label className="flex items-start gap-3 cursor-pointer group">
-        <div className="relative flex items-center mt-0.5">
+      <div className="flex items-start gap-3 group">
+        <label htmlFor={termsConsentId} className="relative mt-0.5 flex cursor-pointer items-center">
           <input
+            id={termsConsentId}
             type="checkbox"
             checked={agreedToTerms}
             onChange={(e) => onToggleTerms?.(e.target.checked)}
@@ -126,15 +135,24 @@ export function PaymentConsent({
           <svg className="absolute h-3.5 w-3.5 text-white opacity-0 peer-checked:opacity-100 left-0.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
-        </div>
+        </label>
         <span className="text-xs font-bold text-text-secondary leading-tight select-none">
-          Saya menyetujui <Link to="/terms" className="text-brand-primary hover:underline">Syarat & Ketentuan</Link> yang berlaku di Tiketbisa
+          <label htmlFor={termsConsentId} className="cursor-pointer">Saya menyetujui</label>{" "}
+          <button
+            type="button"
+            onClick={() => setOpenDocument("terms")}
+            className="cursor-pointer text-brand-primary hover:underline"
+          >
+            Syarat &amp; Ketentuan
+          </button>{" "}
+          yang berlaku di Tiketbisa
         </span>
-      </label>
+      </div>
 
-      <label className="flex items-start gap-3 cursor-pointer group">
-        <div className="relative flex items-center mt-0.5">
+      <div className="flex items-start gap-3 group">
+        <label htmlFor={privacyConsentId} className="relative mt-0.5 flex cursor-pointer items-center">
           <input
+            id={privacyConsentId}
             type="checkbox"
             checked={agreedToPrivacy}
             onChange={(e) => onTogglePrivacy?.(e.target.checked)}
@@ -143,11 +161,32 @@ export function PaymentConsent({
           <svg className="absolute h-3.5 w-3.5 text-white opacity-0 peer-checked:opacity-100 left-0.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
-        </div>
+        </label>
         <span className="text-xs font-bold text-text-secondary leading-tight select-none">
-          Saya menyetujui <Link to="/privacy" className="text-brand-primary hover:underline">Kebijakan Privasi & Pemrosesan Data</Link> yang berlaku di Tiketbisa
+          <label htmlFor={privacyConsentId} className="cursor-pointer">Saya menyetujui</label>{" "}
+          <button
+            type="button"
+            onClick={() => setOpenDocument("privacy")}
+            className="cursor-pointer text-brand-primary hover:underline"
+          >
+            Kebijakan Privasi &amp; Pemrosesan Data
+          </button>{" "}
+          yang berlaku di Tiketbisa
         </span>
-      </label>
+      </div>
+
+      <LegalModal
+        isOpen={openDocument === "terms"}
+        title="Syarat dan Ketentuan TIKETBISA"
+        sections={TERMS_SECTIONS}
+        onClose={closeDocument}
+      />
+      <LegalModal
+        isOpen={openDocument === "privacy"}
+        title="Kebijakan Privasi dan Pemrosesan Data"
+        sections={PRIVACY_SECTIONS}
+        onClose={closeDocument}
+      />
     </div>
   );
 }
