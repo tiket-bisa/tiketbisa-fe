@@ -73,9 +73,22 @@ export function EventCard({ event, className = "" }: EventCardProps) {
 
           {event.brandName && (
             <div className="mt-3 flex items-center gap-2 border-t border-border-default pt-3">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-black text-text-secondary">
-                {brandInitial}
-              </div>
+              {event.brandLogoUrl ? (
+                <img
+                  src={event.brandLogoUrl}
+                  alt={`${event.brandName} logo`}
+                  className="h-7 w-7 shrink-0 rounded-full bg-slate-200 object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <div
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-black text-text-secondary"
+                  role="img"
+                  aria-label={`${event.brandName} logo fallback`}
+                >
+                  {brandInitial}
+                </div>
+              )}
               <span className="text-[10px] font-black text-text-secondary uppercase tracking-[0.15em] truncate">
                 {event.brandName}
               </span>

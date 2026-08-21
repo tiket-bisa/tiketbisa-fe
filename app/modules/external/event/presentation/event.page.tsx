@@ -175,6 +175,7 @@ export default function EventPage({ loaderData }: Route.ComponentProps) {
                   minPrice: event.minPrice,
                   tickets: event.tickets,
                   brandName: event.brand,
+                  brandLogoUrl: event.brandLogoUrl,
                 }}
               />
             ))}

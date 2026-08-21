@@ -59,6 +59,7 @@ export function UpcomingEvents({
               tickets: event.tickets,
               minPrice: event.minPrice,
               brandName: event.brand,
+              brandLogoUrl: event.brandLogoUrl,
             }}
           />
           ))}

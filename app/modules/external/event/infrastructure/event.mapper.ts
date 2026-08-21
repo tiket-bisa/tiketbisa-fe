@@ -62,7 +62,7 @@ export function formatEventTimeRange(startDateStr: string, endDateStr?: string):
 export function mapEventDtoToEntity(
   dto: EventDto,
   index: number,
-  brandName?: string,
+  brand?: { name?: string; logoUrl?: string },
 ): Event {
   const brandId = dto.brandId ?? dto.brand_id ?? "";
   const startDate = dto.startDate ?? dto.start_date ?? "";
@@ -72,7 +72,8 @@ export function mapEventDtoToEntity(
     id: dto.id,
     name: dto.name,
     brandId,
-    brand: brandName || BRAND_NAME_MAP[brandId] || brandId || "Unknown Brand",
+    brand: brand?.name || BRAND_NAME_MAP[brandId] || brandId || "Unknown Brand",
+    brandLogoUrl: brand?.logoUrl || undefined,
     description: dto.description || "",
     imageUrl: bannerUrl || placeholderImages[index % placeholderImages.length],
     date: formatEventDate(startDate),

@@ -40,7 +40,8 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
         <h2 className="text-base font-bold text-text-primary mb-4">Penyelenggara</h2>
         <div className="group flex items-center gap-4 p-5 rounded-2xl border border-border-default bg-surface-alt hover:bg-surface-hover transition-colors">
           <Avatar
-            src=""
+            src={event.brandLogoUrl}
+            alt={`${event.brand} logo`}
             fallback={event.brand.charAt(0)}
             size="lg"
             className="ring-2 ring-brand-primary text-brand-primary"
