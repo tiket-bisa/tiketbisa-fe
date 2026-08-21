@@ -22,6 +22,8 @@ const BRAND_NAME_MAP: Record<string, string> = {
   "b-005": "CulinaryID",
 };
 
+const JAKARTA_TIME_ZONE = "Asia/Jakarta";
+
 function formatEventDate(dateStr: string): string {
   try {
     const date = new Date(dateStr);
@@ -30,6 +32,7 @@ function formatEventDate(dateStr: string): string {
       day: "numeric",
       month: "short",
       year: "numeric",
+      timeZone: JAKARTA_TIME_ZONE,
     });
   } catch (e) {
     return dateStr;
@@ -39,7 +42,12 @@ function formatEventDate(dateStr: string): string {
 /** Formats "startTime - endTime"; falls back to "startTime - Selesai" if the end date is missing/invalid. */
 export function formatEventTimeRange(startDateStr: string, endDateStr?: string): string {
   const formatTime = (d: Date) =>
-    d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false });
+    d.toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: JAKARTA_TIME_ZONE,
+    });
 
   const start = new Date(startDateStr);
   if (Number.isNaN(start.getTime())) return "";
