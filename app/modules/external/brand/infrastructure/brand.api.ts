@@ -16,7 +16,7 @@ export const brandApi = {
   getBrands: async (params: BrandFilterParams): Promise<PaginatedApiResponse<Brand>> => {
     const queryParams = new URLSearchParams();
 
-    if (params.category) queryParams.append("name", params.category);
+    if (params.category) queryParams.append("category", params.category);
     else if (params.location) queryParams.append("name", params.location);
 
     if (params.limit !== undefined) queryParams.append("limit", params.limit.toString());

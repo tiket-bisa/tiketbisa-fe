@@ -11,7 +11,7 @@ interface PartnerSectionProps {
 
 const CATEGORIES = [
   { label: "Semua", value: "" },
-  { label: "Sepak Bola", value: "sepak-bola" },
+  { label: "Sepak Bola", value: "sepak_bola" },
   { label: "Musik", value: "musik" },
   { label: "Lari", value: "lari" },
 ];
