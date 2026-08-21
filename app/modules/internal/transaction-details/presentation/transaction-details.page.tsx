@@ -16,6 +16,7 @@ const STATUS_MAP: Record<string, { label: string; variant: "success" | "warning"
   CANCELED: { label: "Dibatalkan", variant: "destructive" },
   CANCELLED: { label: "Dibatalkan", variant: "destructive" },
   EXPIRED: { label: "Expired", variant: "destructive" },
+  PAID_RECONCILIATION_REQUIRED: { label: "Perlu Rekonsiliasi", variant: "destructive" },
 };
 
 /** Partner — Transaction Details (only shows partner-accessible transactions) */
