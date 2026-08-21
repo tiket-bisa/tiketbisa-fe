@@ -32,6 +32,8 @@ interface BrandListResponseData {
 interface BrandDto {
   id: string;
   name: string;
+  logoPath?: string | null;
+  logo_path?: string | null;
   adminFee?: number;
   admin_fee?: number;
 }
@@ -40,7 +42,13 @@ interface EventImageListResponseData {
   images: EventImageDto[];
 }
 
-async function getBrandNameMap(): Promise<Map<string, string>> {
+interface EventBrandMetadata {
+  name?: string;
+  logoUrl?: string;
+  adminFee: number;
+}
+
+async function getBrandMap(): Promise<Map<string, EventBrandMetadata>> {
   try {
     const response = await apiFetch<ApiResponse<BrandListResponseData>>(
       "/brand?limit=1000&offset=0",
@@ -49,20 +57,25 @@ async function getBrandNameMap(): Promise<Map<string, string>> {
     return new Map(
       (response.data?.brands || [])
         .filter((brand) => brand.id && brand.name)
-        .map((brand) => [brand.id, brand.name]),
+        .map((brand) => [brand.id, {
+          name: brand.name,
+          logoUrl: normalizeImageUrl(brand.logoPath ?? brand.logo_path) || undefined,
+          adminFee: Number(brand.adminFee ?? brand.admin_fee ?? 0),
+        }]),
     );
   } catch {
     return new Map();
   }
 }
 
-async function getBrandDetailsById(brandId: string | undefined): Promise<{ name?: string; adminFee: number }> {
+async function getBrandDetailsById(brandId: string | undefined): Promise<EventBrandMetadata> {
   if (!brandId) return { adminFee: 0 };
 
   try {
     const response = await apiFetch<ApiResponse<BrandDto>>(`/brand/${brandId}`);
     return {
       name: response.data?.name || undefined,
+      logoUrl: normalizeImageUrl(response.data?.logoPath ?? response.data?.logo_path) || undefined,
       adminFee: Number(response.data?.adminFee ?? response.data?.admin_fee ?? 0),
     };
   } catch {
@@ -112,17 +125,17 @@ export const eventApi: EventRepository = {
     queryParams.append("offset", params.offset.toString());
     queryParams.append("isPublished", "true");
 
-    const [response, brandNameMap] = await Promise.all([
+    const [response, brandMap] = await Promise.all([
       apiFetch<ApiResponse<EventListResponseData>>(
         `/event?${queryParams.toString()}`,
       ),
-      getBrandNameMap(),
+      getBrandMap(),
     ]);
 
     const mappedEvents = await Promise.all(
       response.data.events.map(async (dto, idx) => {
         const brandId = dto.brandId ?? dto.brand_id ?? "";
-        const mapped = mapEventDtoToEntity(dto, idx, brandNameMap.get(brandId));
+        const mapped = mapEventDtoToEntity(dto, idx, brandMap.get(brandId));
 
         if (mapped.minPrice !== undefined && mapped.minPrice !== null) {
           return mapped;
@@ -169,7 +182,7 @@ export const eventApi: EventRepository = {
     if (!eventResponse.data) return null;
 
     const brandDetails = await getBrandDetailsById(eventResponse.data.brandId ?? eventResponse.data.brand_id);
-    const baseEvent = mapEventDtoToEntity(eventResponse.data, 0, brandDetails.name);
+    const baseEvent = mapEventDtoToEntity(eventResponse.data, 0, brandDetails);
     const galleryImages = normalizeEventImages(imagesResponse?.data?.images, baseEvent.imageUrl);
     const termsText = eventResponse.data.termAndCondition ?? eventResponse.data.term_and_condition;
 

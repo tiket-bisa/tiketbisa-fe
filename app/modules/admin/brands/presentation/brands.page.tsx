@@ -24,6 +24,7 @@ import {
   HOME_DOMICILE_OPTIONS,
   normalizeHomeDomicile,
 } from "~/shared/constants/domicile.constants";
+import { buildBrandMutationPayload } from "../domain/brand-mutation.payload";
 
 const ITEMS_PER_PAGE = 8;
 
@@ -255,18 +256,7 @@ export default function AdminBrandsPage() {
 
     setIsSubmitting(true);
     try {
-      const isFootball = formData.category.trim() === "sepak_bola";
-      const payload = {
-        name: formData.name.trim(),
-        logoPath: formData.logoPath.trim() || null,
-        bannerPath: formData.bannerPath.trim() || null,
-        adminFee: Math.round(parsedAdminFee),
-        category: formData.category.trim() || null,
-        subCategory: formData.subCategory.trim() || null,
-        sponsorPath: formData.sponsorPath.trim() || null,
-        homeOnly: isFootball ? formData.homeOnly : false,
-        homeCity: isFootball && formData.homeOnly ? formData.homeCity.trim() || null : null,
-      };
+      const payload = buildBrandMutationPayload(formData, parsedAdminFee);
 
       const result = formMode === "edit" && editingBrand
         ? await internalBrandApi.update(editingBrand.id, payload)

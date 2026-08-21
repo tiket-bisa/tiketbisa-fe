@@ -47,6 +47,11 @@ export interface PaymentMethod {
   category: PaymentCategory;
 }
 
+export interface VirtualAccountBank {
+  code: string;
+  name: string;
+}
+
 export interface AppliedPromo {
   promoId: string;
   code: string;

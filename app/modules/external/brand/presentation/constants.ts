@@ -8,7 +8,7 @@ export const BRAND_FILTERS: FilterBarFilter[] = [
     key: "category",
     label: "Kategori",
     options: [
-      { value: "sepak-bola", label: "Sepak Bola" },
+      { value: "sepak_bola", label: "Sepak Bola" },
       { value: "lari", label: "Lari" },
       { value: "musik", label: "Musik" },
     ],

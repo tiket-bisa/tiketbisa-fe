@@ -1,17 +1,10 @@
 import { useState } from "react";
 import { Card } from "~/core/design-system/components";
-import type { PaymentMethod, PaymentCategory } from "../../../domain/checkout.types";
-
-/** Banks offered for a direct Virtual Account payment — matches XenditService's supported bank_code values. */
-const VA_BANKS = [
-  { code: "BCA", name: "BCA" },
-  { code: "BNI", name: "BNI" },
-  { code: "BRI", name: "BRI" },
-  { code: "MANDIRI", name: "Mandiri" },
-];
+import type { PaymentMethod, PaymentCategory, VirtualAccountBank } from "../../../domain/checkout.types";
 
 export interface PaymentMethodSelectionProps {
   methods: PaymentMethod[];
+  virtualAccountBanks: VirtualAccountBank[];
   selectedMethodId: string | null;
   onSelect: (methodId: string) => void;
   selectedBankCode?: string | null;
@@ -21,6 +14,7 @@ export interface PaymentMethodSelectionProps {
 
 export function PaymentMethodSelection({
   methods,
+  virtualAccountBanks,
   selectedMethodId,
   onSelect,
   selectedBankCode,
@@ -99,7 +93,7 @@ export function PaymentMethodSelection({
                   Pilih Bank
                 </p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {VA_BANKS.map((bank) => (
+                  {virtualAccountBanks.map((bank) => (
                     <button
                       key={bank.code}
                       type="button"

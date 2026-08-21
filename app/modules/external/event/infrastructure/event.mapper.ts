@@ -22,6 +22,8 @@ const BRAND_NAME_MAP: Record<string, string> = {
   "b-005": "CulinaryID",
 };
 
+const JAKARTA_TIME_ZONE = "Asia/Jakarta";
+
 function formatEventDate(dateStr: string): string {
   try {
     const date = new Date(dateStr);
@@ -30,6 +32,7 @@ function formatEventDate(dateStr: string): string {
       day: "numeric",
       month: "short",
       year: "numeric",
+      timeZone: JAKARTA_TIME_ZONE,
     });
   } catch (e) {
     return dateStr;
@@ -39,7 +42,12 @@ function formatEventDate(dateStr: string): string {
 /** Formats "startTime - endTime"; falls back to "startTime - Selesai" if the end date is missing/invalid. */
 export function formatEventTimeRange(startDateStr: string, endDateStr?: string): string {
   const formatTime = (d: Date) =>
-    d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false });
+    d.toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: JAKARTA_TIME_ZONE,
+    });
 
   const start = new Date(startDateStr);
   if (Number.isNaN(start.getTime())) return "";
@@ -54,7 +62,7 @@ export function formatEventTimeRange(startDateStr: string, endDateStr?: string):
 export function mapEventDtoToEntity(
   dto: EventDto,
   index: number,
-  brandName?: string,
+  brand?: { name?: string; logoUrl?: string },
 ): Event {
   const brandId = dto.brandId ?? dto.brand_id ?? "";
   const startDate = dto.startDate ?? dto.start_date ?? "";
@@ -64,7 +72,8 @@ export function mapEventDtoToEntity(
     id: dto.id,
     name: dto.name,
     brandId,
-    brand: brandName || BRAND_NAME_MAP[brandId] || brandId || "Unknown Brand",
+    brand: brand?.name || BRAND_NAME_MAP[brandId] || brandId || "Unknown Brand",
+    brandLogoUrl: brand?.logoUrl || undefined,
     description: dto.description || "",
     imageUrl: bannerUrl || placeholderImages[index % placeholderImages.length],
     date: formatEventDate(startDate),

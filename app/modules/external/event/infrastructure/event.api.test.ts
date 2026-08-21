@@ -34,7 +34,7 @@ describe("eventApi.getEvents", () => {
       })
       .mockResolvedValueOnce({
         success: true,
-        data: { brands: [{ id: "brand-123", name: "Test 123" }] },
+        data: { brands: [{ id: "brand-123", name: "Test 123", logoPath: "https://cdn.test/logo.png" }] },
       });
 
     const result = await eventApi.getEvents({
@@ -59,5 +59,37 @@ describe("eventApi.getEvents", () => {
     expect(query.get("maxPrice")).toBe("100000");
     expect(query.get("sortBy")).toBe("start_date:DESC");
     expect((result.data.event_list as Array<{ brand: string }>)[0].brand).toBe("Test 123");
+    expect((result.data.event_list as Array<{ brandLogoUrl: string }>)[0].brandLogoUrl)
+      .toBe("https://cdn.test/logo.png");
+  });
+
+  it("enriches event detail with the brand logo", async () => {
+    mockApiFetch
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          id: "event-1",
+          brandId: "brand-123",
+          name: "Event Test",
+          bannerPath: null,
+          startDate: "2026-07-30T10:00:00Z",
+          endDate: "2026-07-30T11:00:00Z",
+          description: null,
+          city: "Jakarta",
+          status: "ONGOING",
+          isPublished: true,
+        },
+      })
+      .mockResolvedValueOnce({ success: true, data: [] })
+      .mockResolvedValueOnce({ success: true, data: { images: [] } })
+      .mockResolvedValueOnce({
+        success: true,
+        data: { id: "brand-123", name: "Test 123", logoPath: "https://cdn.test/detail-logo.png" },
+      });
+
+    const event = await eventApi.getEventById("event-1");
+
+    expect(event?.brand).toBe("Test 123");
+    expect(event?.brandLogoUrl).toBe("https://cdn.test/detail-logo.png");
   });
 });
