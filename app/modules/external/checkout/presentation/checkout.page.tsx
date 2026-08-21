@@ -38,17 +38,27 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   const event = await eventApi.getEventById(params.eventId);
   if (!event) throw new Response("Not Found", { status: 404 });
 
-  const [paymentMethods, order, brand] = await Promise.all([
+  const [paymentMethods, paymentConfiguration, order, brand] = await Promise.all([
     paymentApi.getPaymentMethods(),
+    paymentApi.getConfiguration(),
     (step === 4 || step === 5) && orderId ? orderApi.getOrderById(orderId) : Promise.resolve(null),
     event.brandId ? brandApi.getBrandBySlug(event.brandId) : Promise.resolve(null),
   ]);
 
-  return { event, paymentMethods, order, adminFee: brand?.adminFee ?? 0 };
+  const availablePaymentMethods = paymentConfiguration.virtualAccountBanks.length > 0
+    ? paymentMethods
+    : paymentMethods.filter((method) => method.id !== "va");
+  return {
+    event,
+    paymentMethods: availablePaymentMethods,
+    virtualAccountBanks: paymentConfiguration.virtualAccountBanks,
+    order,
+    adminFee: brand?.adminFee ?? 0,
+  };
 }
 
 export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
-  const { event, paymentMethods, order } = loaderData;
+  const { event, paymentMethods, virtualAccountBanks, order } = loaderData;
   const [searchParams] = useSearchParams();
   const { warning: warningToast } = useToast();
 
@@ -294,6 +304,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
                 </div>
                 <PaymentMethodSelection
                   methods={paymentMethods}
+                  virtualAccountBanks={virtualAccountBanks}
                   selectedMethodId={paymentSelection.methodId}
                   onSelect={handlePaymentMethodSelect}
                   selectedBankCode={paymentSelection.bankCode}
