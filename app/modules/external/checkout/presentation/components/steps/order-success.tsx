@@ -14,7 +14,8 @@ interface OrderSuccessProps {
 
 export function OrderSuccess({ event, order, onAction }: OrderSuccessProps) {
   const ticketCode = order?.tickets.find((ticket) => ticket.status?.toUpperCase() === "ISSUED")?.code;
-  const { activeAction, download, share } = useTicketArchiveActions(order?.transactionId ?? "", ticketCode);
+  const { activeAction, isPreparingArchive, isArchiveReady, download, share } =
+    useTicketArchiveActions(order?.transactionId ?? "", ticketCode);
 
   if (!order) return <CheckoutComingSoon />;
 
@@ -91,13 +92,17 @@ export function OrderSuccess({ event, order, onAction }: OrderSuccessProps) {
                  type="button"
                  variant="secondary"
                  onClick={share}
-                 disabled={activeAction !== null || !ticketCode}
+                 disabled={activeAction !== null || isPreparingArchive || !ticketCode}
                  className="flex-1 rounded-2xl py-6 font-black gap-2 border-gray-200"
                >
                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                  </svg>
-                 {activeAction === "share" ? "Menyiapkan Tiket..." : "Bagikan"}
+                 {activeAction === "share"
+                   ? "Membuka Bagikan..."
+                   : isPreparingArchive || !isArchiveReady
+                     ? "Menyiapkan Tiket..."
+                     : "Bagikan"}
                </Button>
              </div>
           </Card>
