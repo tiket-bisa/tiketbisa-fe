@@ -116,9 +116,8 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
     clearBlockingError
   } = useCheckoutSteps(event, buyerInfo, summary, validateCheckoutForm, paymentMethods, order, paymentSelectionState, holders);
 
-  // Confirmation modals: submitting step 1 locks the reservation and starts the payment
-  // timer, and cancelling from the payment step releases that lock - both are consequential
-  // enough to double-check before firing the real action.
+  // Confirmation modals: submitting step 1 starts the payment timer. Leaving the payment page
+  // does not cancel the pending gateway order; it remains recoverable until its deadline.
   const [showProceedConfirm, setShowProceedConfirm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
@@ -416,9 +415,9 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
 
       <ConfirmModal
         isOpen={showCancelConfirm}
-        title="Batalkan Pesanan?"
-        message="Tiket yang sudah dikunci untukmu akan dilepas. Kamu perlu memesan ulang dari awal jika berubah pikiran."
-        confirmLabel="Ya, Batalkan"
+        title="Keluar dari Halaman Pembayaran?"
+        message="Pesanan dan batas waktu pembayaran akan tetap aktif. Kamu bisa kembali menggunakan pesanan yang sama sebelum waktunya habis."
+        confirmLabel="Ya, Keluar"
         cancelLabel="Kembali"
         variant="danger"
         onConfirm={confirmCancelOrder}
