@@ -8,7 +8,8 @@ Event ticketing platform — React Router 7, TypeScript, Tailwind CSS v4, Vite.
 
 This release added the hosted checkout flow for activated payment methods,
 production quality gates and rollback, sanitized user-facing messages, and
-reliable release of abandoned checkout locks.
+reliable release of abandoned checkout locks. It also simplified the order
+summary by hiding internal fee formulas and per-ticket fee breakdowns.
 
 #### [#59 — feat: support hosted Xendit checkout](https://github.com/tiket-bisa/tiketbisa-fe/pull/59)
 
@@ -137,6 +138,18 @@ Merged `a8ece88` · 6 files · +77 / -4
 - `app/modules/external/checkout/presentation/components/layout/checkout-sticky-bar.tsx`
 - `app/modules/external/checkout/presentation/hooks/use-checkout-steps.ts`
 - `e2e/smoke.spec.ts`
+
+</details>
+
+#### [#65 — fix: hide fee breakdown details](https://github.com/tiket-bisa/tiketbisa-fe/pull/65)
+
+Merged `c147b93` · 2 files · +42 / -13
+
+<details>
+<summary>Files changed</summary>
+
+- `app/modules/external/checkout/presentation/components/shared/order-summary-card.test.tsx`
+- `app/modules/external/checkout/presentation/components/shared/order-summary-card.tsx`
 
 </details>
 
