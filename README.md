@@ -2,6 +2,144 @@
 
 Event ticketing platform — React Router 7, TypeScript, Tailwind CSS v4, Vite.
 
+## Changelog
+
+### 23 August 2026 — Payment Sessions production rollout
+
+This release added the hosted checkout flow for activated payment methods,
+production quality gates and rollback, sanitized user-facing messages, and
+reliable release of abandoned checkout locks.
+
+#### [#59 — feat: support hosted Xendit checkout](https://github.com/tiket-bisa/tiketbisa-fe/pull/59)
+
+Merged `09d5058` · 22 files · +326 / -253
+
+<details>
+<summary>Files changed</summary>
+
+- `app/core/api/services/transaction.api.test.ts`
+- `app/core/api/services/transaction.api.ts`
+- `app/core/constants/transaction.test.ts`
+- `app/core/constants/transaction.ts`
+- `app/core/types/index.ts`
+- `app/modules/admin/dashboard/presentation/components/transaction-table.test.tsx`
+- `app/modules/admin/dashboard/presentation/dashboard.page.tsx`
+- `app/modules/external/checkout/domain/checkout.pricing.test.ts`
+- `app/modules/external/checkout/domain/checkout.pricing.ts`
+- `app/modules/external/checkout/domain/checkout.types.ts`
+- `app/modules/external/checkout/domain/checkout.validation.test.ts`
+- `app/modules/external/checkout/domain/checkout.validation.ts`
+- `app/modules/external/checkout/infrastructure/order.api.ts`
+- `app/modules/external/checkout/infrastructure/payment.api.test.ts`
+- `app/modules/external/checkout/infrastructure/payment.api.ts`
+- `app/modules/external/checkout/presentation/checkout.page.tsx`
+- `app/modules/external/checkout/presentation/components/steps/payment-instruction.tsx`
+- `app/modules/external/checkout/presentation/components/steps/payment-method-selection.tsx`
+- `app/modules/external/checkout/presentation/hooks/use-checkout-steps.ts`
+- `app/modules/internal/dashboard/presentation/dashboard.page.tsx`
+- `e2e/helpers/e2e-api.ts`
+- `e2e/smoke.spec.ts`
+
+</details>
+
+#### [#60 — ci: add frontend quality gates and safe production rollback](https://github.com/tiket-bisa/tiketbisa-fe/pull/60)
+
+Merged `f57a32f` · 12 files · +287 / -119
+
+<details>
+<summary>Files changed</summary>
+
+- `.env.example`
+- `.github/workflows/ci.yml`
+- `.github/workflows/deploy.yml`
+- `.github/workflows/e2e.yml`
+- `Dockerfile`
+- `app/core/api/api-url.ts`
+- `app/modules/external/checkout/presentation/components/steps/payment-instruction.tsx`
+- `app/routes.ts`
+- `app/routes/healthz.ts`
+- `docker-compose.yml`
+- `docs/production-cicd.md`
+- `scripts/deploy-production.sh`
+
+</details>
+
+#### [#61 — fix: detect compose-managed frontend container](https://github.com/tiket-bisa/tiketbisa-fe/pull/61)
+
+Merged `dd431d0` · 1 file · +39 / -5
+
+<details>
+<summary>Files changed</summary>
+
+- `scripts/deploy-production.sh`
+
+</details>
+
+#### [#62 — fix: sanitize user-facing messages](https://github.com/tiket-bisa/tiketbisa-fe/pull/62)
+
+Merged `f353cbb` · 39 files · +397 / -144
+
+<details>
+<summary>Files changed</summary>
+
+- `app/core/api/api-error.test.ts`
+- `app/core/api/api-error.ts`
+- `app/core/api/api-fetch.ts`
+- `app/core/api/api-response.type.ts`
+- `app/core/api/http-client.ts`
+- `app/core/api/index.ts`
+- `app/core/api/use-api.ts`
+- `app/core/auth/google-oauth.client.ts`
+- `app/modules/admin/brands/presentation/brands.page.tsx`
+- `app/modules/admin/events/presentation/events.page.tsx`
+- `app/modules/admin/integration-clients/presentation/integration-clients.page.tsx`
+- `app/modules/admin/promos/infrastructure/promo.api.ts`
+- `app/modules/admin/promos/presentation/promos.page.tsx`
+- `app/modules/admin/transactions/presentation/transaction-details.page.tsx`
+- `app/modules/external/checkout/infrastructure/ticket-delivery.api.test.ts`
+- `app/modules/external/checkout/infrastructure/ticket-delivery.api.ts`
+- `app/modules/external/checkout/presentation/components/shared/order-summary-card.tsx`
+- `app/modules/external/checkout/presentation/components/steps/manual-transfer-pending.tsx`
+- `app/modules/external/checkout/presentation/components/steps/payment-instruction.test.tsx`
+- `app/modules/external/checkout/presentation/components/steps/payment-instruction.tsx`
+- `app/modules/external/checkout/presentation/components/steps/payment-method-selection.test.tsx`
+- `app/modules/external/checkout/presentation/components/steps/payment-method-selection.tsx`
+- `app/modules/external/checkout/presentation/hooks/use-ticket-archive-actions.ts`
+- `app/modules/external/static/contact.api.ts`
+- `app/modules/external/static/hubungi.page.tsx`
+- `app/modules/internal/brand/presentation/brand.page.tsx`
+- `app/modules/internal/common/infrastructure/partner.api.ts`
+- `app/modules/internal/common/presentation/event-gallery-manager.tsx`
+- `app/modules/internal/common/presentation/image-source-input.tsx`
+- `app/modules/internal/common/presentation/payment-proof-actions.tsx`
+- `app/modules/internal/common/presentation/use-partner-dashboard-data.ts`
+- `app/modules/internal/events/presentation/events.page.tsx`
+- `app/modules/internal/events/presentation/generate-complimentary-ticket.page.tsx`
+- `app/modules/internal/ticket-delivery/presentation/ticket-delivery-actions.tsx`
+- `app/modules/internal/ticket-scanning/presentation/hooks/use-checkin.ts`
+- `app/modules/internal/ticket-scanning/presentation/hooks/use-scan-flow.ts`
+- `app/modules/internal/transaction-details/presentation/transaction-details.page.tsx`
+- `app/root.tsx`
+- `e2e/smoke.spec.ts`
+
+</details>
+
+#### [#63 — fix: release abandoned checkout locks](https://github.com/tiket-bisa/tiketbisa-fe/pull/63)
+
+Merged `a8ece88` · 6 files · +77 / -4
+
+<details>
+<summary>Files changed</summary>
+
+- `app/modules/external/checkout/infrastructure/order.api.test.ts`
+- `app/modules/external/checkout/infrastructure/order.api.ts`
+- `app/modules/external/checkout/presentation/components/layout/checkout-sidebar.tsx`
+- `app/modules/external/checkout/presentation/components/layout/checkout-sticky-bar.tsx`
+- `app/modules/external/checkout/presentation/hooks/use-checkout-steps.ts`
+- `e2e/smoke.spec.ts`
+
+</details>
+
 ## Tech Stack
 
 | Layer           | Technology                         |
