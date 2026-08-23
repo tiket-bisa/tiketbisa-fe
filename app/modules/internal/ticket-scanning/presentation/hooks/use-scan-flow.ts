@@ -7,6 +7,7 @@ import {
   type ValidateResponse,
 } from "../../infrastructure/checkin.api";
 import { useAuth } from "~/core/auth";
+import { toUserFacingError, toUserFacingResponseError } from "~/core/api";
 
 /**
  * Two-phase scan flow:
@@ -55,13 +56,18 @@ export function useScanFlow(expectedEventId?: string, expectedCategoryId?: strin
           });
         } else {
           setValidateResult(
-            buildValidateFailure(normalizedCode, codeType, response.status_code, response.error),
+            buildValidateFailure(
+              normalizedCode,
+              codeType,
+              response.status_code,
+              toUserFacingResponseError(response, "Tiket tidak dapat divalidasi."),
+            ),
           );
         }
       } catch (error) {
         setValidateResult({
           status: "INVALID",
-          message: error instanceof Error ? error.message : "Gagal memproses scan",
+          message: toUserFacingError(error, "Gagal memproses scan."),
           codeHash: normalizedCode,
           codeType,
         });
@@ -99,13 +105,13 @@ export function useScanFlow(expectedEventId?: string, expectedCategoryId?: strin
       } else {
         setCheckInResult({
           status: "FAILED",
-          message: response.error || "Check-in gagal, silakan coba lagi.",
+          message: toUserFacingResponseError(response, "Check-in gagal, silakan coba lagi."),
         });
       }
     } catch (error) {
       setCheckInResult({
         status: "FAILED",
-        message: error instanceof Error ? error.message : "Check-in gagal, silakan coba lagi.",
+        message: toUserFacingError(error, "Check-in gagal, silakan coba lagi."),
       });
     } finally {
       isBusyRef.current = false;

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button, Input } from "~/core/design-system/components";
-import { normalizeImageUrl } from "~/core/api";
+import { normalizeImageUrl, toUserFacingError } from "~/core/api";
 import { internalEventApi, type EventImageData } from "~/core/api/services/internal-event.api";
 import { useIsMounted } from "./use-is-mounted";
 import { useObjectUrlRegistry } from "./use-object-url-registry";
@@ -46,7 +46,7 @@ export function EventGalleryManager({
       setImages(result.data.images ?? []);
     } catch (err) {
       if (isMounted()) {
-        setError(err instanceof Error ? err.message : "Gagal memuat galeri event.");
+        setError(toUserFacingError(err, "Gagal memuat galeri event."));
       }
     } finally {
       if (isMounted()) {
@@ -78,7 +78,7 @@ export function EventGalleryManager({
       await loadImages();
     } catch (err) {
       if (isMounted()) {
-        setError(err instanceof Error ? err.message : "Gagal menambahkan gambar.");
+        setError(toUserFacingError(err, "Gagal menambahkan gambar."));
       }
     } finally {
       if (isMounted()) {
@@ -107,7 +107,7 @@ export function EventGalleryManager({
       await addImageUrl(imageUrl);
     } catch (err) {
       if (isMounted()) {
-        setError(err instanceof Error ? err.message : "Gagal mengunggah gambar.");
+        setError(toUserFacingError(err, "Gagal mengunggah gambar."));
       }
     } finally {
       revokeObjectUrl(previewUrl);
@@ -133,7 +133,7 @@ export function EventGalleryManager({
       }
       setImages(result.data.images);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menyimpan urutan galeri.");
+      setError(toUserFacingError(err, "Gagal menyimpan urutan galeri."));
     } finally {
       setIsMutating(false);
     }
@@ -166,7 +166,7 @@ export function EventGalleryManager({
       }
       await loadImages();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menghapus gambar.");
+      setError(toUserFacingError(err, "Gagal menghapus gambar."));
     } finally {
       setIsMutating(false);
     }

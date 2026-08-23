@@ -10,6 +10,7 @@ import {
   Tabs,
 } from "~/core/design-system/components";
 import { useApiQuery } from "~/core/api/use-api";
+import { toUserFacingError, toUserFacingResponseError } from "~/core/api";
 import {
   internalBrandApi,
   mapInternalBrandToFe,
@@ -65,7 +66,7 @@ function formatRupiah(value: number): string {
   }).format(value);
 }
 
-const accessUnavailableMessage = "Fitur akses login belum aktif di backend yang sedang berjalan. Sinkronkan atau restart backend lalu coba lagi.";
+const accessUnavailableMessage = "Fitur akses login belum tersedia. Muat ulang halaman lalu coba lagi.";
 const isAccessEndpointUnavailable = (statusCode?: number | null) =>
   statusCode === 404 || statusCode === 405;
 
@@ -178,7 +179,7 @@ export default function AdminBrandsPage() {
     }
 
     setAccessState("error");
-    setAccessError(response.error || "Gagal memuat akses login brand.");
+    setAccessError(toUserFacingResponseError(response, "Gagal memuat akses login brand."));
   }, [selectedAccessBrand?.id]);
 
   useEffect(() => {
@@ -273,7 +274,7 @@ export default function AdminBrandsPage() {
         setFormData({ name: "", logoPath: "", bannerPath: "", description: "", adminFee: "", category: "", subCategory: "", sponsorPath: "", homeOnly: false, homeCity: "" });
       }
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Koneksi bermasalah.");
+      setFormError(toUserFacingError(err, "Koneksi bermasalah."));
     } finally {
       setIsSubmitting(false);
     }
@@ -296,7 +297,7 @@ export default function AdminBrandsPage() {
       }
       await refetch();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Koneksi bermasalah.");
+      setFormError(toUserFacingError(err, "Koneksi bermasalah."));
     } finally {
       setIsSubmitting(false);
     }
@@ -337,7 +338,7 @@ export default function AdminBrandsPage() {
       setPartnerEmail("");
       setAccessSuccess("Email Google partner berhasil dihubungkan ke brand.");
     } catch (err) {
-      setAccessError(err instanceof Error ? err.message : "Koneksi bermasalah.");
+      setAccessError(toUserFacingError(err, "Koneksi bermasalah."));
     } finally {
       setIsAccessSubmitting(false);
     }
@@ -363,7 +364,7 @@ export default function AdminBrandsPage() {
       setAccessState("ready");
       setAccessSuccess("Email Google partner berhasil dilepas dari brand.");
     } catch (err) {
-      setAccessError(err instanceof Error ? err.message : "Koneksi bermasalah.");
+      setAccessError(toUserFacingError(err, "Koneksi bermasalah."));
     } finally {
       setIsAccessSubmitting(false);
     }
@@ -399,7 +400,7 @@ export default function AdminBrandsPage() {
       setScannerPassword("");
       setAccessSuccess("Akun scanner berhasil disimpan untuk brand ini.");
     } catch (err) {
-      setAccessError(err instanceof Error ? err.message : "Koneksi bermasalah.");
+      setAccessError(toUserFacingError(err, "Koneksi bermasalah."));
     } finally {
       setIsAccessSubmitting(false);
     }
@@ -425,7 +426,7 @@ export default function AdminBrandsPage() {
       setAccessState("ready");
       setAccessSuccess("Akun scanner berhasil dinonaktifkan.");
     } catch (err) {
-      setAccessError(err instanceof Error ? err.message : "Koneksi bermasalah.");
+      setAccessError(toUserFacingError(err, "Koneksi bermasalah."));
     } finally {
       setIsAccessSubmitting(false);
     }
@@ -803,7 +804,7 @@ export default function AdminBrandsPage() {
                         ) : accessState === "idle" ? (
                           <p className="text-sm text-text-tertiary">Pilih tab akses login untuk memuat data partner.</p>
                         ) : accessState === "unavailable" ? (
-                          <p className="text-sm text-text-tertiary">Daftar partner belum bisa dimuat dari backend saat ini.</p>
+                          <p className="text-sm text-text-tertiary">Daftar partner belum dapat dimuat. Coba muat ulang.</p>
                         ) : (
                           <div className="space-y-2">
                             {accessSummary?.partnerEmails.length ? (
@@ -876,7 +877,7 @@ export default function AdminBrandsPage() {
                         ) : accessState === "idle" ? (
                           <p className="text-sm text-text-tertiary">Pilih tab akses login untuk memuat akun scanner.</p>
                         ) : accessState === "unavailable" ? (
-                          <p className="text-sm text-text-tertiary">Daftar scanner belum bisa dimuat dari backend saat ini.</p>
+                          <p className="text-sm text-text-tertiary">Daftar scanner belum dapat dimuat. Coba muat ulang.</p>
                         ) : (
                           <div className="space-y-2">
                             {accessSummary?.scannerAccounts.length ? (

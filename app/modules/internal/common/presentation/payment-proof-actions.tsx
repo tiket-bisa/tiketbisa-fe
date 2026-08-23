@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button, useToast } from "~/core/design-system/components";
 import { transactionApi } from "~/core/api/services/transaction.api";
+import { ApiRequestError, toUserFacingError, toUserFacingResponseError } from "~/core/api";
 import { useObjectUrlRegistry } from "./use-object-url-registry";
 
 type ProofPreview = {
@@ -41,7 +42,7 @@ export function PaymentProofActions({ transactionId }: PaymentProofActionsProps)
     try {
       const response = await transactionApi.getPaymentProof(transactionId);
       if (!response.success || !response.data) {
-        throw new Error(response.error ?? "Bukti transfer tidak ditemukan");
+        throw new ApiRequestError(toUserFacingResponseError(response, "Bukti transfer tidak ditemukan."));
       }
 
       const file = response.data;
@@ -56,7 +57,7 @@ export function PaymentProofActions({ transactionId }: PaymentProofActionsProps)
         return;
       }
       if (!file.base64Content) {
-        throw new Error("Bukti transfer tidak tersedia");
+        throw new ApiRequestError("Bukti transfer tidak tersedia.");
       }
 
       const mimeType = file.mimeType || "application/octet-stream";
@@ -67,7 +68,7 @@ export function PaymentProofActions({ transactionId }: PaymentProofActionsProps)
         isObjectUrl: true,
       });
     } catch (error) {
-      errorToast(error instanceof Error ? error.message : "Gagal membuka bukti transfer");
+      errorToast(toUserFacingError(error, "Gagal membuka bukti transfer."));
     } finally {
       setActiveAction(null);
     }
@@ -78,7 +79,7 @@ export function PaymentProofActions({ transactionId }: PaymentProofActionsProps)
     try {
       const response = await transactionApi.downloadPaymentProof(transactionId);
       if (!response.success || !response.data) {
-        throw new Error(response.error ?? "Gagal download bukti transfer");
+        throw new ApiRequestError(toUserFacingResponseError(response, "Gagal mengunduh bukti transfer."));
       }
 
       const url = createObjectUrl(response.data.blob);
@@ -90,7 +91,7 @@ export function PaymentProofActions({ transactionId }: PaymentProofActionsProps)
       anchor.remove();
       revokeObjectUrl(url);
     } catch (error) {
-      errorToast(error instanceof Error ? error.message : "Gagal download bukti transfer");
+      errorToast(toUserFacingError(error, "Gagal mengunduh bukti transfer."));
     } finally {
       setActiveAction(null);
     }

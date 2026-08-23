@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, Avatar, Button, Input, Select } from "~/core/design-system/components";
 import { useAuth } from "~/core/auth";
-import { useApiQuery } from "~/core/api";
+import { toUserFacingError, useApiQuery } from "~/core/api";
 import {
   internalBrandApi,
   mapInternalBrandToFe,
@@ -110,7 +110,7 @@ export default function BrandPage() {
       await refetch();
       setIsEditing(false);
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Koneksi bermasalah.");
+      setFormError(toUserFacingError(err, "Koneksi bermasalah."));
     } finally {
       setIsSubmitting(false);
     }

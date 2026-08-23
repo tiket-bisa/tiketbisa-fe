@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { Badge, Button, Card, useToast } from "~/core/design-system/components";
-import { useApiQuery } from "~/core/api";
+import { ApiRequestError, toUserFacingError, toUserFacingResponseError, useApiQuery } from "~/core/api";
 import { transactionApi } from "~/core/api/services/transaction.api";
 import { formatIDR } from "~/core/utils";
 import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
@@ -80,11 +80,11 @@ export default function TransactionDetailsPage() {
     try {
       const response = await transactionApi.reviewManualTransfer(id, { action });
       if (!response.success) {
-        throw new Error(response.error ?? "Gagal memproses approval");
+        throw new ApiRequestError(toUserFacingResponseError(response, "Gagal memproses approval."));
       }
       navigate(returnTo, { replace: true });
     } catch (error) {
-      errorToast(error instanceof Error ? error.message : "Gagal memproses approval");
+      errorToast(toUserFacingError(error, "Gagal memproses approval."));
     } finally {
       setIsReviewLoading(false);
     }

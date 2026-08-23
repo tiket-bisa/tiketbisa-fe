@@ -1,4 +1,4 @@
-import { toAbsoluteApiUrl } from "~/core/api";
+import { apiErrorFromResponse, toAbsoluteApiUrl } from "~/core/api";
 
 export interface TicketArchive {
   blob: Blob;
@@ -12,12 +12,12 @@ function getFileName(disposition: string | null, transactionId: string): string 
   return fileName?.trim() || `tickets-${transactionId}.zip`;
 }
 
-async function getErrorMessage(response: Response): Promise<string> {
+async function getResponseError(response: Response): Promise<Error> {
   try {
     const body = await response.json();
-    return body?.error?.message || body?.error || "Gagal menyiapkan tiket";
+    return apiErrorFromResponse(body, response, "Gagal menyiapkan tiket. Silakan coba lagi.");
   } catch {
-    return "Gagal menyiapkan tiket";
+    return apiErrorFromResponse(null, response, "Gagal menyiapkan tiket. Silakan coba lagi.");
   }
 }
 
@@ -29,7 +29,7 @@ export const ticketDeliveryApi = {
     );
 
     if (!response.ok) {
-      throw new Error(await getErrorMessage(response));
+      throw await getResponseError(response);
     }
 
     return {

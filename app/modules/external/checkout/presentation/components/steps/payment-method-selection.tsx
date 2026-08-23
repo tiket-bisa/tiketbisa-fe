@@ -19,13 +19,10 @@ export function PaymentMethodSelection({ methods, virtualAccountBanks, paymentSe
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {methods.map((method) => (
           <button key={method.id} type="button" onClick={() => onSelect(method.id)}
-            className={`relative min-h-24 rounded-2xl border-2 p-4 text-left transition-all cursor-pointer ${selectedMethodId === method.id
+            className={`relative flex min-h-24 items-center rounded-2xl border-2 p-4 text-left transition-all cursor-pointer ${selectedMethodId === method.id
               ? "border-brand-primary bg-brand-primary/[0.04] ring-1 ring-brand-primary/20"
               : "border-gray-200 bg-white hover:border-gray-400"}`}>
             <span className="block text-sm font-black text-text-primary">{method.name}</span>
-            <span className="mt-2 block text-[10px] font-bold uppercase tracking-wider text-text-tertiary">
-              {method.id === "manual" || method.id === "manual_transfer" ? "Verifikasi manual" : "Diproses oleh Xendit"}
-            </span>
           </button>
         ))}
       </div>

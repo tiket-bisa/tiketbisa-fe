@@ -1,4 +1,4 @@
-import { internalHttpClient } from "~/core/api";
+import { ApiRequestError, internalHttpClient, toUserFacingResponseError } from "~/core/api";
 
 export type PromoType = "PERCENT" | "FLAT";
 
@@ -30,7 +30,9 @@ interface PromoListResponse {
 export const promoAdminApi = {
   async list(): Promise<PromoData[]> {
     const response = await internalHttpClient.get<PromoListResponse>("/promo?limit=100&offset=0&sortBy=created:DESC");
-    if (!response.success || !response.data) throw new Error(response.error || "Gagal memuat promo");
+    if (!response.success || !response.data) {
+      throw new ApiRequestError(toUserFacingResponseError(response, "Gagal memuat promo."));
+    }
     return response.data.promos ?? [];
   },
   create: (data: PromoUpsertPayload) => internalHttpClient.post<PromoData>("/promo", data),

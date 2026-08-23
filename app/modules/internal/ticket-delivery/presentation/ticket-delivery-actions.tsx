@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button, Input } from "~/core/design-system/components";
 import { transactionApi, type TicketEmailDeliveryMode } from "~/core/api/services/transaction.api";
+import { ApiRequestError, toUserFacingError, toUserFacingResponseError } from "~/core/api";
 
 interface TicketDeliveryActionsProps {
   transactionId?: string | null;
@@ -49,7 +50,7 @@ export function TicketDeliveryActions({
     try {
       const response = await transactionApi.downloadTickets(transactionId);
       if (!response.success || !response.data) {
-        throw new Error(response.error ?? "Gagal download tiket");
+        throw new ApiRequestError(toUserFacingResponseError(response, "Gagal mengunduh tiket."));
       }
 
       const url = URL.createObjectURL(response.data.blob);
@@ -62,7 +63,7 @@ export function TicketDeliveryActions({
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       setMessage("File tiket berhasil disiapkan.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal download tiket");
+      setError(toUserFacingError(err, "Gagal mengunduh tiket."));
     } finally {
       setActiveAction(null);
     }
@@ -91,11 +92,11 @@ export function TicketDeliveryActions({
         email: deliveryMode === "CUSTOM_EMAIL" ? recipientEmail : undefined,
       });
       if (!response.success || !response.data) {
-        throw new Error(response.error ?? "Gagal mengirim tiket");
+        throw new ApiRequestError(toUserFacingResponseError(response, "Gagal mengirim tiket."));
       }
       setMessage(`Tiket masuk antrean kirim ke ${response.data.recipientEmail}.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal mengirim tiket");
+      setError(toUserFacingError(err, "Gagal mengirim tiket."));
     } finally {
       setActiveAction(null);
     }

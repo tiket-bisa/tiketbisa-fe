@@ -20,6 +20,7 @@ export interface ApiResponse<T = unknown> {
   error: string | null;
   reason: string | null;
   status_code: number;
+  request_id?: string;
 }
 
 /**

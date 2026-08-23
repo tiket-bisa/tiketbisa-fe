@@ -5,6 +5,7 @@ import {
   type CheckInResponse,
 } from "../../infrastructure/checkin.api";
 import { useAuth } from "~/core/auth";
+import { toUserFacingError, toUserFacingResponseError } from "~/core/api";
 
 export function useCheckIn() {
   const { user } = useAuth();
@@ -41,14 +42,14 @@ export function useCheckIn() {
           setScanResult(buildFailureResult(
             normalizedCode,
             response.status_code,
-            response.error,
+            toUserFacingResponseError(response, "Tiket tidak dapat diproses."),
           ));
         }
       } catch (error) {
         setScanResult({
           ticket_id: normalizedCode.substring(0, 20),
           status: "invalid",
-          message: error instanceof Error ? error.message : "Gagal memproses scan",
+          message: toUserFacingError(error, "Gagal memproses scan."),
         });
       } finally {
         isLoadingRef.current = false;

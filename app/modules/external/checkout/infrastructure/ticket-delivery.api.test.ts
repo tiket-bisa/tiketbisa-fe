@@ -20,13 +20,13 @@ describe("ticketDeliveryApi", () => {
     expect(await archive.blob.text()).toBe("zip");
   });
 
-  it("surfaces the backend error message", async () => {
+  it("does not surface a technical backend error message", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(
       JSON.stringify({ error: { message: "Invalid ticket access code" } }),
       { status: 403, headers: { "Content-Type": "application/json" } },
     ));
 
     await expect(ticketDeliveryApi.downloadArchive("order-1", "wrong"))
-      .rejects.toThrow("Invalid ticket access code");
+      .rejects.toThrow("Gagal menyiapkan tiket. Silakan coba lagi.");
   });
 });

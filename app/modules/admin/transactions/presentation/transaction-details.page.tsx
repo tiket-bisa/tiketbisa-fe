@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { useNavigate, useParams, Link, useSearchParams } from "react-router";
 import { Badge, Button, Card, useToast } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
-import { useApiQuery } from "~/core/api";
+import { ApiRequestError, toUserFacingError, toUserFacingResponseError, useApiQuery } from "~/core/api";
 import { transactionApi } from "~/core/api/services/transaction.api";
 import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 import { TicketDeliveryActions } from "~/modules/internal/ticket-delivery/presentation/ticket-delivery-actions";
@@ -89,11 +89,11 @@ export default function AdminTransactionDetailsPage() {
     try {
       const response = await transactionApi.reviewManualTransfer(id, { action });
       if (!response.success) {
-        throw new Error(response.error ?? "Gagal memproses approval");
+        throw new ApiRequestError(toUserFacingResponseError(response, "Gagal memproses approval."));
       }
       navigate(returnTo, { replace: true });
     } catch (error) {
-      errorToast(error instanceof Error ? error.message : "Gagal memproses approval");
+      errorToast(toUserFacingError(error, "Gagal memproses approval."));
     } finally {
       setIsReviewLoading(false);
     }

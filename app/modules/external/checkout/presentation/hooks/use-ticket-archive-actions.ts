@@ -4,6 +4,7 @@ import {
   ticketDeliveryApi,
   type TicketArchive,
 } from "../../infrastructure/ticket-delivery.api";
+import { ApiRequestError, toUserFacingError } from "~/core/api";
 
 type TicketArchiveAction = "download" | "share";
 
@@ -26,7 +27,7 @@ export function useTicketArchiveActions(transactionId: string, ticketCode?: stri
   const { error: errorToast, info: infoToast, success: successToast } = useToast();
 
   const loadArchive = useCallback((): Promise<TicketArchive> => {
-    if (!ticketCode) throw new Error("Kode akses tiket tidak tersedia.");
+    if (!ticketCode) throw new ApiRequestError("Kode akses tiket tidak tersedia.");
     const key = `${transactionId}:${ticketCode}`;
     if (archiveRequestRef.current?.key === key) return archiveRequestRef.current.promise;
 
@@ -69,11 +70,11 @@ export function useTicketArchiveActions(transactionId: string, ticketCode?: stri
     setActiveAction("download");
     try {
       const prepared = archive ?? await prepareArchive();
-      if (!prepared) throw new Error("Kode akses tiket tidak tersedia.");
+      if (!prepared) throw new ApiRequestError("Kode akses tiket tidak tersedia.");
       saveArchive(prepared);
       successToast("File tiket berhasil diunduh.");
     } catch (error) {
-      errorToast(error instanceof Error ? error.message : "Gagal mengunduh tiket.");
+      errorToast(toUserFacingError(error, "Gagal mengunduh tiket."));
     } finally {
       setActiveAction(null);
     }
@@ -83,7 +84,7 @@ export function useTicketArchiveActions(transactionId: string, ticketCode?: stri
     if (activeAction) return;
     if (!archive) {
       void prepareArchive().catch((error) => {
-        errorToast(error instanceof Error ? error.message : "Gagal menyiapkan tiket.");
+        errorToast(toUserFacingError(error, "Gagal menyiapkan tiket."));
       });
       infoToast("Tiket sedang disiapkan. Tekan Bagikan lagi setelah selesai.");
       return;
@@ -111,11 +112,11 @@ export function useTicketArchiveActions(transactionId: string, ticketCode?: stri
           errorToast("Izin berbagi ditolak. Pastikan halaman dibuka melalui HTTPS lalu coba lagi.");
           return;
         }
-        errorToast(error instanceof Error ? error.message : "Gagal membagikan tiket.");
+        errorToast(toUserFacingError(error, "Gagal membagikan tiket."));
       }).finally(() => setActiveAction(null));
     } catch (error) {
       setActiveAction(null);
-      errorToast(error instanceof Error ? error.message : "Gagal membagikan tiket.");
+      errorToast(toUserFacingError(error, "Gagal membagikan tiket."));
     }
   };
 

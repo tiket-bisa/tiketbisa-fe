@@ -210,11 +210,11 @@ export function PaymentInstruction({
         <div className="space-y-2">
           <h2 className="text-2xl font-black text-text-primary">Pembayaran masih aktif</h2>
           <p className="text-sm font-medium text-text-secondary">
-            Pilihan channel dan instruksi pembayaran tersedia di halaman aman Xendit sampai {deadline} WIB.
+            Pilihan metode dan instruksi pembayaran tersedia di halaman pembayaran sampai {deadline} WIB.
           </p>
         </div>
         <Button onClick={() => window.location.assign(gatewayData.paymentUrl!)} className="w-full py-5 rounded-2xl text-lg font-black">
-          Lanjut ke Xendit
+          Lanjutkan Pembayaran
         </Button>
         <button type="button" onClick={onBack} className="text-sm font-bold text-text-secondary hover:text-text-primary cursor-pointer">
           Keluar dari halaman pembayaran

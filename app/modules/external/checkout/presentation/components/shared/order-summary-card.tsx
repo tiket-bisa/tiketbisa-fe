@@ -51,7 +51,7 @@ export function OrderSummaryCard({ summary, className = "" }: OrderSummaryCardPr
         {summary.transactionFee > 0 && (
           <div className="flex justify-between items-start gap-4">
             <div className="space-y-1">
-              <span className="block text-sm font-medium text-text-secondary">Biaya transaksi (payment gateway)</span>
+              <span className="block text-sm font-medium text-text-secondary">Biaya transaksi</span>
               {summary.transactionFeeDescription && (
                 <span className="block text-xs font-medium text-text-tertiary">{summary.transactionFeeDescription}</span>
               )}

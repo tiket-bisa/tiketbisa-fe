@@ -124,7 +124,8 @@ test.describe.serial("local smoke flows", () => {
     cancelUrl.searchParams.set("payment", "cancelled");
     await page.goto(cancelUrl.toString());
     await expect(page.getByRole("heading", { name: "Pembayaran masih aktif" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Lanjut ke Xendit" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Lanjutkan Pembayaran" })).toBeVisible();
+    await expect(page.getByText(/Xendit/i)).toHaveCount(0);
 
     await postPaymentSessionWebhook(request, hostedTransactionId, "payment_session.completed");
     await postPaymentSessionWebhook(request, hostedTransactionId, "payment_session.completed");
@@ -141,7 +142,8 @@ test.describe.serial("local smoke flows", () => {
     let lastTransactionId = "";
     for (const method of hostedMethods.slice(1)) {
       lastTransactionId = await openHostedPayment(page, seeded, method);
-      await expect(page.getByText("Lanjut ke Xendit", { exact: true })).toBeVisible();
+      await expect(page.getByText("Lanjutkan Pembayaran", { exact: true })).toBeVisible();
+      await expect(page.getByText(/Xendit/i)).toHaveCount(0);
     }
     await postPaymentSessionWebhook(request, lastTransactionId, "payment_session.expired");
     await page.reload();

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ApiRequestError, toUserFacingError } from "~/core/api";
 import type { EventSummary, RevenueDataPoint, TicketDashboardSummary } from "~/core/types";
 import {
   findPartnerBrand,
@@ -116,7 +117,7 @@ export function usePartnerDashboardData(
       try {
         const brand = await findPartnerBrand({ brandName, brandSlug });
         if (!brand) {
-          throw new Error("Brand partner tidak ditemukan di data internal");
+          throw new ApiRequestError("Brand partner tidak ditemukan.");
         }
 
         const events = await getEventsByBrandId(brand.id);
@@ -141,10 +142,7 @@ export function usePartnerDashboardData(
 
         setState({
           isLoading: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : "Gagal mengambil data internal partner",
+          error: toUserFacingError(error, "Data partner belum dapat dimuat. Coba muat ulang."),
           brand: null,
           events: [],
           categoriesByEvent: {},
