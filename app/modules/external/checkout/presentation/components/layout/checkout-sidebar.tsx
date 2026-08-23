@@ -68,6 +68,7 @@ export function CheckoutSidebar({
         <div className="flex gap-4">
           <button
             onClick={onBack}
+            aria-label="Kembali"
             className="p-5 border-2 border-gray-100 rounded-2xl hover:bg-gray-50 transition-all active:scale-95 cursor-pointer"
           >
             <svg className="h-6 w-6 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">

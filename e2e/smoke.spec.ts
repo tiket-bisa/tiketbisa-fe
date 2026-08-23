@@ -63,6 +63,35 @@ test.beforeAll(async ({ request }) => {
 });
 
 test.describe.serial("local smoke flows", () => {
+  test("abandoned checkout releases its ticket reservation", async ({ page, request }) => {
+    if (!seeded) throw new Error("Seed data missing");
+
+    await page.goto(`/event/${seeded.event.id}`);
+    await page.getByRole("button", { name: "Increase" }).first().click();
+    const initialLock = page.waitForResponse(
+      (response) => response.url().endsWith("/transaction/lock") && response.request().method() === "POST",
+    );
+    await page.getByRole("button", { name: "Beli Tiket" }).click();
+    const lockResponse = await initialLock;
+    const lockEnvelope = await lockResponse.json();
+    const lockId = lockEnvelope.data?.userId as string;
+    expect(lockId).toBeTruthy();
+
+    const releaseResponse = page.waitForResponse(
+      (response) => response.url().endsWith(`/transaction/lock/${lockId}`)
+        && response.request().method() === "DELETE",
+    );
+    await page.getByRole("button", { name: "Kembali" }).first().click();
+    await expect((await releaseResponse).ok()).toBeTruthy();
+
+    const ttlResponse = await request.get(
+      `${process.env.E2E_API_BASE_URL ?? "http://localhost:8080"}/transaction/ttl/locks/`
+        + `${seeded.event.id}/${seeded.ticketCategory.id}/${lockId}`,
+    );
+    const ttlEnvelope = await ttlResponse.json();
+    expect(Number(ttlEnvelope.data?.remainingSeconds ?? ttlEnvelope.data?.remaining_seconds ?? 0)).toBe(0);
+  });
+
   test("public browse and checkout", async ({ page }) => {
     if (!seeded) {
       throw new Error("Seed data missing");

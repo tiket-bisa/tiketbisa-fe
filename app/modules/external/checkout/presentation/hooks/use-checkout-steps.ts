@@ -86,13 +86,24 @@ export function useCheckoutSteps(
     CHECKOUT_STORAGE_KEYS.forEach((key) => sessionStorage.removeItem(key));
   }, []);
 
+  const releaseActiveCheckout = useCallback((activeLockId?: string | null) => {
+    const checkoutId = activeLockId ?? lockId ?? searchParams.get("lockId");
+    if (!checkoutId || searchParams.get("orderId")) return;
+    void orderApi.releaseCheckout(checkoutId, event.id).catch((error) => {
+      // TTL remains the safety net if the browser loses its connection during cancellation.
+      console.error("Failed to release checkout reservation", error);
+    });
+  }, [event.id, lockId, searchParams]);
+
   const redirectForTicketLimit = useCallback(() => {
+    releaseActiveCheckout();
     clearCheckoutStorage();
     warningToast(`Maksimum ${MAX_TICKETS_PER_TRANSACTION} tiket per transaksi.`);
     navigate(`/event/${params.eventId ?? event.id}`);
-  }, [clearCheckoutStorage, event.id, navigate, params.eventId, warningToast]);
+  }, [clearCheckoutStorage, event.id, navigate, params.eventId, releaseActiveCheckout, warningToast]);
 
   const expireCheckoutSession = useCallback((showMessage = true) => {
+    releaseActiveCheckout();
     clearCheckoutStorage();
     setLockId(null);
     setManualTransferProofFile(null);
@@ -101,7 +112,7 @@ export function useCheckoutSteps(
       warningToast("Sesi checkout kamu sudah kedaluwarsa. Silakan pilih tiket ulang.");
     }
     navigate(`/event/${params.eventId ?? event.id}`);
-  }, [clearCheckoutStorage, event.id, navigate, params.eventId, warningToast]);
+  }, [clearCheckoutStorage, event.id, navigate, params.eventId, releaseActiveCheckout, warningToast]);
 
   const setDeadlineFromTtl = useCallback((ttl: CheckoutTtl) => {
     if (ttl.status === "ACTIVE" && ttl.remainingSeconds > 0) {
@@ -194,6 +205,7 @@ export function useCheckoutSteps(
     setIsActionLoading(true);
     try {
       const lock = await orderApi.acquireLock(event.id, baseSummary);
+      setBlockingError(null);
       setLockId(lock.userId);
       setSearchParams(prev => {
         const newParams = new URLSearchParams(prev);
@@ -202,10 +214,13 @@ export function useCheckoutSteps(
       }, { replace: true });
     } catch (error) {
       console.error("Failed to acquire initial ticket lock", error);
+      const message = "Tiket belum dapat direservasi. Periksa ketersediaan tiket lalu coba lagi.";
+      setBlockingError(message);
+      errorToast(message);
     } finally {
       setIsActionLoading(false);
     }
-  }, [lockId, currentStep, event.id, baseSummary, setSearchParams, exceedsTicketLimit, redirectForTicketLimit]);
+  }, [lockId, currentStep, event.id, baseSummary, setSearchParams, exceedsTicketLimit, redirectForTicketLimit, errorToast]);
 
   // Trigger lock on mount if on step 1
   useEffect(() => {
@@ -507,6 +522,7 @@ export function useCheckoutSteps(
 
   const handleBack = useCallback(() => {
     if (currentStep === 1) {
+      releaseActiveCheckout();
       clearCheckoutStorage();
       navigate(`/event/${params.eventId}`);
     } else if (currentStep === 5) {
@@ -515,7 +531,7 @@ export function useCheckoutSteps(
     } else {
       navigate(-1);
     }
-  }, [clearCheckoutStorage, currentStep, navigate, params.eventId]);
+  }, [clearCheckoutStorage, currentStep, navigate, params.eventId, releaseActiveCheckout]);
 
   const handleExpire = useCallback(() => {
     expireCheckoutSession(false);

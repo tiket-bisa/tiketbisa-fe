@@ -292,6 +292,18 @@ export const orderApi = {
     return response.data;
   },
 
+  /** Release an abandoned checkout. Persisted orders are protected by the backend. */
+  async releaseCheckout(lockId: string, eventId: string): Promise<void> {
+    const response = await apiFetch<ApiResponse<{ released: boolean }>>(`/transaction/lock/${lockId}`, {
+      method: "DELETE",
+      body: JSON.stringify({ eventId }),
+    });
+
+    if (!response.success) {
+      throw new Error(getApiErrorMessage(response, "Checkout belum dapat dibatalkan"));
+    }
+  },
+
   /**
    * Phase 2: Store temporary transaction with buyer info (DDD - Store Context)
    */
