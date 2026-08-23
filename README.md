@@ -16,30 +16,30 @@ summary by hiding internal fee formulas and per-ticket fee breakdowns.
 Merged `09d5058` · 22 files · +326 / -253
 
 <details>
-<summary>Files changed</summary>
+<summary>Files changed (+/− lines per file)</summary>
 
-- `app/core/api/services/transaction.api.test.ts`
-- `app/core/api/services/transaction.api.ts`
-- `app/core/constants/transaction.test.ts`
-- `app/core/constants/transaction.ts`
-- `app/core/types/index.ts`
-- `app/modules/admin/dashboard/presentation/components/transaction-table.test.tsx`
-- `app/modules/admin/dashboard/presentation/dashboard.page.tsx`
-- `app/modules/external/checkout/domain/checkout.pricing.test.ts`
-- `app/modules/external/checkout/domain/checkout.pricing.ts`
-- `app/modules/external/checkout/domain/checkout.types.ts`
-- `app/modules/external/checkout/domain/checkout.validation.test.ts`
-- `app/modules/external/checkout/domain/checkout.validation.ts`
-- `app/modules/external/checkout/infrastructure/order.api.ts`
-- `app/modules/external/checkout/infrastructure/payment.api.test.ts`
-- `app/modules/external/checkout/infrastructure/payment.api.ts`
-- `app/modules/external/checkout/presentation/checkout.page.tsx`
-- `app/modules/external/checkout/presentation/components/steps/payment-instruction.tsx`
-- `app/modules/external/checkout/presentation/components/steps/payment-method-selection.tsx`
-- `app/modules/external/checkout/presentation/hooks/use-checkout-steps.ts`
-- `app/modules/internal/dashboard/presentation/dashboard.page.tsx`
-- `e2e/helpers/e2e-api.ts`
-- `e2e/smoke.spec.ts`
+- `app/core/api/services/transaction.api.test.ts` — +30 / -0
+- `app/core/api/services/transaction.api.ts` — +1 / -0
+- `app/core/constants/transaction.test.ts` — +13 / -0
+- `app/core/constants/transaction.ts` — +8 / -0
+- `app/core/types/index.ts` — +1 / -1
+- `app/modules/admin/dashboard/presentation/components/transaction-table.test.tsx` — +31 / -0
+- `app/modules/admin/dashboard/presentation/dashboard.page.tsx` — +2 / -8
+- `app/modules/external/checkout/domain/checkout.pricing.test.ts` — +10 / -0
+- `app/modules/external/checkout/domain/checkout.pricing.ts` — +9 / -0
+- `app/modules/external/checkout/domain/checkout.types.ts` — +6 / -1
+- `app/modules/external/checkout/domain/checkout.validation.test.ts` — +4 / -0
+- `app/modules/external/checkout/domain/checkout.validation.ts` — +2 / -2
+- `app/modules/external/checkout/infrastructure/order.api.ts` — +19 / -7
+- `app/modules/external/checkout/infrastructure/payment.api.test.ts` — +18 / -2
+- `app/modules/external/checkout/infrastructure/payment.api.ts` — +10 / -6
+- `app/modules/external/checkout/presentation/checkout.page.tsx` — +10 / -4
+- `app/modules/external/checkout/presentation/components/steps/payment-instruction.tsx` — +24 / -1
+- `app/modules/external/checkout/presentation/components/steps/payment-method-selection.tsx` — +30 / -158
+- `app/modules/external/checkout/presentation/hooks/use-checkout-steps.ts` — +13 / -2
+- `app/modules/internal/dashboard/presentation/dashboard.page.tsx` — +2 / -22
+- `e2e/helpers/e2e-api.ts` — +23 / -0
+- `e2e/smoke.spec.ts` — +60 / -39
 
 </details>
 
@@ -48,20 +48,20 @@ Merged `09d5058` · 22 files · +326 / -253
 Merged `f57a32f` · 12 files · +287 / -119
 
 <details>
-<summary>Files changed</summary>
+<summary>Files changed (+/− lines per file)</summary>
 
-- `.env.example`
-- `.github/workflows/ci.yml`
-- `.github/workflows/deploy.yml`
-- `.github/workflows/e2e.yml`
-- `Dockerfile`
-- `app/core/api/api-url.ts`
-- `app/modules/external/checkout/presentation/components/steps/payment-instruction.tsx`
-- `app/routes.ts`
-- `app/routes/healthz.ts`
-- `docker-compose.yml`
-- `docs/production-cicd.md`
-- `scripts/deploy-production.sh`
+- `.env.example` — +5 / -0
+- `.github/workflows/ci.yml` — +34 / -0
+- `.github/workflows/deploy.yml` — +86 / -111
+- `.github/workflows/e2e.yml` — +43 / -0
+- `Dockerfile` — +8 / -0
+- `app/core/api/api-url.ts` — +4 / -4
+- `app/modules/external/checkout/presentation/components/steps/payment-instruction.tsx` — +9 / -3
+- `app/routes.ts` — +2 / -0
+- `app/routes/healthz.ts` — +6 / -0
+- `docker-compose.yml` — +10 / -1
+- `docs/production-cicd.md` — +24 / -0
+- `scripts/deploy-production.sh` — +56 / -0
 
 </details>
 
@@ -70,9 +70,9 @@ Merged `f57a32f` · 12 files · +287 / -119
 Merged `dd431d0` · 1 file · +39 / -5
 
 <details>
-<summary>Files changed</summary>
+<summary>Files changed (+/− lines per file)</summary>
 
-- `scripts/deploy-production.sh`
+- `scripts/deploy-production.sh` — +39 / -5
 
 </details>
 
@@ -81,47 +81,47 @@ Merged `dd431d0` · 1 file · +39 / -5
 Merged `f353cbb` · 39 files · +397 / -144
 
 <details>
-<summary>Files changed</summary>
+<summary>Files changed (+/− lines per file)</summary>
 
-- `app/core/api/api-error.test.ts`
-- `app/core/api/api-error.ts`
-- `app/core/api/api-fetch.ts`
-- `app/core/api/api-response.type.ts`
-- `app/core/api/http-client.ts`
-- `app/core/api/index.ts`
-- `app/core/api/use-api.ts`
-- `app/core/auth/google-oauth.client.ts`
-- `app/modules/admin/brands/presentation/brands.page.tsx`
-- `app/modules/admin/events/presentation/events.page.tsx`
-- `app/modules/admin/integration-clients/presentation/integration-clients.page.tsx`
-- `app/modules/admin/promos/infrastructure/promo.api.ts`
-- `app/modules/admin/promos/presentation/promos.page.tsx`
-- `app/modules/admin/transactions/presentation/transaction-details.page.tsx`
-- `app/modules/external/checkout/infrastructure/ticket-delivery.api.test.ts`
-- `app/modules/external/checkout/infrastructure/ticket-delivery.api.ts`
-- `app/modules/external/checkout/presentation/components/shared/order-summary-card.tsx`
-- `app/modules/external/checkout/presentation/components/steps/manual-transfer-pending.tsx`
-- `app/modules/external/checkout/presentation/components/steps/payment-instruction.test.tsx`
-- `app/modules/external/checkout/presentation/components/steps/payment-instruction.tsx`
-- `app/modules/external/checkout/presentation/components/steps/payment-method-selection.test.tsx`
-- `app/modules/external/checkout/presentation/components/steps/payment-method-selection.tsx`
-- `app/modules/external/checkout/presentation/hooks/use-ticket-archive-actions.ts`
-- `app/modules/external/static/contact.api.ts`
-- `app/modules/external/static/hubungi.page.tsx`
-- `app/modules/internal/brand/presentation/brand.page.tsx`
-- `app/modules/internal/common/infrastructure/partner.api.ts`
-- `app/modules/internal/common/presentation/event-gallery-manager.tsx`
-- `app/modules/internal/common/presentation/image-source-input.tsx`
-- `app/modules/internal/common/presentation/payment-proof-actions.tsx`
-- `app/modules/internal/common/presentation/use-partner-dashboard-data.ts`
-- `app/modules/internal/events/presentation/events.page.tsx`
-- `app/modules/internal/events/presentation/generate-complimentary-ticket.page.tsx`
-- `app/modules/internal/ticket-delivery/presentation/ticket-delivery-actions.tsx`
-- `app/modules/internal/ticket-scanning/presentation/hooks/use-checkin.ts`
-- `app/modules/internal/ticket-scanning/presentation/hooks/use-scan-flow.ts`
-- `app/modules/internal/transaction-details/presentation/transaction-details.page.tsx`
-- `app/root.tsx`
-- `e2e/smoke.spec.ts`
+- `app/core/api/api-error.test.ts` — +64 / -0
+- `app/core/api/api-error.ts` — +90 / -0
+- `app/core/api/api-fetch.ts` — +12 / -8
+- `app/core/api/api-response.type.ts` — +1 / -0
+- `app/core/api/http-client.ts` — +14 / -10
+- `app/core/api/index.ts` — +7 / -0
+- `app/core/api/use-api.ts` — +2 / -1
+- `app/core/auth/google-oauth.client.ts` — +9 / -12
+- `app/modules/admin/brands/presentation/brands.page.tsx` — +11 / -10
+- `app/modules/admin/events/presentation/events.page.tsx` — +3 / -3
+- `app/modules/admin/integration-clients/presentation/integration-clients.page.tsx` — +12 / -8
+- `app/modules/admin/promos/infrastructure/promo.api.ts` — +4 / -2
+- `app/modules/admin/promos/presentation/promos.page.tsx` — +8 / -6
+- `app/modules/admin/transactions/presentation/transaction-details.page.tsx` — +3 / -3
+- `app/modules/external/checkout/infrastructure/ticket-delivery.api.test.ts` — +2 / -2
+- `app/modules/external/checkout/infrastructure/ticket-delivery.api.ts` — +5 / -5
+- `app/modules/external/checkout/presentation/components/shared/order-summary-card.tsx` — +1 / -1
+- `app/modules/external/checkout/presentation/components/steps/manual-transfer-pending.tsx` — +1 / -1
+- `app/modules/external/checkout/presentation/components/steps/payment-instruction.test.tsx` — +44 / -0
+- `app/modules/external/checkout/presentation/components/steps/payment-instruction.tsx` — +2 / -2
+- `app/modules/external/checkout/presentation/components/steps/payment-method-selection.test.tsx` — +33 / -0
+- `app/modules/external/checkout/presentation/components/steps/payment-method-selection.tsx` — +1 / -4
+- `app/modules/external/checkout/presentation/hooks/use-ticket-archive-actions.ts` — +7 / -6
+- `app/modules/external/static/contact.api.ts` — +2 / -2
+- `app/modules/external/static/hubungi.page.tsx` — +2 / -1
+- `app/modules/internal/brand/presentation/brand.page.tsx` — +2 / -2
+- `app/modules/internal/common/infrastructure/partner.api.ts` — +2 / -2
+- `app/modules/internal/common/presentation/event-gallery-manager.tsx` — +6 / -6
+- `app/modules/internal/common/presentation/image-source-input.tsx` — +2 / -2
+- `app/modules/internal/common/presentation/payment-proof-actions.tsx` — +6 / -5
+- `app/modules/internal/common/presentation/use-partner-dashboard-data.ts` — +3 / -5
+- `app/modules/internal/events/presentation/events.page.tsx` — +3 / -3
+- `app/modules/internal/events/presentation/generate-complimentary-ticket.page.tsx` — +3 / -3
+- `app/modules/internal/ticket-delivery/presentation/ticket-delivery-actions.tsx` — +5 / -4
+- `app/modules/internal/ticket-scanning/presentation/hooks/use-checkin.ts` — +3 / -2
+- `app/modules/internal/ticket-scanning/presentation/hooks/use-scan-flow.ts` — +10 / -4
+- `app/modules/internal/transaction-details/presentation/transaction-details.page.tsx` — +3 / -3
+- `app/root.tsx` — +5 / -14
+- `e2e/smoke.spec.ts` — +4 / -2
 
 </details>
 
@@ -130,14 +130,14 @@ Merged `f353cbb` · 39 files · +397 / -144
 Merged `a8ece88` · 6 files · +77 / -4
 
 <details>
-<summary>Files changed</summary>
+<summary>Files changed (+/− lines per file)</summary>
 
-- `app/modules/external/checkout/infrastructure/order.api.test.ts`
-- `app/modules/external/checkout/infrastructure/order.api.ts`
-- `app/modules/external/checkout/presentation/components/layout/checkout-sidebar.tsx`
-- `app/modules/external/checkout/presentation/components/layout/checkout-sticky-bar.tsx`
-- `app/modules/external/checkout/presentation/hooks/use-checkout-steps.ts`
-- `e2e/smoke.spec.ts`
+- `app/modules/external/checkout/infrastructure/order.api.test.ts` — +14 / -0
+- `app/modules/external/checkout/infrastructure/order.api.ts` — +12 / -0
+- `app/modules/external/checkout/presentation/components/layout/checkout-sidebar.tsx` — +1 / -0
+- `app/modules/external/checkout/presentation/components/layout/checkout-sticky-bar.tsx` — +1 / -0
+- `app/modules/external/checkout/presentation/hooks/use-checkout-steps.ts` — +20 / -4
+- `e2e/smoke.spec.ts` — +29 / -0
 
 </details>
 
@@ -146,10 +146,10 @@ Merged `a8ece88` · 6 files · +77 / -4
 Merged `c147b93` · 2 files · +42 / -13
 
 <details>
-<summary>Files changed</summary>
+<summary>Files changed (+/− lines per file)</summary>
 
-- `app/modules/external/checkout/presentation/components/shared/order-summary-card.test.tsx`
-- `app/modules/external/checkout/presentation/components/shared/order-summary-card.tsx`
+- `app/modules/external/checkout/presentation/components/shared/order-summary-card.test.tsx` — +38 / -0
+- `app/modules/external/checkout/presentation/components/shared/order-summary-card.tsx` — +4 / -13
 
 </details>
 
