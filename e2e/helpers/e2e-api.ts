@@ -188,6 +188,29 @@ export async function approveManualTransfer(
   );
 }
 
+export async function postPaymentSessionWebhook(
+  request: APIRequestContext,
+  transactionId: string,
+  event: "payment_session.completed" | "payment_session.expired",
+): Promise<void> {
+  const response = await request.post(
+    `${normalizeBaseUrl(E2E_API_BASE_URL)}/transaction/webhook/xendit`,
+    {
+      data: {
+        event,
+        data: {
+          reference_id: transactionId,
+          status: event.endsWith(".completed") ? "COMPLETED" : "EXPIRED",
+        },
+      },
+    },
+  );
+  const payload = (await response.json()) as ApiResponse<unknown>;
+  if (!response.ok() || !payload.success) {
+    throw new Error(`Webhook failed: ${response.status()} ${JSON.stringify(payload.error)}`);
+  }
+}
+
 async function seedRoles(
   request: APIRequestContext,
   payload: { adminEmail?: string; partnerEmail?: string; brandId?: string },

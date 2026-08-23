@@ -77,6 +77,7 @@ export interface CompleteOrderResponse {
   /** Gateway (FLIP) VA/QRIS payload, present for non-manual-transfer payment methods. */
   virtualAccount?: string | null;
   qrPayload?: string | null;
+  paymentUrl?: string | null;
   gatewayStatus?: GatewayStatus | null;
   gatewayExpiry?: string | null;
 }
@@ -86,6 +87,7 @@ export interface TransactionStatusResult {
   gatewayStatus?: GatewayStatus | null;
   virtualAccount?: string | null;
   qrPayload?: string | null;
+  paymentUrl?: string | null;
   gatewayExpiry?: string | null;
 }
 
@@ -148,6 +150,7 @@ interface TransactionStatusFromApi {
   status?: string;
   virtualAccount?: string | null;
   qrPayload?: string | null;
+  paymentUrl?: string | null;
   gatewayStatus?: string | null;
   gatewayExpiry?: string | null;
 }
@@ -225,11 +228,15 @@ function mapPaymentMethod(paymentMethodRaw: string | undefined): PaymentMethod {
       };
     case "EWALLET":
       return {
-        id: "ewallet",
-        name: "E-Wallet",
+        id: "astrapay",
+        name: "AstraPay",
         logo: "",
-        category: "E_WALLET_QRIS",
+        category: "E_WALLET",
       };
+    case "PAYLATER":
+      return { id: "akulaku", name: "Akulaku", logo: "", category: "PAYLATER" };
+    case "OVER_THE_COUNTER":
+      return { id: "indomaret", name: "Indomaret", logo: "", category: "OVER_THE_COUNTER" };
     default:
       return {
         id: "unknown",
@@ -297,13 +304,13 @@ export const orderApi = {
     promoCode?: string,
     bankCode?: string
   ): Promise<CheckoutTtl> {
-    let backendPaymentMethod = "MANUAL_TRANSFER";
-    if (paymentMethod.category === "BANK_TRANSFER") {
+    let backendPaymentMethod = paymentMethod.paymentMethod ?? "MANUAL_TRANSFER";
+    if (!paymentMethod.paymentMethod && paymentMethod.category === "BANK_TRANSFER") {
       const paymentMethodId = paymentMethod.id.toLowerCase();
       backendPaymentMethod = paymentMethodId === "manual" || paymentMethodId === "manual_transfer"
         ? "MANUAL_TRANSFER"
         : "VA";
-    } else if (paymentMethod.category === "E_WALLET_QRIS") {
+    } else if (!paymentMethod.paymentMethod && paymentMethod.category === "E_WALLET_QRIS") {
       backendPaymentMethod = "QRIS";
     }
 
@@ -356,6 +363,7 @@ export const orderApi = {
     const response = await apiFetch<ApiResponse<Record<string, TicketIssuedFromApi[]> & {
       virtualAccount?: string | null;
       qrPayload?: string | null;
+      paymentUrl?: string | null;
       gatewayStatus?: string | null;
       gatewayExpiry?: string | null;
     }>>(`/transaction/${lockId}/complete`, {
@@ -366,7 +374,7 @@ export const orderApi = {
       throw new Error(getApiErrorMessage(response, "Failed to complete transaction"));
     }
 
-    const { virtualAccount, qrPayload, gatewayStatus, gatewayExpiry, ...ticketsByCategory } = response.data;
+    const { virtualAccount, qrPayload, paymentUrl, gatewayStatus, gatewayExpiry, ...ticketsByCategory } = response.data;
 
     const normalizedTickets = Object.values(ticketsByCategory)
       // Only the per-category arrays are tickets; ignore any stray scalar fields the gateway
@@ -398,6 +406,7 @@ export const orderApi = {
       tickets: normalizedTickets,
       virtualAccount: virtualAccount ?? transactionSnapshot?.virtualAccount ?? null,
       qrPayload: qrPayload ?? transactionSnapshot?.qrPayload ?? null,
+      paymentUrl: paymentUrl ?? transactionSnapshot?.paymentUrl ?? null,
       gatewayStatus: (gatewayStatus ?? transactionSnapshot?.gatewayStatus ?? null) as GatewayStatus | null,
       gatewayExpiry: gatewayExpiry ?? transactionSnapshot?.gatewayExpiry ?? null,
     };
@@ -525,6 +534,7 @@ export const orderApi = {
       const gatewayExpiry = data.gatewayExpiry as string | undefined;
       const virtualAccount = (data.virtualAccount as string | null | undefined) ?? null;
       const qrPayload = (data.qrPayload as string | null | undefined) ?? null;
+      const paymentUrl = (data.paymentUrl as string | null | undefined) ?? null;
       const gatewayStatus = (data.gatewayStatus as GatewayStatus | null | undefined) ?? null;
 
       return {
@@ -538,6 +548,7 @@ export const orderApi = {
           : "Pindai kode QR menggunakan aplikasi pembayaran Anda.",
         virtualAccount,
         qrPayload,
+        paymentUrl,
         gatewayStatus,
         gatewayExpiry: gatewayExpiry ?? null,
       };
@@ -565,6 +576,7 @@ export const orderApi = {
         gatewayStatus: (data.gatewayStatus as GatewayStatus | null | undefined) ?? null,
         virtualAccount: data.virtualAccount ?? null,
         qrPayload: data.qrPayload ?? null,
+        paymentUrl: data.paymentUrl ?? null,
         gatewayExpiry: data.gatewayExpiry ?? null,
       };
     } catch {

@@ -65,10 +65,12 @@ export function PaymentInstruction({
     virtualAccount?: string | null;
     qrPayload?: string | null;
     gatewayExpiry?: string | null;
+    paymentUrl?: string | null;
   }>({
     virtualAccount: order.virtualAccount,
     qrPayload: order.qrPayload,
     gatewayExpiry: order.gatewayExpiry,
+    paymentUrl: order.paymentUrl,
   });
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [hasCompleted, setHasCompleted] = useState(false);
@@ -79,8 +81,9 @@ export function PaymentInstruction({
       virtualAccount: order.virtualAccount,
       qrPayload: order.qrPayload,
       gatewayExpiry: order.gatewayExpiry,
+      paymentUrl: order.paymentUrl,
     });
-  }, [order.virtualAccount, order.qrPayload, order.gatewayExpiry]);
+  }, [order.virtualAccount, order.qrPayload, order.gatewayExpiry, order.paymentUrl]);
 
   useEffect(() => {
     const stored = Number(sessionStorage.getItem(CHECKOUT_DEADLINE_STORAGE_KEY));
@@ -93,6 +96,7 @@ export function PaymentInstruction({
       virtualAccount: result.virtualAccount ?? prev.virtualAccount,
       qrPayload: result.qrPayload ?? prev.qrPayload,
       gatewayExpiry: result.gatewayExpiry ?? prev.gatewayExpiry,
+      paymentUrl: result.paymentUrl ?? prev.paymentUrl,
     }));
 
     const isCompleted =
@@ -199,6 +203,25 @@ export function PaymentInstruction({
 
   const { bankName, accountNumber } = parseVirtualAccount(gatewayData.virtualAccount);
   const qrPayload = gatewayData.qrPayload;
+
+  if (!isManualTransfer && gatewayData.paymentUrl) {
+    return (
+      <Card className="max-w-2xl mx-auto p-8 md:p-12 rounded-3xl text-center space-y-6">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-black text-text-primary">Pembayaran masih aktif</h2>
+          <p className="text-sm font-medium text-text-secondary">
+            Pilihan channel dan instruksi pembayaran tersedia di halaman aman Xendit sampai {deadline} WIB.
+          </p>
+        </div>
+        <Button onClick={() => window.location.assign(gatewayData.paymentUrl!)} className="w-full py-5 rounded-2xl text-lg font-black">
+          Lanjut ke Xendit
+        </Button>
+        <button type="button" onClick={onBack} className="text-sm font-bold text-text-secondary hover:text-text-primary cursor-pointer">
+          Keluar dari halaman pembayaran
+        </button>
+      </Card>
+    );
+  }
 
   // --- 1. QRIS LAYOUT — a real scannable qr_string from Xendit's direct QR Code API (not a hosted
   // checkout URL). VA is handled entirely by layout 2 below: it gets a real bank + account number

@@ -57,7 +57,7 @@ export interface Transaction extends AuditableEntity {
   ticket_name: string;
   quantity: number;
   total_price: number;
-  status: "pending" | "paid" | "cancelled" | "refunded";
+  status: "pending" | "paid" | "cancelled" | "refunded" | "expired";
   payment_method?: string;
 }
 

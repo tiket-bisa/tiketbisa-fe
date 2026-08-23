@@ -45,20 +45,24 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     event.brandId ? brandApi.getBrandBySlug(event.brandId) : Promise.resolve(null),
   ]);
 
-  const availablePaymentMethods = paymentConfiguration.virtualAccountBanks.length > 0
-    ? paymentMethods
-    : paymentMethods.filter((method) => method.id !== "va");
+  const configuredMethods = paymentConfiguration.paymentSessionEnabled && paymentConfiguration.paymentMethods.length > 0
+    ? paymentConfiguration.paymentMethods
+    : paymentMethods;
+  const availablePaymentMethods = paymentConfiguration.paymentSessionEnabled || paymentConfiguration.virtualAccountBanks.length > 0
+    ? configuredMethods
+    : configuredMethods.filter((method) => method.id !== "va");
   return {
     event,
     paymentMethods: availablePaymentMethods,
     virtualAccountBanks: paymentConfiguration.virtualAccountBanks,
+    paymentSessionEnabled: paymentConfiguration.paymentSessionEnabled,
     order,
     adminFee: brand?.adminFee ?? 0,
   };
 }
 
 export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
-  const { event, paymentMethods, virtualAccountBanks, order } = loaderData;
+  const { event, paymentMethods, virtualAccountBanks, paymentSessionEnabled, order } = loaderData;
   const [searchParams] = useSearchParams();
   const { warning: warningToast } = useToast();
 
@@ -206,6 +210,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
       ...order,
       virtualAccount: completedOrder.virtualAccount ?? order.virtualAccount,
       qrPayload: completedOrder.qrPayload ?? order.qrPayload,
+      paymentUrl: completedOrder.paymentUrl ?? order.paymentUrl,
       gatewayStatus: completedOrder.gatewayStatus ?? order.gatewayStatus,
       gatewayExpiry: completedOrder.gatewayExpiry ?? order.gatewayExpiry,
     };
@@ -304,6 +309,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
                 <PaymentMethodSelection
                   methods={paymentMethods}
                   virtualAccountBanks={virtualAccountBanks}
+                  paymentSessionEnabled={paymentSessionEnabled}
                   selectedMethodId={paymentSelection.methodId}
                   onSelect={handlePaymentMethodSelect}
                   selectedBankCode={paymentSelection.bankCode}

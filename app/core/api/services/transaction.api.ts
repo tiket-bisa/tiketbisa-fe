@@ -239,6 +239,7 @@ function mapBackendStatus(status: string | undefined): Transaction["status"] {
     if (normalizedStatus === "WAITING_PAYMENT" || normalizedStatus === "WAITING_APPROVAL") return "pending";
     if (normalizedStatus === "CANCELED" || normalizedStatus === "CANCELLED") return "cancelled";
     if (normalizedStatus === "REFUNDED") return "refunded";
+    if (normalizedStatus === "EXPIRED") return "expired";
     return "pending";
 }
 

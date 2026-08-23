@@ -9,29 +9,9 @@ import { useApiQuery } from "~/core/api";
 import { TransactionPaginationControls } from "~/modules/internal/common/presentation/transaction-pagination-controls";
 import { useDebouncedValue } from "~/modules/internal/common/presentation/use-debounced-value";
 import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
-
-const STATUS_MAP = {
-  paid: { label: "Lunas", variant: "success" as const },
-  pending: { label: "Menunggu", variant: "warning" as const },
-  cancelled: { label: "Dibatalkan", variant: "destructive" as const },
-  refunded: { label: "Refund", variant: "default" as const },
-};
+import { mapTransactionStatusFilterToApi, STATUS_MAP, statusFilterOptions, type TransactionStatus } from "~/core/constants/transaction";
 
 const DEFAULT_PAGE_SIZE = 5;
-
-function mapStatusFilterToApi(statusFilter: string): string | undefined {
-  if (statusFilter === "all") return undefined;
-  if (statusFilter === "pending") return "WAITING_APPROVAL";
-  return statusFilter.toUpperCase();
-}
-
-const statusFilterOptions = [
-  { value: "all", label: "Semua Status" },
-  { value: "paid", label: "Lunas" },
-  { value: "pending", label: "Menunggu" },
-  { value: "cancelled", label: "Dibatalkan" },
-  { value: "refunded", label: "Refund" },
-];
 
 /** Partner — Dashboard / Beranda (filtered by partner's brand) */
 export default function DashboardPage() {
@@ -66,7 +46,7 @@ export default function DashboardPage() {
         offset: (currentPage - 1) * pageSize,
         brandId: user.brand_id,
         customerName: debouncedSearch || undefined,
-        status: mapStatusFilterToApi(statusFilter),
+        status: mapTransactionStatusFilterToApi(statusFilter as "all" | TransactionStatus),
       });
       if (res.success && res.data) {
         return {

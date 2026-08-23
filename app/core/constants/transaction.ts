@@ -10,6 +10,7 @@ export const STATUS_MAP: Record<
   pending: { label: "Menunggu", variant: "warning" },
   cancelled: { label: "Dibatalkan", variant: "destructive" },
   refunded: { label: "Refund", variant: "default" },
+  expired: { label: "Expired", variant: "destructive" },
 };
 
 export const statusFilterOptions: Array<{ value: "all" | TransactionStatus; label: string }> = [
@@ -18,4 +19,11 @@ export const statusFilterOptions: Array<{ value: "all" | TransactionStatus; labe
   { value: "pending", label: "Menunggu" },
   { value: "cancelled", label: "Dibatalkan" },
   { value: "refunded", label: "Refund" },
+  { value: "expired", label: "Expired" },
 ];
+
+export function mapTransactionStatusFilterToApi(statusFilter: "all" | TransactionStatus): string | undefined {
+  if (statusFilter === "all") return undefined;
+  if (statusFilter === "pending") return "WAITING_APPROVAL";
+  return statusFilter.toUpperCase();
+}

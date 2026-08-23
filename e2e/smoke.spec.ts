@@ -2,7 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import {
   seedE2eData,
   getTransactionDetail,
-  approveManualTransfer,
+  postPaymentSessionWebhook,
   type E2eSeedResult,
 } from "./helpers/e2e-api";
 import { setAdminSession, setPartnerSession } from "./helpers/e2e-auth";
@@ -11,11 +11,25 @@ import { createPaymentProofFile } from "./helpers/e2e-files";
 let seeded: Awaited<ReturnType<typeof seedE2eData>> | null = null;
 let transactionId: string | null = null;
 
-async function openGatewayPayment(
+interface HostedMethod {
+  id: "va" | "qris" | "astrapay" | "akulaku" | "indomaret";
+  name: string;
+  expectedTotal: string;
+}
+
+const hostedMethods: HostedMethod[] = [
+  { id: "va", name: "Virtual Account", expectedTotal: "Rp 155.000" },
+  { id: "qris", name: "QRIS", expectedTotal: "Rp 154.500" },
+  { id: "astrapay", name: "AstraPay", expectedTotal: "Rp 155.000" },
+  { id: "akulaku", name: "Akulaku", expectedTotal: "Rp 155.000" },
+  { id: "indomaret", name: "Indomaret", expectedTotal: "Rp 155.000" },
+];
+
+async function openHostedPayment(
   page: Page,
   seed: E2eSeedResult,
-  method: "va" | "qris",
-) {
+  method: HostedMethod,
+): Promise<string> {
   await page.goto(`/event/${seed.event.id}`);
   await page.getByRole("button", { name: "Increase" }).first().click();
   const initialLock = page.waitForResponse(
@@ -30,22 +44,18 @@ async function openGatewayPayment(
   await page.locator("#identityNumber").fill(seed.buyer.identityNumber);
   await page.getByLabel("Samakan dengan data utama").check();
 
-  if (method === "va") {
-    await page.getByRole("button", { name: "Virtual Account", exact: true }).click();
-    await page.getByRole("button", { name: "BCA", exact: true }).click();
-  } else {
-    await page.getByRole("button", { name: /E-Wallet \/ QRIS Instant Payment/i }).click();
-    await page.getByRole("button", { name: "QRIS", exact: true }).click();
-  }
+  await page.getByRole("button", { name: new RegExp(`^${method.name}`) }).click();
+  await expect(page.getByText(method.expectedTotal, { exact: true }).and(page.locator(":visible")).first()).toBeVisible();
 
-  const expectedTotal = method === "va" ? "Rp 155.000" : "Rp 154.500";
-  await expect(page.getByText(expectedTotal, { exact: true }).and(page.locator(":visible")).first()).toBeVisible();
-
-  await page.getByLabel(/Syarat & Ketentuan/i).and(page.locator(":visible")).check();
-  await page.getByLabel(/Kebijakan Privasi/i).and(page.locator(":visible")).check();
+  await page.locator('[data-checkout-consent]:visible input[type="checkbox"]').nth(0).check();
+  await page.locator('[data-checkout-consent]:visible input[type="checkbox"]').nth(1).check();
   await page.getByRole("button", { name: /Lanjut ke Pembayaran/i }).and(page.locator(":visible")).click();
   await page.getByRole("button", { name: "Ya, Lanjutkan" }).click();
-  await expect(page).toHaveURL(/(?:\?|&)step=4(?:&|$)/);
+  await expect(page).toHaveURL(/(?:\?|&)mockPayment=1(?:&|$)/);
+  await expect(page.getByRole("heading", { name: "Pembayaran masih aktif" })).toBeVisible();
+  const transactionId = new URL(page.url()).searchParams.get("orderId");
+  expect(transactionId).toBeTruthy();
+  return transactionId as string;
 }
 
 test.beforeAll(async ({ request }) => {
@@ -84,8 +94,8 @@ test.describe.serial("local smoke flows", () => {
     await expect(page.locator("#fullName")).toHaveValue(seeded.buyer.name);
 
     await page.locator('button', { hasText: 'Manual Transfer' }).click();
-    await page.getByLabel(/Syarat & Ketentuan/i).and(page.locator(':visible')).check();
-    await page.getByLabel(/Kebijakan Privasi/i).and(page.locator(':visible')).check();
+    await page.locator('[data-checkout-consent]:visible input[type="checkbox"]').nth(0).check();
+    await page.locator('[data-checkout-consent]:visible input[type="checkbox"]').nth(1).check();
     await page.getByRole("button", { name: /Lanjut ke Pembayaran/i }).and(page.locator(':visible')).click();
     await page.getByRole("button", { name: "Ya, Lanjutkan" }).click();
 
@@ -105,35 +115,46 @@ test.describe.serial("local smoke flows", () => {
     expect(transactionId).toBeTruthy();
   });
 
-  test("VA keeps the backend deadline across reload and creates an invoice", async ({ page }) => {
+  test("hosted VA resumes after cancel and completes only after webhook", async ({ page, request }) => {
     if (!seeded) throw new Error("Seed data missing");
 
-    await openGatewayPayment(page, seeded, "va");
-    const deadline = await page.evaluate(() => sessionStorage.getItem("tiketbisa_checkout_deadline"));
-    expect(deadline).toBeTruthy();
+    const hostedTransactionId = await openHostedPayment(page, seeded, hostedMethods[0]);
 
-    await page.reload();
-    await expect(page).toHaveURL(/(?:\?|&)step=4(?:&|$)/);
-    const reloadedDeadline = await page.evaluate(() => sessionStorage.getItem("tiketbisa_checkout_deadline"));
-    expect(Number(reloadedDeadline)).toBeLessThanOrEqual(Number(deadline));
+    const cancelUrl = new URL(page.url());
+    cancelUrl.searchParams.set("payment", "cancelled");
+    await page.goto(cancelUrl.toString());
+    await expect(page.getByRole("heading", { name: "Pembayaran masih aktif" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Lanjut ke Xendit" })).toBeVisible();
 
-    await expect(page.getByText("Nomor Virtual Account", { exact: true })).toBeVisible();
-    await expect(page.getByText("BCA", { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Salin Nomor VA" })).toBeEnabled();
+    await postPaymentSessionWebhook(request, hostedTransactionId, "payment_session.completed");
+    await postPaymentSessionWebhook(request, hostedTransactionId, "payment_session.completed");
+    await expect(page.getByRole("heading", { name: "Pembayaran Berhasil!" })).toBeVisible({ timeout: 15_000 });
+
+    const detail = await getTransactionDetail(request, hostedTransactionId, seeded.admin.email);
+    expect(detail.transaction.status).toBe("COMPLETED");
+    expect(detail.ticketDetails[0]?.issuedTickets).toHaveLength(1);
   });
 
-  test("QRIS keeps the backend deadline across reload and creates a QR", async ({ page }) => {
+  test("all other activated hosted channels redirect and expired session is recorded", async ({ page, request }) => {
     if (!seeded) throw new Error("Seed data missing");
 
-    await openGatewayPayment(page, seeded, "qris");
-    const deadline = await page.evaluate(() => sessionStorage.getItem("tiketbisa_checkout_deadline"));
-    expect(deadline).toBeTruthy();
-
+    let lastTransactionId = "";
+    for (const method of hostedMethods.slice(1)) {
+      lastTransactionId = await openHostedPayment(page, seeded, method);
+      await expect(page.getByText("Lanjut ke Xendit", { exact: true })).toBeVisible();
+    }
+    await postPaymentSessionWebhook(request, lastTransactionId, "payment_session.expired");
     await page.reload();
-    const reloadedDeadline = await page.evaluate(() => sessionStorage.getItem("tiketbisa_checkout_deadline"));
-    expect(Number(reloadedDeadline)).toBeLessThanOrEqual(Number(deadline));
-    await expect(page.getByText("Selesaikan Pembayaran QRIS", { exact: true })).toBeVisible();
-    await expect(page.getByText("Perbesar", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Pembayaran masih aktif" })).toBeVisible();
+
+    await setAdminSession(page, seeded.admin);
+    await page.goto("/internal-tb/admin");
+    const expiredRow = page.getByRole("row").filter({ hasText: lastTransactionId });
+    await expect(expiredRow.getByText("Expired", { exact: true })).toBeVisible();
+    await expiredRow.getByRole("button", { name: "Detail" }).click();
+    await expect(page).toHaveURL(/\/internal-tb\/admin\/transactions\//);
+    await expect(page.getByRole("heading", { name: "Detail Transaksi" })).toBeVisible();
+    await expect(page.getByText("Expired", { exact: true })).toBeVisible();
   });
 
   test("internal admin approval and partner scan", async ({ page, request }) => {
