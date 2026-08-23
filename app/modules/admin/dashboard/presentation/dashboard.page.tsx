@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { Card, SearchInput, Select } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils";
-import { statusFilterOptions } from "~/core/constants/transaction";
+import { mapTransactionStatusFilterToApi, statusFilterOptions, type TransactionStatus } from "~/core/constants/transaction";
 import { TransactionTable } from "./components/transaction-table";
 import { transactionApi, mapTransactionApiToFe } from "~/core/api/services/transaction.api";
 import { useApiQuery } from "~/core/api";
@@ -43,12 +43,6 @@ function buildDashboardParams({
   return params;
 }
 
-function mapStatusFilterToApi(statusFilter: string): string | undefined {
-  if (statusFilter === "all") return undefined;
-  if (statusFilter === "pending") return "WAITING_APPROVAL";
-  return statusFilter.toUpperCase();
-}
-
 /** Admin — Dashboard (overview across all brands) */
 export default function AdminDashboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -73,7 +67,7 @@ export default function AdminDashboardPage() {
         limit: pageSize,
         offset: (currentPage - 1) * pageSize,
         customerName: debouncedSearch || undefined,
-        status: mapStatusFilterToApi(statusFilter),
+        status: mapTransactionStatusFilterToApi(statusFilter as "all" | TransactionStatus),
       });
       if (res.success && res.data) {
         return {

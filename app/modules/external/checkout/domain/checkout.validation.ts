@@ -1,10 +1,10 @@
 import type { PaymentSelection } from "./checkout.types";
 
-export function canProceedWithPayment(selection: PaymentSelection): boolean {
+export function canProceedWithPayment(selection: PaymentSelection, requiresBankSelection = selection.methodId === "va"): boolean {
   return Boolean(
     selection.methodId
     && selection.agreedToTerms
     && selection.agreedToPrivacy
-    && (selection.methodId !== "va" || selection.bankCode),
+    && (!requiresBankSelection || selection.bankCode),
   );
 }

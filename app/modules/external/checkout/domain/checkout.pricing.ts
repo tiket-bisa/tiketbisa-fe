@@ -24,6 +24,15 @@ function buildTransactionFee(paymentMethod: PaymentMethod | null | undefined, ba
     return { transactionFee: 0 };
   }
 
+  if (paymentMethod.feeType === "FLAT") {
+    return { transactionFee: Math.round(paymentMethod.feeValue ?? 0), transactionFeeDescription: `${paymentMethod.name} Rp ${formatRupiah(paymentMethod.feeValue ?? 0)}` };
+  }
+  if (paymentMethod.feeType === "PERCENT") {
+    const rate = paymentMethod.feeValue ?? 0;
+    return { transactionFee: Math.ceil((baseAmount * rate) / 100), transactionFeeDescription: `${paymentMethod.name} ${rate}% dari sub total + biaya layanan` };
+  }
+  if (paymentMethod.feeType === "NONE") return { transactionFee: 0 };
+
   if (paymentMethod.id === "qris" || paymentMethod.category === "E_WALLET_QRIS") {
     return {
       transactionFee: Math.ceil((baseAmount * 3) / 100),

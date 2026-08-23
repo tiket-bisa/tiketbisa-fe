@@ -75,7 +75,7 @@ export function useCheckoutSteps(
   const isManualTransferPayment = activePaymentMethod?.id === "manual" || activePaymentMethod?.id === "manual_transfer";
 
   /** Payment method chosen + both consents checked — required before submitting the combined data+payment page. */
-  const canProceedToPayment = canProceedWithPayment(selection);
+  const canProceedToPayment = canProceedWithPayment(selection, Boolean(selectedPaymentMethod?.requiresBankSelection));
   const exceedsTicketLimit = baseSummary.ticketCount > MAX_TICKETS_PER_TRANSACTION;
 
   const handlePaymentMethodSelect = useCallback((methodId: string) => {
@@ -308,7 +308,7 @@ export function useCheckoutSteps(
   const gatewayInvoiceRequestedRef = useRef<string | null>(null);
   useEffect(() => {
     if (currentStep !== 4 || isManualTransferPayment) return;
-    if (existingOrder?.qrPayload || existingOrder?.virtualAccount) return;
+    if (existingOrder?.qrPayload || existingOrder?.virtualAccount || existingOrder?.paymentUrl) return;
 
     const activeLockId = getActiveLockId();
     if (!activeLockId || gatewayInvoiceRequestedRef.current === activeLockId) return;
@@ -321,6 +321,11 @@ export function useCheckoutSteps(
         const result = await orderApi.executeOrder(activeLockId, paymentSummary.totalPrice);
         setCompletedOrder(result);
         setIsManualTransferPending(false);
+
+        if (result.paymentUrl) {
+          window.location.assign(result.paymentUrl);
+          return;
+        }
 
         if (isGatewayPaymentSuccessful(result)) {
           const nextParams = new URLSearchParams(searchParams);
@@ -342,6 +347,7 @@ export function useCheckoutSteps(
     isManualTransferPayment,
     existingOrder?.qrPayload,
     existingOrder?.virtualAccount,
+    existingOrder?.paymentUrl,
     getActiveLockId,
     ensureCheckoutSessionActive,
     paymentSummary.totalPrice,
@@ -452,6 +458,11 @@ export function useCheckoutSteps(
               );
               setCompletedOrder(result);
               setIsManualTransferPending(false);
+
+              if (result.paymentUrl) {
+                window.location.assign(result.paymentUrl);
+                return;
+              }
 
               if (isGatewayPaymentSuccessful(result)) {
                 // Edge case: the gateway already reports success (e.g. re-click after paying,

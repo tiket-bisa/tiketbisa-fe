@@ -38,13 +38,17 @@ export interface OrderSummary {
   items: OrderItem[];
 }
 
-export type PaymentCategory = "BANK_TRANSFER" | "E_WALLET_QRIS";
+export type PaymentCategory = "BANK_TRANSFER" | "E_WALLET_QRIS" | "QRIS" | "E_WALLET" | "PAYLATER" | "OVER_THE_COUNTER";
 
 export interface PaymentMethod {
   id: string;
   name: string;
   logo: string;
   category: PaymentCategory;
+  paymentMethod?: string;
+  feeType?: "NONE" | "FLAT" | "PERCENT";
+  feeValue?: number;
+  requiresBankSelection?: boolean;
 }
 
 export interface VirtualAccountBank {
@@ -84,6 +88,7 @@ export interface OrderResponse {
   qrCodeUrl?: string;
   /** Raw QRIS payload from the gateway (may be a scannable string or a deep-link URL). */
   qrPayload?: string | null;
+  paymentUrl?: string | null;
   gatewayStatus?: GatewayStatus | null;
   /** ISO timestamp for when the gateway-issued VA/QRIS bill expires. */
   gatewayExpiry?: string | null;

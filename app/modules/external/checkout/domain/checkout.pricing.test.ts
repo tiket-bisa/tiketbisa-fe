@@ -65,4 +65,14 @@ describe("checkout pricing", () => {
     expect(summary.transactionFeeDescription).toContain("Virtual Account");
     expect(summary.totalPrice).toBe(227500);
   });
+
+  it("uses backend-configured hosted channel fee", () => {
+    const baseSummary = buildBaseOrderSummary(mockEvent, mockItems);
+    const summary = buildPaymentOrderSummary(baseSummary, {
+      id: "astrapay", name: "AstraPay", logo: "", category: "E_WALLET",
+      paymentMethod: "EWALLET", feeType: "FLAT", feeValue: 5000,
+    });
+    expect(summary.transactionFee).toBe(5000);
+    expect(summary.totalPrice).toBe(227500);
+  });
 });

@@ -25,4 +25,8 @@ describe("canProceedWithPayment", () => {
     expect(canProceedWithPayment({ ...validSelection, methodId: "va", bankCode: null })).toBe(false);
     expect(canProceedWithPayment({ ...validSelection, methodId: "va", bankCode: "BCA" })).toBe(true);
   });
+
+  it("does not require a bank when hosted Xendit will collect the bank choice", () => {
+    expect(canProceedWithPayment({ ...validSelection, methodId: "va", bankCode: null }, false)).toBe(true);
+  });
 });
