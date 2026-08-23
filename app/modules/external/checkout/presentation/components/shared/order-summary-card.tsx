@@ -1,7 +1,6 @@
 import { Card } from "~/core/design-system/components";
 import { formatIDR } from "~/core/utils/currency";
 import type { OrderSummary } from "../../../domain/checkout.types";
-import { formatServiceFeeBreakdown } from "../../../domain/checkout.pricing";
 
 export interface OrderSummaryCardProps {
   summary: OrderSummary;
@@ -39,23 +38,15 @@ export function OrderSummaryCard({ summary, className = "" }: OrderSummaryCardPr
         </div>
 
         {summary.serviceFee > 0 && (
-          <div className="flex justify-between items-start gap-4">
-            <div className="space-y-1">
-              <span className="block text-sm font-medium text-text-secondary">Biaya layanan</span>
-              <span className="block text-xs font-medium text-text-tertiary">{formatServiceFeeBreakdown(summary)}</span>
-            </div>
+          <div className="flex justify-between items-center gap-4">
+            <span className="text-sm font-medium text-text-secondary">Biaya layanan</span>
             <span className="text-sm font-bold text-text-primary whitespace-nowrap">{formatIDR(summary.serviceFee)}</span>
           </div>
         )}
 
         {summary.transactionFee > 0 && (
-          <div className="flex justify-between items-start gap-4">
-            <div className="space-y-1">
-              <span className="block text-sm font-medium text-text-secondary">Biaya transaksi</span>
-              {summary.transactionFeeDescription && (
-                <span className="block text-xs font-medium text-text-tertiary">{summary.transactionFeeDescription}</span>
-              )}
-            </div>
+          <div className="flex justify-between items-center gap-4">
+            <span className="text-sm font-medium text-text-secondary">Biaya transaksi</span>
             <span className="text-sm font-bold text-text-primary whitespace-nowrap">{formatIDR(summary.transactionFee)}</span>
           </div>
         )}
