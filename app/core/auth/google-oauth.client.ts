@@ -42,7 +42,7 @@ function loadGoogleScript(): Promise<void> {
 
   googleScriptPromise = new Promise((resolve, reject) => {
     if (typeof window === "undefined" || typeof document === "undefined") {
-      reject(new Error("Google OAuth is only available in browser"));
+      reject(new ApiRequestError("Login belum dapat digunakan. Silakan coba lagi."));
       return;
     }
 
@@ -58,7 +58,7 @@ function loadGoogleScript(): Promise<void> {
       existingScript.addEventListener("load", () => resolve(), { once: true });
       existingScript.addEventListener(
         "error",
-        () => reject(new Error("Failed to load Google Identity script")),
+        () => reject(new ApiRequestError("Layanan login belum dapat dimuat. Silakan coba lagi.")),
         { once: true },
       );
       return;
@@ -70,7 +70,7 @@ function loadGoogleScript(): Promise<void> {
     script.defer = true;
     script.onload = () => resolve();
     script.onerror = () =>
-      reject(new Error("Failed to load Google Identity script"));
+      reject(new ApiRequestError("Layanan login belum dapat dimuat. Silakan coba lagi."));
     document.head.appendChild(script);
   });
 
@@ -80,13 +80,13 @@ function loadGoogleScript(): Promise<void> {
 export async function requestGoogleAuthorizationCode(): Promise<string> {
   const clientId = import.meta.env.VITE_GOOGLE_AUTH_CLIENT_ID;
   if (!clientId) {
-    throw new Error("VITE_GOOGLE_AUTH_CLIENT_ID is not configured");
+    throw new ApiRequestError("Layanan login belum tersedia. Silakan coba lagi." );
   }
 
   await loadGoogleScript();
 
   if (!window.google?.accounts?.oauth2) {
-    throw new Error("Google OAuth client is unavailable");
+    throw new ApiRequestError("Layanan login belum tersedia. Silakan coba lagi.");
   }
 
   return new Promise<string>((resolve, reject) => {
@@ -96,16 +96,12 @@ export async function requestGoogleAuthorizationCode(): Promise<string> {
       ux_mode: "popup",
       callback: (response) => {
         if (response.error) {
-          reject(
-            new Error(
-              response.error_description ?? `Google OAuth error: ${response.error}`,
-            ),
-          );
+          reject(new ApiRequestError("Login tidak berhasil. Silakan coba lagi."));
           return;
         }
 
         if (!response.code) {
-          reject(new Error("Google OAuth did not return authorization code"));
+          reject(new ApiRequestError("Login tidak berhasil. Silakan coba lagi."));
           return;
         }
 
@@ -114,10 +110,11 @@ export async function requestGoogleAuthorizationCode(): Promise<string> {
     });
 
     if (!codeClient) {
-      reject(new Error("Failed to initialize Google OAuth client"));
+      reject(new ApiRequestError("Layanan login belum tersedia. Silakan coba lagi."));
       return;
     }
 
     codeClient.requestCode();
   });
 }
+import { ApiRequestError } from "~/core/api/api-error";

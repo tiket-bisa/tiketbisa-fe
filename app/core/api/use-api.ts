@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { toUserFacingError } from "./api-error";
 
 /**
  * Generic hook for API data fetching.
@@ -20,7 +21,7 @@ export function useApiQuery<T>(
         setError(null);
         fetcher()
             .then(setData)
-            .catch((err) => setError(err instanceof Error ? err.message : "Unknown error"))
+            .catch((err) => setError(toUserFacingError(err, "Data belum dapat dimuat. Coba muat ulang.")))
             .finally(() => setLoading(false));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, deps);

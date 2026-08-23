@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { useApiQuery } from "~/core/api";
+import { ApiRequestError, toUserFacingError, toUserFacingResponseError, useApiQuery } from "~/core/api";
 import { brandApi, mapBrandApiToFe } from "~/core/api/services/brand.api";
 import {
   EMPTY_PROMO_FORM,
@@ -26,7 +26,9 @@ export default function PromosPage() {
   const { data: promos, loading, error, refetch } = useApiQuery(() => promoAdminApi.list(), []);
   const { data: brands } = useApiQuery(async () => {
     const response = await brandApi.getList({ limit: 100, offset: 0 });
-    if (!response.success || !response.data) throw new Error(response.error || "Gagal memuat brand");
+    if (!response.success || !response.data) {
+      throw new ApiRequestError(toUserFacingResponseError(response, "Gagal memuat brand."));
+    }
     return (response.data.brands ?? []).map(mapBrandApiToFe);
   }, []);
 
@@ -69,14 +71,14 @@ export default function PromosPage() {
         ? await promoAdminApi.update(form.id, payload)
         : await promoAdminApi.create(payload);
       if (!response.success) {
-        setFeedback({ type: "error", message: response.error || "Gagal menyimpan promo." });
+        setFeedback({ type: "error", message: toUserFacingResponseError(response, "Gagal menyimpan promo.") });
         return;
       }
       setForm(EMPTY_PROMO_FORM);
       setFeedback({ type: "success", message: "Promo berhasil disimpan." });
       refetch();
     } catch (error) {
-      setFeedback({ type: "error", message: error instanceof Error ? error.message : "Gagal menyimpan promo." });
+      setFeedback({ type: "error", message: toUserFacingError(error, "Gagal menyimpan promo.") });
     } finally {
       setIsSaving(false);
     }
@@ -90,7 +92,7 @@ export default function PromosPage() {
     try {
       const response = await promoAdminApi.deactivate(promo.id);
       if (!response.success) {
-        setFeedback({ type: "error", message: response.error || "Gagal menonaktifkan promo." });
+        setFeedback({ type: "error", message: toUserFacingResponseError(response, "Gagal menonaktifkan promo.") });
         return;
       }
       if (form.id === promo.id) setForm(EMPTY_PROMO_FORM);
@@ -98,7 +100,7 @@ export default function PromosPage() {
       setFeedback({ type: "success", message: "Promo dinonaktifkan." });
       refetch();
     } catch (error) {
-      setFeedback({ type: "error", message: error instanceof Error ? error.message : "Gagal menonaktifkan promo." });
+      setFeedback({ type: "error", message: toUserFacingError(error, "Gagal menonaktifkan promo.") });
     } finally {
       setDeactivatingId(null);
     }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, Input } from "~/core/design-system/components";
-import { normalizeImageUrl } from "~/core/api";
+import { normalizeImageUrl, toUserFacingError } from "~/core/api";
 import { useIsMounted } from "./use-is-mounted";
 import { useObjectUrlRegistry } from "./use-object-url-registry";
 
@@ -99,7 +99,7 @@ export function ImageSourceInput({
       if (inputRef.current) inputRef.current.value = "";
     } catch (err) {
       if (isMounted()) {
-        setError(err instanceof Error ? err.message : "Gagal mengunggah gambar.");
+        setError(toUserFacingError(err, "Gagal mengunggah gambar."));
       }
     } finally {
       if (isMounted()) {

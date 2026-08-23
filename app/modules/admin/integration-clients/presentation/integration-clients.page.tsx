@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Badge, Button, Card, Input } from "~/core/design-system/components";
-import { useApiQuery } from "~/core/api";
+import { ApiRequestError, toUserFacingResponseError, useApiQuery } from "~/core/api";
 import {
   generateClientKey,
   normalizeClientCode,
@@ -48,7 +48,9 @@ export default function IntegrationClientsPage() {
     refetch: refetchClients,
   } = useApiQuery(async () => {
     const response = await integrationClientApi.list();
-    if (!response.success) throw new Error(response.error || "Gagal memuat integration clients.");
+    if (!response.success) {
+      throw new ApiRequestError(toUserFacingResponseError(response, "Gagal memuat integration clients."));
+    }
     return response.data;
   }, []);
 
@@ -65,7 +67,9 @@ export default function IntegrationClientsPage() {
   } = useApiQuery(async () => {
     if (!selectedId) return [];
     const response = await integrationClientApi.listKeys(selectedId);
-    if (!response.success) throw new Error(response.error || "Gagal memuat RSA public keys.");
+    if (!response.success) {
+      throw new ApiRequestError(toUserFacingResponseError(response, "Gagal memuat RSA public keys."));
+    }
     return response.data;
   }, [selectedId]);
 
@@ -120,7 +124,7 @@ export default function IntegrationClientsPage() {
     try {
       const response = await integrationClientApi.create({ code, name, client_key: clientKey });
       if (!response.success) {
-        setPageError(response.error || "Gagal membuat integration client.");
+        setPageError(toUserFacingResponseError(response, "Gagal membuat integration client."));
         return;
       }
       setCreateCode(""); setCreateName(""); setCreateKey("");
@@ -137,7 +141,7 @@ export default function IntegrationClientsPage() {
     clearMessage(); setIsMutating(true);
     try {
       const response = await integrationClientApi.update(selectedClient.id, editName.trim());
-      if (!response.success) return setPageError(response.error || "Gagal memperbarui nama client.");
+      if (!response.success) return setPageError(toUserFacingResponseError(response, "Gagal memperbarui nama client."));
       setPageSuccess("Nama client berhasil diperbarui."); refetchClients();
     } finally {
       setIsMutating(false);
@@ -150,7 +154,7 @@ export default function IntegrationClientsPage() {
     clearMessage(); setIsMutating(true);
     try {
       const response = await integrationClientApi.updateStatus(client.id, nextActive);
-      if (!response.success) return setPageError(response.error || "Gagal memperbarui status client.");
+      if (!response.success) return setPageError(toUserFacingResponseError(response, "Gagal memperbarui status client."));
       setPageSuccess(`Client berhasil ${nextActive ? "diaktifkan" : "dinonaktifkan"}.`); refetchClients();
     } finally {
       setIsMutating(false);
@@ -181,7 +185,7 @@ export default function IntegrationClientsPage() {
         valid_from: fromDate.toISOString(),
         valid_until: untilDate?.toISOString() ?? null,
       });
-      if (!response.success) return setPageError(response.error || "Gagal menambahkan public key.");
+      if (!response.success) return setPageError(toUserFacingResponseError(response, "Gagal menambahkan public key."));
       setPem(""); setValidFrom(toLocalDateTime()); setValidUntil("");
       setPageSuccess("RSA public key berhasil ditambahkan."); refetchKeys(); refetchClients();
     } finally {
@@ -196,7 +200,7 @@ export default function IntegrationClientsPage() {
     clearMessage(); setIsMutating(true);
     try {
       const response = await integrationClientApi.updateKeyStatus(selectedClient.id, keyId, nextActive);
-      if (!response.success) return setPageError(response.error || "Gagal memperbarui status key.");
+      if (!response.success) return setPageError(toUserFacingResponseError(response, "Gagal memperbarui status key."));
       setPageSuccess(`Public key berhasil ${nextActive ? "diaktifkan" : "dinonaktifkan"}.`);
       refetchKeys(); refetchClients();
     } finally {

@@ -1,4 +1,5 @@
 import { toAbsoluteApiUrl } from "./api-url";
+import { ApiRequestError, apiErrorFromResponse, sanitizeApiEnvelope } from "./api-error";
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
@@ -24,24 +25,27 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
       payload = JSON.parse(bodyText) as T & { error?: unknown };
     } catch {
       if (contentType.includes("application/json")) {
-        throw new Error("Invalid JSON response from server");
+        throw new ApiRequestError("Respons layanan tidak dapat diproses. Silakan coba lagi.", {
+          requestId: response.headers.get("X-Request-Id") ?? undefined,
+          statusCode: response.status,
+        });
       }
     }
   }
 
   if (!payload) {
     if (!response.ok) {
-      throw new Error(`Request failed with status ${response.status}`);
+      throw apiErrorFromResponse(null, response);
     }
 
-    throw new Error(`Expected JSON response but received '${contentType || "unknown"}'`);
+    throw new ApiRequestError("Respons layanan tidak dapat diproses. Silakan coba lagi.", {
+      requestId: response.headers.get("X-Request-Id") ?? undefined,
+      statusCode: response.status,
+    });
   }
   if (!response.ok) {
-    const errorMessage = typeof payload.error === "string" && payload.error.trim().length > 0
-      ? payload.error
-      : `Request failed with status ${response.status}`;
-    throw new Error(errorMessage);
+    throw apiErrorFromResponse(payload, response);
   }
 
-  return payload;
+  return sanitizeApiEnvelope(payload, response);
 }

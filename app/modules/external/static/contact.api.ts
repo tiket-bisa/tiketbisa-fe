@@ -1,4 +1,4 @@
-import { apiFetch } from "~/core/api";
+import { ApiRequestError, apiFetch, toUserFacingResponseError } from "~/core/api";
 import type { ApiResponse } from "~/core/api";
 
 export interface ContactMessageRequest {
@@ -15,6 +15,6 @@ export async function sendContactMessage(payload: ContactMessageRequest): Promis
   });
 
   if (!response.success) {
-    throw new Error(response.error ?? "Gagal mengirim pesan");
+    throw new ApiRequestError(toUserFacingResponseError(response, "Gagal mengirim pesan."));
   }
 }

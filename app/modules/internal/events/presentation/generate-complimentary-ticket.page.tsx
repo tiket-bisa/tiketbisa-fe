@@ -4,7 +4,7 @@ import { Button, Card, Select } from "~/core/design-system/components";
 import { ticketCategoryApi, mapTicketCategoryToFe } from "~/core/api/services/ticket-category.api";
 import { transactionApi, type IssuedTicketDetail } from "~/core/api/services/transaction.api";
 import { internalEventApi, normalizeInternalEvent } from "~/core/api/services/internal-event.api";
-import { useApiQuery } from "~/core/api";
+import { toUserFacingError, useApiQuery } from "~/core/api";
 import { useAuth } from "~/core/auth";
 import { formatIDR } from "~/core/utils";
 import { normalizeIndonesianPhone } from "~/modules/external/checkout/domain/phone";
@@ -175,7 +175,7 @@ export default function GenerateComplimentaryTicketPage() {
       link.remove();
       URL.revokeObjectURL(objectUrl);
     } catch (err) {
-      setDownloadError(err instanceof Error ? err.message : "Gagal mengunduh tiket.");
+      setDownloadError(toUserFacingError(err, "Gagal mengunduh tiket."));
     } finally {
       setDownloadingIds((prev) => {
         const next = new Set(prev);
@@ -201,7 +201,7 @@ export default function GenerateComplimentaryTicketPage() {
     } catch (err) {
       setEmailFeedback({
         type: "error",
-        msg: err instanceof Error ? err.message : "Gagal mengirim email tiket.",
+        msg: toUserFacingError(err, "Gagal mengirim email tiket."),
       });
     } finally {
       setEmailingIds((prev) => {

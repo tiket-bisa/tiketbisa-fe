@@ -11,7 +11,7 @@ import {
   Select,
 } from "~/core/design-system/components";
 import { useAuth } from "~/core/auth";
-import { useApiQuery } from "~/core/api";
+import { toUserFacingError, useApiQuery } from "~/core/api";
 import {
   internalEventApi,
   mapInternalEventToSummary,
@@ -229,7 +229,7 @@ export default function EventsPage() {
       await refetch();
       resetForm();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Koneksi bermasalah.");
+      setFormError(toUserFacingError(err, "Koneksi bermasalah."));
     } finally {
       setIsSubmitting(false);
     }
@@ -250,7 +250,7 @@ export default function EventsPage() {
       }
       await refetch();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Koneksi bermasalah.");
+      setFormError(toUserFacingError(err, "Koneksi bermasalah."));
     } finally {
       setIsSubmitting(false);
       setPendingAction(null);

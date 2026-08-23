@@ -45,7 +45,7 @@ export function ManualTransferPending({ event, orderId, onAction }: ManualTransf
     return {
       title: "Pembayaran sedang diverifikasi",
       description: "Bukti transfer kamu sudah kami terima. Mohon tunggu, status pembayaran dan e-ticket akan kami kirim lewat email setelah proses verifikasi selesai.",
-      label: "Menunggu approval manual transfer",
+      label: "Menunggu verifikasi pembayaran",
       tone: "warning",
     };
   }, [liveStatus]);

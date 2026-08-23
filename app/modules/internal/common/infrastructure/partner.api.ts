@@ -1,4 +1,4 @@
-import { internalHttpClient } from "~/core/api";
+import { ApiRequestError, internalHttpClient, toUserFacingResponseError } from "~/core/api";
 import type { ApiResponse } from "~/core/api";
 
 export interface InternalBrandDto {
@@ -66,7 +66,7 @@ function buildQueryString(params: Record<string, string | number | undefined>): 
 
 function ensureSuccess<T>(response: ApiResponse<T>, defaultMessage: string): T {
   if (!response.success || response.data == null) {
-    throw new Error(response.error ?? defaultMessage);
+    throw new ApiRequestError(toUserFacingResponseError(response, defaultMessage));
   }
   return response.data;
 }

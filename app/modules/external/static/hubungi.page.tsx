@@ -3,6 +3,7 @@ import { Button } from "~/core/design-system/components/button";
 import { Input } from "~/core/design-system/components/input";
 import { Card } from "~/core/design-system/components/card";
 import { sendContactMessage } from "./contact.api";
+import { toUserFacingError } from "~/core/api";
 
 const INITIAL_FORM = {
   name: "",
@@ -56,7 +57,7 @@ export default function HubungiPage() {
       setSuccess("Pesan berhasil dikirim. Tim kami akan segera menghubungi Anda.");
       setFormData(INITIAL_FORM);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal mengirim pesan.");
+      setError(toUserFacingError(err, "Gagal mengirim pesan."));
     } finally {
       setIsSubmitting(false);
     }

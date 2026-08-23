@@ -15,5 +15,12 @@ export { getPaginationFromSearchParams } from "./pagination-utils";
 export { getApiBaseUrl, toAbsoluteApiUrl } from "./api-url";
 export { normalizeImageUrl } from "./image-url";
 export { apiFetch } from "./api-fetch";
+export {
+  ApiRequestError,
+  apiErrorFromResponse,
+  sanitizeApiEnvelope,
+  toUserFacingError,
+  toUserFacingResponseError,
+} from "./api-error";
 export { httpClient, internalHttpClient } from "./http-client";
 export { useApiQuery } from "./use-api";

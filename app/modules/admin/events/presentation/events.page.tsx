@@ -10,7 +10,7 @@ import {
   Button,
   Input,
 } from "~/core/design-system/components";
-import { useApiQuery } from "~/core/api";
+import { toUserFacingError, useApiQuery } from "~/core/api";
 import {
   internalEventApi,
   mapInternalEventToSummary,
@@ -270,7 +270,7 @@ export default function AdminEventsPage() {
       setFormSuccess(formMode === "edit" ? "Event berhasil diperbarui." : "Event berhasil dibuat.");
       await refetch();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Koneksi bermasalah.");
+      setFormError(toUserFacingError(err, "Koneksi bermasalah."));
     } finally {
       setIsSubmitting(false);
     }
@@ -291,7 +291,7 @@ export default function AdminEventsPage() {
       }
       await refetch();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Koneksi bermasalah.");
+      setFormError(toUserFacingError(err, "Koneksi bermasalah."));
     } finally {
       setIsSubmitting(false);
       setPendingAction(null);

@@ -1,6 +1,7 @@
 import type { ApiResponse } from "./api-response.type";
 import { AUTH_STORAGE_KEY } from "~/core/auth/auth.constants";
 import { toAbsoluteApiUrl } from "./api-url";
+import { apiErrorFromResponse, sanitizeApiEnvelope, toUserFacingResponseError } from "./api-error";
 
 const INTERNAL_API_PREFIX = "/internal-tb";
 
@@ -79,26 +80,28 @@ async function request<T>(
     // Handle non-JSON error responses (e.g. nginx 413, 502, 504)
     const contentType = response.headers.get("content-type") ?? "";
     if (!response.ok && !contentType.includes("application/json")) {
-      let errorMessage: string;
+      let fallback: string;
       if (response.status === 413) {
-        errorMessage = "Ukuran file terlalu besar. Maksimal 10MB.";
+        fallback = "Ukuran file terlalu besar. Maksimal 10MB.";
       } else if (response.status === 502 || response.status === 503) {
-        errorMessage = "Server sedang tidak tersedia. Coba lagi nanti.";
+        fallback = "Layanan sedang tidak tersedia. Coba lagi nanti.";
       } else if (response.status === 504) {
-        errorMessage = "Server tidak merespons. Coba lagi nanti.";
+        fallback = "Layanan belum merespons. Coba lagi nanti.";
       } else {
-        errorMessage = `Server error (${response.status})`;
+        fallback = "Permintaan tidak dapat diproses. Silakan coba lagi.";
       }
+      const requestError = apiErrorFromResponse(null, response, fallback);
       return {
         success: false,
         data: null as unknown as T,
-        error: errorMessage,
+        error: requestError.message,
         reason: `HTTP_${response.status}`,
         status_code: response.status,
+        request_id: requestError.requestId,
       };
     }
 
-    const json = await response.json();
+    const json = sanitizeApiEnvelope(await response.json(), response);
 
     // Only authentication failures invalidate the session. A 403 is a scoped authorization
     // failure and must remain visible on the current page instead of logging the operator out.
@@ -120,15 +123,16 @@ async function request<T>(
     return {
       success: json.success,
       data: json.data as T,
-      error: json.error?.message ?? null,
-      reason: json.error?.code ?? null,
+      error: json.success ? null : toUserFacingResponseError(json, "Permintaan tidak dapat diproses. Silakan coba lagi."),
+      reason: json.reason ?? null,
       status_code: json.status_code,
+      request_id: json.request_id,
     };
   } catch (error) {
     return {
       success: false,
       data: null as unknown as T,
-      error: error instanceof Error ? error.message : "Network error",
+      error: "Koneksi bermasalah. Periksa jaringan lalu coba lagi.",
       reason: "NETWORK_ERROR",
       status_code: 0,
     };
