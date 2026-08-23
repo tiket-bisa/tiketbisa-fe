@@ -2,139 +2,114 @@ name: Deploy Frontend
 
 on:
   push:
-    branches: [ "main" ]
-    
+    branches: ["main"]
+
 permissions:
   contents: read
   packages: write
 
+concurrency:
+  group: tiketbisa-frontend-production
+  cancel-in-progress: false
+
 jobs:
-  build-and-push:
+  quality:
+    name: Test, Typecheck and Build
     runs-on: ubuntu-latest
-    outputs:
-      image-tag: ${{ steps.image.outputs.image-tag }}
+    environment: production
+    env:
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+      VITE_API_INTERNAL_BASE_URL: ${{ vars.VITE_API_INTERNAL_BASE_URL }}
+      VITE_GOOGLE_AUTH_CLIENT_ID: ${{ vars.VITE_GOOGLE_AUTH_CLIENT_ID || secrets.VITE_GOOGLE_AUTH_CLIENT_ID }}
+      VITE_MANUAL_TRANSFER_BANK_NAME: ${{ vars.VITE_MANUAL_TRANSFER_BANK_NAME }}
+      VITE_MANUAL_TRANSFER_ACCOUNT_NUMBER: ${{ vars.VITE_MANUAL_TRANSFER_ACCOUNT_NUMBER }}
+      VITE_MANUAL_TRANSFER_ACCOUNT_HOLDER: ${{ vars.VITE_MANUAL_TRANSFER_ACCOUNT_HOLDER }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Prepare Docker image tag
-        id: image
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - name: Validate production build configuration
         run: |
-          OWNER_LOWER="$(printf '%s' "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
-          REPO_LOWER="$(printf '%s' "${GITHUB_REPOSITORY#*/}" | tr '[:upper:]' '[:lower:]')"
-          IMAGE_TAG="ghcr.io/${OWNER_LOWER}/${REPO_LOWER}/frontend:latest"
+          for name in VITE_API_BASE_URL VITE_API_INTERNAL_BASE_URL VITE_GOOGLE_AUTH_CLIENT_ID VITE_MANUAL_TRANSFER_BANK_NAME VITE_MANUAL_TRANSFER_ACCOUNT_NUMBER VITE_MANUAL_TRANSFER_ACCOUNT_HOLDER; do
+            if [ -z "${!name}" ]; then
+              echo "Missing production build configuration: $name" >&2
+              exit 1
+            fi
+          done
+          case "$VITE_API_BASE_URL $VITE_API_INTERNAL_BASE_URL" in
+            *http://*|*localhost*|*127.0.0.1*)
+              echo "Production API URLs must use HTTPS and must not point to localhost" >&2
+              exit 1
+              ;;
+          esac
+      - run: pnpm test
+      - run: pnpm typecheck
+      - run: pnpm build
 
-          printf 'image-tag=%s\n' "$IMAGE_TAG" >> "$GITHUB_OUTPUT"
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+  build-and-push:
+    needs: quality
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      FRONTEND_IMAGE: ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+      VITE_API_INTERNAL_BASE_URL: ${{ vars.VITE_API_INTERNAL_BASE_URL }}
+      VITE_GOOGLE_AUTH_CLIENT_ID: ${{ vars.VITE_GOOGLE_AUTH_CLIENT_ID || secrets.VITE_GOOGLE_AUTH_CLIENT_ID }}
+      VITE_MANUAL_TRANSFER_BANK_NAME: ${{ vars.VITE_MANUAL_TRANSFER_BANK_NAME }}
+      VITE_MANUAL_TRANSFER_ACCOUNT_NUMBER: ${{ vars.VITE_MANUAL_TRANSFER_ACCOUNT_NUMBER }}
+      VITE_MANUAL_TRANSFER_ACCOUNT_HOLDER: ${{ vars.VITE_MANUAL_TRANSFER_ACCOUNT_HOLDER }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and Push Docker Image
-        env:
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
-          VITE_API_INTERNAL_BASE_URL: ${{ secrets.VITE_API_INTERNAL_BASE_URL }}
-          VITE_GOOGLE_AUTH_CLIENT_ID: ${{ secrets.VITE_GOOGLE_AUTH_CLIENT_ID }}
+      - name: Build and push immutable image
         run: |
-          API_BASE_URL="${VITE_API_BASE_URL:-https://api.tiketbisa.com}"
-          API_INTERNAL_BASE_URL="${VITE_API_INTERNAL_BASE_URL:-$API_BASE_URL}"
-
-          case "$API_BASE_URL $API_INTERNAL_BASE_URL" in
-            *localhost:8080*|*127.0.0.1:8080*)
-              echo "::error::Production API build args must not point to localhost"
-              exit 1
-              ;;
-          esac
-
           docker build \
-            --build-arg "VITE_API_BASE_URL=$API_BASE_URL" \
-            --build-arg "VITE_API_INTERNAL_BASE_URL=$API_INTERNAL_BASE_URL" \
+            --build-arg "VITE_API_BASE_URL=$VITE_API_BASE_URL" \
+            --build-arg "VITE_API_INTERNAL_BASE_URL=$VITE_API_INTERNAL_BASE_URL" \
             --build-arg "VITE_GOOGLE_AUTH_CLIENT_ID=$VITE_GOOGLE_AUTH_CLIENT_ID" \
-            -t ${{ steps.image.outputs.image-tag }} \
-            -f Dockerfile .
-          docker push ${{ steps.image.outputs.image-tag }}
-          
+            --build-arg "VITE_MANUAL_TRANSFER_BANK_NAME=$VITE_MANUAL_TRANSFER_BANK_NAME" \
+            --build-arg "VITE_MANUAL_TRANSFER_ACCOUNT_NUMBER=$VITE_MANUAL_TRANSFER_ACCOUNT_NUMBER" \
+            --build-arg "VITE_MANUAL_TRANSFER_ACCOUNT_HOLDER=$VITE_MANUAL_TRANSFER_ACCOUNT_HOLDER" \
+            -t "$FRONTEND_IMAGE" -f Dockerfile .
+          docker push "$FRONTEND_IMAGE"
+
   deploy:
-    needs: build-and-push # Wait for the build to finish first
+    needs: build-and-push
     runs-on: ubuntu-latest
+    environment: production
+    env:
+      GHCR_USERNAME: ${{ github.actor }}
+      GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      DEPLOY_DIR: /home/${{ secrets.VM_USER }}/tiketbisa-fe
+      RELEASE_DIR: /home/${{ secrets.VM_USER }}/tiketbisa-fe/releases/${{ github.run_id }}
+      GITHUB_RUN_ID: ${{ github.run_id }}
+      FRONTEND_IMAGE: ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
     steps:
-      - name: Executing remote ssh commands using password
-        uses: appleboy/ssh-action@v1.0.3
-        env:
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GHCR_USERNAME: ${{ github.actor }}
-          IMAGE_TAG: ${{ needs.build-and-push.outputs.image-tag }}
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Upload release configuration
+        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634 # v0.1.7
         with:
           host: ${{ secrets.VM_IP }}
           username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }} # The private key we generated earlier
-          envs: GHCR_TOKEN,GHCR_USERNAME,IMAGE_TAG
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: docker-compose.yml,scripts/deploy-production.sh
+          target: ${{ env.RELEASE_DIR }}
+      - name: Deploy and verify production
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
+        with:
+          host: ${{ secrets.VM_IP }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: GHCR_USERNAME,GHCR_TOKEN,DEPLOY_DIR,RELEASE_DIR,GITHUB_RUN_ID,FRONTEND_IMAGE
           script: |
             set -Eeuo pipefail
-
-            log() {
-              printf '[deploy] %s\n' "$1"
-            }
-
-            fail() {
-              printf '[deploy] ERROR: %s\n' "$1" >&2
-              exit 1
-            }
-
-            trap 'status=$?; if [ "$status" -eq 0 ]; then log "Deployment finished successfully"; else printf "[deploy] FAILED\n" >&2; fi' EXIT
-
-            deploy_dir=""
-            for candidate in "$HOME/tiketbisa/fe" "$HOME/tiketbisa-fe" "$HOME/tiketbisa/frontend"; do
-              if [ -f "$candidate/docker-compose.yml" ]; then
-                deploy_dir="$candidate"
-                break
-              fi
-            done
-
-            [ -n "$deploy_dir" ] || fail "Could not find docker-compose.yml in any expected deploy directory"
-
-            log "Using deploy directory: $deploy_dir"
-            cd "$deploy_dir"
-
-            compose_service=""
-            if docker compose config --services >/tmp/deploy-services.txt 2>/dev/null; then
-              if grep -qx 'tiketbisa-fe' /tmp/deploy-services.txt; then
-                compose_service="tiketbisa-fe"
-              elif grep -qx 'app' /tmp/deploy-services.txt; then
-                compose_service="app"
-              else
-                compose_service="$(head -n 1 /tmp/deploy-services.txt)"
-              fi
-            else
-              fail "Unable to read compose services from $deploy_dir/docker-compose.yml"
-            fi
-
-            [ -n "$compose_service" ] || fail "No compose service names were found"
-            [ -n "${IMAGE_TAG:-}" ] || fail "IMAGE_TAG was not provided"
-            [ -n "${GHCR_USERNAME:-}" ] || fail "GHCR_USERNAME was not provided"
-            [ -n "${GHCR_TOKEN:-}" ] || fail "GHCR_TOKEN was not provided"
-
-            log "Using compose service: $compose_service"
-            log "Using image: $IMAGE_TAG"
-
-            override_file="/tmp/tiketbisa-fe-deploy-compose.yml"
-            {
-              printf 'services:\n'
-              printf '  %s:\n' "$compose_service"
-              printf '    image: %s\n' "$IMAGE_TAG"
-            } > "$override_file"
-
-            log "Logging in to GitHub Container Registry"
             printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null
-
-            log "Pulling latest app image"
-            docker compose -f docker-compose.yml -f "$override_file" pull "$compose_service"
-
-            log "Starting app container"
-            docker compose -f docker-compose.yml -f "$override_file" up -d --no-build "$compose_service"
-
-            log "Pruning unused Docker images"
-            docker system prune -f # Clean up old images to save disk space
+            chmod +x "$RELEASE_DIR/scripts/deploy-production.sh"
+            "$RELEASE_DIR/scripts/deploy-production.sh"

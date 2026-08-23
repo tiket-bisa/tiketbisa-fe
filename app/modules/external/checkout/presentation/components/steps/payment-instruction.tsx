@@ -385,10 +385,16 @@ export function PaymentInstruction({
 
   // --- 2. BANK TRANSFER LAYOUT (Traditional Style) — used for both manual transfer and VA. VA's
   // bankName/accountNumber below come straight from Xendit's direct Virtual Account API. ---
+  const productionConfig = (name: string, value: string | undefined, localFallback: string) => {
+    if (import.meta.env.PROD && !value) {
+      throw new Error(`${name} is required in production`);
+    }
+    return value ?? localFallback;
+  };
   const manualTransferBankInfo = {
-    bankName: import.meta.env.VITE_MANUAL_TRANSFER_BANK_NAME ?? "Mandiri",
-    accountNumber: import.meta.env.VITE_MANUAL_TRANSFER_ACCOUNT_NUMBER ?? "1010014855397",
-    accountHolder: import.meta.env.VITE_MANUAL_TRANSFER_ACCOUNT_HOLDER ?? "PT. Tiketbisa Digital Sejahtera",
+    bankName: productionConfig("VITE_MANUAL_TRANSFER_BANK_NAME", import.meta.env.VITE_MANUAL_TRANSFER_BANK_NAME, "Mandiri"),
+    accountNumber: productionConfig("VITE_MANUAL_TRANSFER_ACCOUNT_NUMBER", import.meta.env.VITE_MANUAL_TRANSFER_ACCOUNT_NUMBER, "1010014855397"),
+    accountHolder: productionConfig("VITE_MANUAL_TRANSFER_ACCOUNT_HOLDER", import.meta.env.VITE_MANUAL_TRANSFER_ACCOUNT_HOLDER, "PT. Tiketbisa Digital Sejahtera"),
   };
 
   return (
