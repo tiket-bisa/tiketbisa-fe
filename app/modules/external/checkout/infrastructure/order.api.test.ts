@@ -67,6 +67,20 @@ describe("orderApi", () => {
     expect(result.userId).toBe("lock-001");
   });
 
+  it("releaseCheckout explicitly releases an abandoned reservation", async () => {
+    mockApiFetch.mockResolvedValueOnce({
+      success: true,
+      data: { released: true },
+    } as any);
+
+    await orderApi.releaseCheckout("lock-001", mockEventId);
+
+    expect(mockApiFetch).toHaveBeenCalledWith("/transaction/lock/lock-001", {
+      method: "DELETE",
+      body: JSON.stringify({ eventId: mockEventId }),
+    });
+  });
+
   it("storeTempTransaction sends backend-compatible payload without tickets", async () => {
     mockApiFetch.mockResolvedValueOnce({
       success: true,
