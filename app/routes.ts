@@ -6,6 +6,8 @@ import {
 } from "@react-router/dev/routes";
 
 export default [
+  route("healthz", "routes/healthz.ts"),
+
   // ─── External Layout (tiketbisa.com) ───
   layout("layouts/external.layout.tsx", [
     index("modules/external/landing/presentation/landing.page.tsx"),
