@@ -12,8 +12,42 @@ cd "$DEPLOY_DIR"
 backup_dir="$DEPLOY_DIR/.deploy-backups/$GITHUB_RUN_ID"
 mkdir -p "$backup_dir"
 cp docker-compose.yml "$backup_dir/docker-compose.yml"
-previous_image="$(docker inspect --format='{{.Config.Image}}' tiketbisa-fe 2>/dev/null || true)"
+previous_container_id="$(docker compose ps -q tiketbisa-fe 2>/dev/null || true)"
+previous_image="$(docker inspect --format='{{.Config.Image}}' "$previous_container_id" 2>/dev/null || true)"
 [[ -n "$previous_image" ]] || { echo 'Could not determine the currently deployed frontend image' >&2; exit 1; }
+
+wait_for_frontend_health() {
+  local env_file="$1"
+  local deadline=$((SECONDS + 150))
+  local container_id
+
+  while ((SECONDS < deadline)); do
+    container_id="$(docker compose --env-file "$env_file" ps -q tiketbisa-fe 2>/dev/null || true)"
+    if [[ -n "$container_id" ]] &&
+       [[ "$(docker inspect --format='{{.State.Health.Status}}' "$container_id" 2>/dev/null || true)" == healthy ]]; then
+      return 0
+    fi
+    sleep 5
+  done
+
+  echo 'Frontend container did not become healthy within 150 seconds' >&2
+  return 1
+}
+
+wait_for_rollback_health() {
+  local deadline=$((SECONDS + 150))
+
+  while ((SECONDS < deadline)); do
+    if curl --fail --silent http://127.0.0.1:3000/healthz >/dev/null 2>&1 ||
+       curl --fail --silent http://127.0.0.1:3000/ >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 5
+  done
+
+  echo 'Restored frontend did not become reachable within 150 seconds' >&2
+  return 1
+}
 
 next_compose="$DEPLOY_DIR/docker-compose.yml.next"
 next_env="$DEPLOY_DIR/.deploy.env.next"
@@ -30,8 +64,7 @@ rollback() {
     cp "$backup_dir/docker-compose.yml" docker-compose.yml
     printf 'FRONTEND_IMAGE=%s\n' "$previous_image" > .deploy.env
     docker compose --env-file .deploy.env up -d tiketbisa-fe
-    timeout 150 bash -c 'until [[ "$(docker inspect --format="{{.State.Health.Status}}" tiketbisa-fe 2>/dev/null)" == healthy ]]; do sleep 5; done'
-    curl --fail --silent http://127.0.0.1:3000/healthz >/dev/null
+    wait_for_rollback_health
   fi
   exit "$failure_code"
 }
@@ -43,10 +76,11 @@ activated=true
 
 docker compose --env-file .deploy.env pull tiketbisa-fe
 docker compose --env-file .deploy.env up -d --no-build tiketbisa-fe
-timeout 150 bash -c 'until [[ "$(docker inspect --format="{{.State.Health.Status}}" tiketbisa-fe 2>/dev/null)" == healthy ]]; do sleep 5; done'
+wait_for_frontend_health .deploy.env
 curl --fail --silent http://127.0.0.1:3000/healthz >/dev/null
 
-deployed_image="$(docker inspect --format='{{.Config.Image}}' tiketbisa-fe)"
+deployed_container_id="$(docker compose --env-file .deploy.env ps -q tiketbisa-fe)"
+deployed_image="$(docker inspect --format='{{.Config.Image}}' "$deployed_container_id")"
 [[ "$deployed_image" == "$FRONTEND_IMAGE" ]] || {
   printf 'Expected image %s but container uses %s\n' "$FRONTEND_IMAGE" "$deployed_image" >&2
   exit 1
