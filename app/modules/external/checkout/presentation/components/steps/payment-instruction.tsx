@@ -7,6 +7,7 @@ import type { TransactionStatusResult } from "../../../infrastructure/order.api"
 import { usePublicRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 import type { OrderResponse } from "../../../domain/checkout.types";
 import type { Event } from "../../../../event/domain/event.entity";
+import { XenditComponentsPayment } from "./xendit-components-payment-wrapper";
 
 const STATUS_POLL_INTERVAL_MS = 5000;
 const CHECKOUT_DEADLINE_STORAGE_KEY = "tiketbisa_checkout_deadline";
@@ -108,6 +109,11 @@ export function PaymentInstruction({
     }
   }, []);
 
+  const checkGatewayStatus = useCallback(() => {
+    if (!transactionId) return;
+    void orderApi.getTransactionStatus(transactionId).then(handleStatusResult);
+  }, [transactionId, handleStatusResult]);
+
   // Fire the completion callback exactly once, from a passive effect — never inside a
   // setState updater, which is a side effect during render (React warns with "Cannot
   // update a component while rendering a different component" and can drop the update).
@@ -203,6 +209,34 @@ export function PaymentInstruction({
 
   const { bankName, accountNumber } = parseVirtualAccount(gatewayData.virtualAccount);
   const qrPayload = gatewayData.qrPayload;
+
+  if (!isManualTransfer && order.paymentSessionMode === "COMPONENTS") {
+    if (order.componentsSdkKey) {
+      return (
+        <XenditComponentsPayment
+          componentsSdkKey={order.componentsSdkKey}
+          paymentMethodId={order.paymentMethod.id}
+          deadline={deadline}
+          onCheckStatus={checkGatewayStatus}
+          onBack={onBack}
+          onExpire={onExpire}
+        />
+      );
+    }
+    return (
+      <Card className="max-w-2xl mx-auto p-8 md:p-12 rounded-3xl text-center space-y-6">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-black text-text-primary">Menyiapkan pembayaran</h2>
+          <p className="text-sm font-medium text-text-secondary">
+            Metode pembayaran sedang disiapkan sampai {deadline} WIB.
+          </p>
+        </div>
+        <Button onClick={onAction} disabled={isLoading} className="w-full py-5 rounded-2xl text-lg font-black">
+          {isLoading ? "Memuat…" : "Coba Lagi"}
+        </Button>
+      </Card>
+    );
+  }
 
   if (!isManualTransfer && gatewayData.paymentUrl) {
     return (

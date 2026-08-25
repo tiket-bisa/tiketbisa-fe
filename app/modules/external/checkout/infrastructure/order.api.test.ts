@@ -130,6 +130,8 @@ describe("orderApi", () => {
       .mockResolvedValueOnce({
         success: true,
         data: {
+          paymentSessionMode: "COMPONENTS",
+          componentsSdkKey: "session-key",
           "tc-001": [
             {
               id: "ticket-1",
@@ -153,6 +155,8 @@ describe("orderApi", () => {
     expect(result.transactionId).toBe("lock-001");
     expect(result.customerName).toBe("John Doe");
     expect(result.totalPrice).toBe(125000);
+    expect(result.paymentSessionMode).toBe("COMPONENTS");
+    expect(result.componentsSdkKey).toBe("session-key");
     expect(result.tickets).toEqual([
       {
         ticketId: "ticket-1",

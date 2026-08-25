@@ -1,6 +1,6 @@
 import { apiFetch } from "~/core/api";
 import type { ApiResponse } from "~/core/api";
-import type { BuyerInfo, GatewayStatus, OrderItem, OrderResponse, OrderSummary, PaymentMethod, TicketHolder } from "../domain/checkout.types";
+import type { BuyerInfo, GatewayStatus, OrderItem, OrderResponse, OrderSummary, PaymentMethod, PaymentSessionMode, TicketHolder } from "../domain/checkout.types";
 import { normalizeIndonesianPhone } from "../domain/phone";
 
 interface TicketRequest {
@@ -78,6 +78,8 @@ export interface CompleteOrderResponse {
   virtualAccount?: string | null;
   qrPayload?: string | null;
   paymentUrl?: string | null;
+  paymentSessionMode?: PaymentSessionMode | null;
+  componentsSdkKey?: string | null;
   gatewayStatus?: GatewayStatus | null;
   gatewayExpiry?: string | null;
 }
@@ -151,6 +153,7 @@ interface TransactionStatusFromApi {
   virtualAccount?: string | null;
   qrPayload?: string | null;
   paymentUrl?: string | null;
+  paymentSessionMode?: PaymentSessionMode | null;
   gatewayStatus?: string | null;
   gatewayExpiry?: string | null;
 }
@@ -376,6 +379,8 @@ export const orderApi = {
       virtualAccount?: string | null;
       qrPayload?: string | null;
       paymentUrl?: string | null;
+      paymentSessionMode?: PaymentSessionMode | null;
+      componentsSdkKey?: string | null;
       gatewayStatus?: string | null;
       gatewayExpiry?: string | null;
     }>>(`/transaction/${lockId}/complete`, {
@@ -386,7 +391,16 @@ export const orderApi = {
       throw new Error(getApiErrorMessage(response, "Failed to complete transaction"));
     }
 
-    const { virtualAccount, qrPayload, paymentUrl, gatewayStatus, gatewayExpiry, ...ticketsByCategory } = response.data;
+    const {
+      virtualAccount,
+      qrPayload,
+      paymentUrl,
+      paymentSessionMode,
+      componentsSdkKey,
+      gatewayStatus,
+      gatewayExpiry,
+      ...ticketsByCategory
+    } = response.data;
 
     const normalizedTickets = Object.values(ticketsByCategory)
       // Only the per-category arrays are tickets; ignore any stray scalar fields the gateway
@@ -419,6 +433,8 @@ export const orderApi = {
       virtualAccount: virtualAccount ?? transactionSnapshot?.virtualAccount ?? null,
       qrPayload: qrPayload ?? transactionSnapshot?.qrPayload ?? null,
       paymentUrl: paymentUrl ?? transactionSnapshot?.paymentUrl ?? null,
+      paymentSessionMode: paymentSessionMode ?? transactionSnapshot?.paymentSessionMode ?? null,
+      componentsSdkKey: componentsSdkKey ?? null,
       gatewayStatus: (gatewayStatus ?? transactionSnapshot?.gatewayStatus ?? null) as GatewayStatus | null,
       gatewayExpiry: gatewayExpiry ?? transactionSnapshot?.gatewayExpiry ?? null,
     };
@@ -547,6 +563,7 @@ export const orderApi = {
       const virtualAccount = (data.virtualAccount as string | null | undefined) ?? null;
       const qrPayload = (data.qrPayload as string | null | undefined) ?? null;
       const paymentUrl = (data.paymentUrl as string | null | undefined) ?? null;
+      const paymentSessionMode = (data.paymentSessionMode as PaymentSessionMode | null | undefined) ?? null;
       const gatewayStatus = (data.gatewayStatus as GatewayStatus | null | undefined) ?? null;
 
       return {
@@ -561,6 +578,7 @@ export const orderApi = {
         virtualAccount,
         qrPayload,
         paymentUrl,
+        paymentSessionMode,
         gatewayStatus,
         gatewayExpiry: gatewayExpiry ?? null,
       };

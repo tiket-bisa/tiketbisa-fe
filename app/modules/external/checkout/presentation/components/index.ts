@@ -13,6 +13,7 @@ export * from "./steps/checkout-coming-soon";
 export * from "./steps/order-details-form";
 export * from "./steps/ticket-holder-inputs";
 export * from "./steps/payment-instruction";
+export * from "./steps/xendit-components-payment-wrapper";
 export * from "./steps/payment-method-selection";
 export * from "./steps/order-success";
 export * from "./steps/manual-transfer-pending";

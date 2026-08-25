@@ -17,6 +17,7 @@ describe("paymentApi", () => {
     await expect(paymentApi.getConfiguration()).resolves.toEqual({
       virtualAccountBanks: [{ code: "BRI", name: "BRI" }],
       paymentSessionEnabled: false,
+      paymentSessionMode: "PAYMENT_LINK",
       paymentMethods: [],
     });
     expect(mockApiFetch).toHaveBeenCalledWith("/transaction/payment-config");
@@ -24,7 +25,7 @@ describe("paymentApi", () => {
 
   it("fails closed when configuration cannot be loaded", async () => {
     mockApiFetch.mockResolvedValueOnce({ success: false, data: null } as any);
-    await expect(paymentApi.getConfiguration()).resolves.toEqual({ virtualAccountBanks: [], paymentSessionEnabled: false, paymentMethods: [] });
+    await expect(paymentApi.getConfiguration()).resolves.toEqual({ virtualAccountBanks: [], paymentSessionEnabled: false, paymentSessionMode: "PAYMENT_LINK", paymentMethods: [] });
   });
 
   it("maps hosted methods without requiring a local VA bank choice", async () => {
@@ -32,17 +33,19 @@ describe("paymentApi", () => {
       success: true,
       data: {
         paymentSessionEnabled: true,
+        paymentSessionMode: "COMPONENTS",
         virtualAccountBanks: [],
         paymentMethods: [{ id: "va", name: "Virtual Account", category: "BANK_TRANSFER", paymentMethod: "VA", feeType: "FLAT", feeValue: 5000 }],
       },
     } as any);
     const result = await paymentApi.getConfiguration();
     expect(result.paymentSessionEnabled).toBe(true);
+    expect(result.paymentSessionMode).toBe("COMPONENTS");
     expect(result.paymentMethods[0]).toMatchObject({ id: "va", requiresBankSelection: false, feeValue: 5000 });
   });
 
   it("fails closed when the configuration request throws", async () => {
     mockApiFetch.mockRejectedValueOnce(new Error("network unavailable"));
-    await expect(paymentApi.getConfiguration()).resolves.toEqual({ virtualAccountBanks: [], paymentSessionEnabled: false, paymentMethods: [] });
+    await expect(paymentApi.getConfiguration()).resolves.toEqual({ virtualAccountBanks: [], paymentSessionEnabled: false, paymentSessionMode: "PAYMENT_LINK", paymentMethods: [] });
   });
 });

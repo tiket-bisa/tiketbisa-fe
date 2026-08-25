@@ -56,13 +56,14 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     paymentMethods: availablePaymentMethods,
     virtualAccountBanks: paymentConfiguration.virtualAccountBanks,
     paymentSessionEnabled: paymentConfiguration.paymentSessionEnabled,
+    paymentSessionMode: paymentConfiguration.paymentSessionMode,
     order,
     adminFee: brand?.adminFee ?? 0,
   };
 }
 
 export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
-  const { event, paymentMethods, virtualAccountBanks, paymentSessionEnabled, order } = loaderData;
+  const { event, paymentMethods, virtualAccountBanks, paymentSessionEnabled, paymentSessionMode, order } = loaderData;
   const [searchParams] = useSearchParams();
   const { warning: warningToast } = useToast();
 
@@ -211,10 +212,12 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
       virtualAccount: completedOrder.virtualAccount ?? order.virtualAccount,
       qrPayload: completedOrder.qrPayload ?? order.qrPayload,
       paymentUrl: completedOrder.paymentUrl ?? order.paymentUrl,
+      paymentSessionMode: completedOrder.paymentSessionMode ?? order.paymentSessionMode ?? paymentSessionMode,
+      componentsSdkKey: completedOrder.componentsSdkKey ?? order.componentsSdkKey,
       gatewayStatus: completedOrder.gatewayStatus ?? order.gatewayStatus,
       gatewayExpiry: completedOrder.gatewayExpiry ?? order.gatewayExpiry,
     };
-  }, [order, completedOrder]);
+  }, [order, completedOrder, paymentSessionMode]);
 
   useEffect(() => {
     sessionStorage.setItem("tiketbisa_checkout_summary", JSON.stringify(activeSummary));
