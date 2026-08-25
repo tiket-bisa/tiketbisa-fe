@@ -12,20 +12,17 @@ let seeded: Awaited<ReturnType<typeof seedE2eData>> | null = null;
 let transactionId: string | null = null;
 
 interface HostedMethod {
-  id: "va" | "qris" | "astrapay" | "akulaku" | "indomaret";
+  id: "va" | "qris";
   name: string;
   expectedTotal: string;
 }
 
-const hostedMethods: HostedMethod[] = [
+const nativeMethods: HostedMethod[] = [
   { id: "va", name: "Virtual Account", expectedTotal: "Rp 155.000" },
   { id: "qris", name: "QRIS", expectedTotal: "Rp 154.500" },
-  { id: "astrapay", name: "AstraPay", expectedTotal: "Rp 155.000" },
-  { id: "akulaku", name: "Akulaku", expectedTotal: "Rp 155.000" },
-  { id: "indomaret", name: "Indomaret", expectedTotal: "Rp 155.000" },
 ];
 
-async function openHostedPayment(
+async function openNativePayment(
   page: Page,
   seed: E2eSeedResult,
   method: HostedMethod,
@@ -51,8 +48,9 @@ async function openHostedPayment(
   await page.locator('[data-checkout-consent]:visible input[type="checkbox"]').nth(1).check();
   await page.getByRole("button", { name: /Lanjut ke Pembayaran/i }).and(page.locator(":visible")).click();
   await page.getByRole("button", { name: "Ya, Lanjutkan" }).click();
-  await expect(page).toHaveURL(/(?:\?|&)mockPayment=1(?:&|$)/);
-  await expect(page.getByRole("heading", { name: "Pembayaran masih aktif" })).toBeVisible();
+  await expect(page.getByRole("heading", {
+    name: method.id === "qris" ? "Pembayaran QRIS" : "Pembayaran Virtual Account",
+  })).toBeVisible();
   const transactionId = new URL(page.url()).searchParams.get("orderId");
   expect(transactionId).toBeTruthy();
   return transactionId as string;
@@ -144,16 +142,12 @@ test.describe.serial("local smoke flows", () => {
     expect(transactionId).toBeTruthy();
   });
 
-  test("hosted VA resumes after cancel and completes only after webhook", async ({ page, request }) => {
+  test("native QRIS completes only after the verified webhook", async ({ page, request }) => {
     if (!seeded) throw new Error("Seed data missing");
 
-    const hostedTransactionId = await openHostedPayment(page, seeded, hostedMethods[0]);
-
-    const cancelUrl = new URL(page.url());
-    cancelUrl.searchParams.set("payment", "cancelled");
-    await page.goto(cancelUrl.toString());
-    await expect(page.getByRole("heading", { name: "Pembayaran masih aktif" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Lanjutkan Pembayaran" })).toBeVisible();
+    const hostedTransactionId = await openNativePayment(page, seeded, nativeMethods[1]);
+    await page.getByRole("button", { name: "Tampilkan QRIS" }).click();
+    await expect(page.getByText(/QRIS siap dipindai/)).toBeVisible();
     await expect(page.getByText(/Xendit/i)).toHaveCount(0);
 
     await postPaymentSessionWebhook(request, hostedTransactionId, "payment_session.completed");
@@ -165,18 +159,15 @@ test.describe.serial("local smoke flows", () => {
     expect(detail.ticketDetails[0]?.issuedTickets).toHaveLength(1);
   });
 
-  test("all other activated hosted channels redirect and expired session is recorded", async ({ page, request }) => {
+  test("dynamic VA bank selection is native and an expired session is recorded", async ({ page, request }) => {
     if (!seeded) throw new Error("Seed data missing");
 
-    let lastTransactionId = "";
-    for (const method of hostedMethods.slice(1)) {
-      lastTransactionId = await openHostedPayment(page, seeded, method);
-      await expect(page.getByText("Lanjutkan Pembayaran", { exact: true })).toBeVisible();
-      await expect(page.getByText(/Xendit/i)).toHaveCount(0);
-    }
+    const lastTransactionId = await openNativePayment(page, seeded, nativeMethods[0]);
+    await page.getByLabel("Pilih bank Virtual Account").selectOption("BRI_VIRTUAL_ACCOUNT");
+    await page.getByRole("button", { name: "Buat Nomor Virtual Account" }).click();
+    await expect(page.getByText(/Nomor VA BRI siap digunakan/)).toBeVisible();
+    await expect(page.getByText(/Xendit/i)).toHaveCount(0);
     await postPaymentSessionWebhook(request, lastTransactionId, "payment_session.expired");
-    await page.reload();
-    await expect(page.getByRole("heading", { name: "Pembayaran masih aktif" })).toBeVisible();
 
     await setAdminSession(page, seeded.admin);
     await page.goto("/internal-tb/admin");

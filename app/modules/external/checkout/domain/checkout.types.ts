@@ -39,6 +39,7 @@ export interface OrderSummary {
 }
 
 export type PaymentCategory = "BANK_TRANSFER" | "E_WALLET_QRIS" | "QRIS" | "E_WALLET" | "PAYLATER" | "OVER_THE_COUNTER";
+export type PaymentSessionMode = "PAYMENT_LINK" | "COMPONENTS";
 
 export interface PaymentMethod {
   id: string;
@@ -89,6 +90,9 @@ export interface OrderResponse {
   /** Raw QRIS payload from the gateway (may be a scannable string or a deep-link URL). */
   qrPayload?: string | null;
   paymentUrl?: string | null;
+  paymentSessionMode?: PaymentSessionMode | null;
+  /** Short-lived Xendit Components client key. Keep in memory only; never persist or log it. */
+  componentsSdkKey?: string | null;
   gatewayStatus?: GatewayStatus | null;
   /** ISO timestamp for when the gateway-issued VA/QRIS bill expires. */
   gatewayExpiry?: string | null;

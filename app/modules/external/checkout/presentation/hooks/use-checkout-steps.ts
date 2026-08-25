@@ -287,9 +287,11 @@ export function useCheckoutSteps(
   useEffect(() => {
     if (currentStep === 5 && completedOrder) {
       try {
+        const persistableOrder = { ...completedOrder };
+        delete persistableOrder.componentsSdkKey;
         sessionStorage.setItem(
           CHECKOUT_COMPLETED_ORDER_STORAGE_KEY,
-          JSON.stringify(completedOrder),
+          JSON.stringify(persistableOrder),
         );
       } catch {
         // Ignore storage write failures (quota / serialization).
