@@ -43,7 +43,7 @@ export const mockTransactions: Transaction[] = [
     ticket_name: "Tribune Selatan",
     quantity: 4,
     total_price: 300000,
-    status: "pending",
+    status: "waiting_payment",
     payment_method: "BRI Virtual Account",
     created_at: "2026-03-02T08:15:00Z",
   },

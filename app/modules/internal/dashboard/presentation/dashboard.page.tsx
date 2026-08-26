@@ -1,7 +1,7 @@
 import { useCallback, useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Card, Badge, SearchInput, Select, Button } from "~/core/design-system/components";
-import { formatIDR } from "~/core/utils";
+import { formatIDR, formatTransactionTimestamp } from "~/core/utils";
 import { useAuth } from "~/core/auth";
 import { analyticsApi, type DashboardStats } from "../../analytics/analytics.api";
 import { transactionApi, mapTransactionApiToFe } from "~/core/api/services/transaction.api";
@@ -12,6 +12,12 @@ import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 import { mapTransactionStatusFilterToApi, STATUS_MAP, statusFilterOptions, type TransactionStatus } from "~/core/constants/transaction";
 
 const DEFAULT_PAGE_SIZE = 5;
+type TransactionSort = "newest" | "oldest";
+
+const transactionSortOptions = [
+  { value: "newest", label: "Terbaru" },
+  { value: "oldest", label: "Terlama" },
+];
 
 /** Partner — Dashboard / Beranda (filtered by partner's brand) */
 export default function DashboardPage() {
@@ -19,6 +25,7 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState<TransactionSort>("newest");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -47,6 +54,7 @@ export default function DashboardPage() {
         brandId: user.brand_id,
         customerName: debouncedSearch || undefined,
         status: mapTransactionStatusFilterToApi(statusFilter as "all" | TransactionStatus),
+        orderBy: sortOrder === "oldest" ? "created:ASC" : "created:DESC",
       });
       if (res.success && res.data) {
         return {
@@ -57,7 +65,7 @@ export default function DashboardPage() {
       }
       return { transactions: [], totalCount: 0, totalPages: 1 };
     },
-    [currentPage, pageSize, debouncedSearch, statusFilter, user?.brand_slug, user?.brand_id],
+    [currentPage, pageSize, debouncedSearch, statusFilter, sortOrder, user?.brand_slug, user?.brand_id],
   );
 
   const paged = transactionRes?.transactions ?? [];
@@ -150,6 +158,17 @@ export default function DashboardPage() {
               label=""
             />
           </div>
+          <div className="w-full sm:w-40">
+            <Select
+              options={transactionSortOptions}
+              value={sortOrder}
+              onChange={(e) => {
+                setSortOrder(e.target.value as TransactionSort);
+                setCurrentPage(1);
+              }}
+              label=""
+            />
+          </div>
         </div>
 
         {/* Table */}
@@ -165,6 +184,7 @@ export default function DashboardPage() {
                 <tr className="border-b border-border-default text-text-tertiary text-xs uppercase tracking-wide">
                   <th className="text-left px-4 py-3 font-medium">ID</th>
                   <th className="text-left px-4 py-3 font-medium">Pembeli</th>
+                  <th className="text-left px-4 py-3 font-medium">Waktu Pembelian</th>
                   <th className="text-right px-4 py-3 font-medium">Total</th>
                   <th className="text-center px-4 py-3 font-medium">Status</th>
                   <th className="text-center px-4 py-3 font-medium">Aksi</th>
@@ -183,6 +203,9 @@ export default function DashboardPage() {
                       </td>
                       <td className="px-4 py-3 text-text-primary">
                         {tx.buyer_name}
+                      </td>
+                      <td className="px-4 py-3 text-text-secondary whitespace-nowrap">
+                        {formatTransactionTimestamp(tx.created_at)}
                       </td>
                       <td className="px-4 py-3 text-text-primary text-right font-medium">
                         {formatIDR(tx.total_price)}
@@ -207,7 +230,7 @@ export default function DashboardPage() {
                 {paged.length === 0 && (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={6}
                       className="px-4 py-12 text-center text-text-tertiary"
                     >
                       Tidak ada transaksi ditemukan

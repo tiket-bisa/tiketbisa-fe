@@ -207,11 +207,15 @@ test.describe.serial("local smoke flows", () => {
     await page.getByLabel("Event").selectOption({ label: seeded.event.name });
     await page.getByLabel("Kategori Tiket").selectOption({ label: seeded.ticketCategory.name });
     await page.getByRole("button", { name: "Terapkan" }).click();
+    await page.reload();
+    await expect(page.getByText("Kategori Aktif", { exact: true })).toBeVisible();
+    await expect(page.getByText(`${seeded.event.name} — ${seeded.ticketCategory.name}`, { exact: true })).toBeVisible();
     await page.getByPlaceholder(/Masukkan kode tiket/i).fill(issuedTicket.codeHash);
     await page.getByRole("button", { name: "Validasi" }).click();
     await expect(page.getByText("VALID", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Check In" }).click();
     await expect(page.getByText("SUCCESS CHECKED-IN", { exact: true })).toBeVisible();
+    await expect(page.getByText("Tiket berhasil check-in", { exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "Tutup hasil scan" }).click();
     await page.getByPlaceholder(/Masukkan kode tiket/i).fill(issuedTicket.codeHash);

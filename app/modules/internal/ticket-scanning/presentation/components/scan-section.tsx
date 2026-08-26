@@ -4,6 +4,7 @@ import { useQrScanner } from "../hooks/use-qr-scanner";
 import { useScanFlow } from "../hooks/use-scan-flow";
 import type { ScanCheckInResult, ScanValidateResult } from "~/core/types";
 import { CategoryPicker, type SelectedCategory } from "./category-picker";
+import { persistScanSelection, readScanSelection } from "../scan-selection-storage";
 
 const VALIDATE_STATUS_MAP: Record<
   ScanValidateResult["status"],
@@ -30,6 +31,7 @@ interface ScanSectionProps {
 
 export function ScanSection({ brandId }: ScanSectionProps) {
   const [category, setCategory] = useState<SelectedCategory | null>(null);
+  const [selectionRestored, setSelectionRestored] = useState(false);
   const {
     validateResult,
     checkInResult,
@@ -58,6 +60,20 @@ export function ScanSection({ brandId }: ScanSectionProps) {
   } = useQrScanner({ onScanSuccess: handleScan, disabled: isBusy });
   const [manualCode, setManualCode] = useState("");
   const backgroundClass = getScanBackgroundClass(validateResult, checkInResult, error);
+
+  useEffect(() => {
+    setCategory(readScanSelection(brandId, window.sessionStorage));
+    setSelectionRestored(true);
+  }, [brandId]);
+
+  useEffect(() => {
+    if (!selectionRestored) return;
+    persistScanSelection(
+      category,
+      brandId,
+      window.sessionStorage,
+    );
+  }, [brandId, category, selectionRestored]);
 
   // Freeze the scanner after the first result so the same camera frame cannot immediately replace
   // VALID/SUCCESS with another scan. The operator explicitly closes the result before continuing.
@@ -286,6 +302,15 @@ function ScanResultCard({
               />
             )}
             {validateResult.message && <ScanDetail label="Info" value={validateResult.message} />}
+            {checkInResult?.status === "SUCCESS" && (
+              <ScanDetail label="Status" value="Tiket berhasil check-in" />
+            )}
+            {checkInResult?.checkInTime && (
+              <ScanDetail
+                label="Waktu"
+                value={new Date(checkInResult.checkInTime).toLocaleString("id-ID")}
+              />
+            )}
             {checkInResult?.message && <ScanDetail label="Hasil" value={checkInResult.message} />}
           </dl>
 

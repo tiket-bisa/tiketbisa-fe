@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Badge, Button, Card } from "~/core/design-system/components";
 import { STATUS_MAP } from "~/core/constants/transaction";
-import { formatIDR } from "~/core/utils";
+import { formatIDR, formatTransactionTimestamp } from "~/core/utils";
 import type { Transaction } from "~/core/types";
 
 interface TransactionTableProps {
@@ -27,6 +27,7 @@ export function TransactionTable({ transactions, returnTo = "/internal-tb/admin"
             <tr className="border-b border-border-default text-text-tertiary text-xs uppercase tracking-wide">
               <th className="text-left px-4 py-3 font-medium">ID</th>
               <th className="text-left px-4 py-3 font-medium">Pembeli</th>
+              <th className="text-left px-4 py-3 font-medium">Waktu Pembelian</th>
               <th className="text-right px-4 py-3 font-medium">Total</th>
               <th className="text-center px-4 py-3 font-medium">Status</th>
               <th className="text-center px-4 py-3 font-medium">Aksi</th>
@@ -39,6 +40,9 @@ export function TransactionTable({ transactions, returnTo = "/internal-tb/admin"
                 <tr key={tx.id} className="border-b border-border-subtle hover:bg-surface-hover transition-colors">
                   <td className="px-4 py-3 text-text-secondary font-mono text-xs">{tx.id}</td>
                   <td className="px-4 py-3 text-text-primary">{tx.buyer_name}</td>
+                  <td className="px-4 py-3 text-text-secondary whitespace-nowrap">
+                    {formatTransactionTimestamp(tx.created_at)}
+                  </td>
                   <td className="px-4 py-3 text-text-primary text-right font-medium">{formatIDR(tx.total_price)}</td>
                   <td className="px-4 py-3 text-center">
                     <Badge variant={status.variant}>{status.label}</Badge>
@@ -59,7 +63,7 @@ export function TransactionTable({ transactions, returnTo = "/internal-tb/admin"
             })}
             {transactions.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-12 text-center text-text-tertiary">Tidak ada transaksi ditemukan</td>
+                <td colSpan={6} className="px-4 py-12 text-center text-text-tertiary">Tidak ada transaksi ditemukan</td>
               </tr>
             )}
           </tbody>
