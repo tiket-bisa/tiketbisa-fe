@@ -103,6 +103,7 @@ export interface TransactionListParams {
     eventId?: string;
     status?: string;
     customerName?: string;
+    orderBy?: "created:ASC" | "created:DESC";
 }
 
 export interface ManualTransferReviewRequest {
@@ -129,7 +130,7 @@ type BlobDownloadResult = {
     error: string | null;
 };
 
-function buildQuery(params?: TransactionListParams): string {
+export function buildTransactionListQuery(params?: TransactionListParams): string {
     if (!params) return "";
     const qs = new URLSearchParams();
     if (params.limit != null) qs.set("limit", String(params.limit));
@@ -138,6 +139,7 @@ function buildQuery(params?: TransactionListParams): string {
     if (params.eventId) qs.set("eventId", params.eventId);
     if (params.status) qs.set("status", params.status);
     if (params.customerName) qs.set("customerName", params.customerName);
+    if (params.orderBy) qs.set("orderBy", params.orderBy);
     const str = qs.toString();
     return str ? `?${str}` : "";
 }
@@ -179,7 +181,7 @@ async function downloadInternalBlob(path: string, fallbackFileName: string): Pro
 export const transactionApi = {
     /** Get transaction list */
     getList: (params?: TransactionListParams) =>
-        internalHttpClient.get<TransactionListResponse>(`/transaction/list${buildQuery(params)}`),
+        internalHttpClient.get<TransactionListResponse>(`/transaction/list${buildTransactionListQuery(params)}`),
     
     /** Get detailed transaction */
     getDetail: (id: string) =>
@@ -236,11 +238,12 @@ import type { Transaction } from "~/core/types";
 function mapBackendStatus(status: string | undefined): Transaction["status"] {
     const normalizedStatus = (status ?? "").toUpperCase();
     if (normalizedStatus === "PAID" || normalizedStatus === "COMPLETED") return "paid";
-    if (normalizedStatus === "WAITING_PAYMENT" || normalizedStatus === "WAITING_APPROVAL") return "pending";
+    if (normalizedStatus === "WAITING_PAYMENT") return "waiting_payment";
+    if (normalizedStatus === "WAITING_APPROVAL") return "waiting_approval";
     if (normalizedStatus === "CANCELED" || normalizedStatus === "CANCELLED") return "cancelled";
     if (normalizedStatus === "REFUNDED") return "refunded";
     if (normalizedStatus === "EXPIRED") return "expired";
-    return "pending";
+    return "waiting_payment";
 }
 
 export function mapTransactionApiToFe(api: TransactionApiData): Transaction {
@@ -257,7 +260,7 @@ export function mapTransactionApiToFe(api: TransactionApiData): Transaction {
         total_price: api.totalPrice ?? 0,
         status: mapBackendStatus(api.status),
         payment_method: api.paymentMethod,
-        created_at: api.paymentDate ?? api.created ?? new Date().toISOString(),
+        created_at: api.created ?? api.paymentDate ?? new Date().toISOString(),
     };
 }
 
@@ -292,6 +295,6 @@ export function mapTransactionDetailApiToFe(api: TransactionDetailResponse): Tra
         total_price: tx.totalPrice ?? 0,
         status: mapBackendStatus(tx.status),
         payment_method: tx.paymentMethod,
-        created_at: tx.paymentDate ?? tx.created ?? new Date().toISOString(),
+        created_at: tx.created ?? tx.paymentDate ?? new Date().toISOString(),
     };
 }

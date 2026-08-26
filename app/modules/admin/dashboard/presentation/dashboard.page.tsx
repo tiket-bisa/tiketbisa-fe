@@ -13,6 +13,12 @@ import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 
 const DEFAULT_PAGE_SIZE = 5;
 const PAGE_SIZE_OPTIONS = new Set([5, 10, 25, 50]);
+type TransactionSort = "newest" | "oldest";
+
+const transactionSortOptions = [
+  { value: "newest", label: "Terbaru" },
+  { value: "oldest", label: "Terlama" },
+];
 
 function parsePositiveInt(value: string | null, fallback: number): number {
   const parsed = Number(value);
@@ -29,17 +35,20 @@ function buildDashboardParams({
   pageSize,
   search,
   statusFilter,
+  sortOrder,
 }: {
   currentPage: number;
   pageSize: number;
   search: string;
   statusFilter: string;
+  sortOrder: TransactionSort;
 }) {
   const params = new URLSearchParams();
   if (currentPage > 1) params.set("page", String(currentPage));
   if (pageSize !== DEFAULT_PAGE_SIZE) params.set("pageSize", String(pageSize));
   if (search.trim()) params.set("search", search.trim());
   if (statusFilter !== "all") params.set("status", statusFilter);
+  if (sortOrder !== "newest") params.set("sort", sortOrder);
   return params;
 }
 
@@ -48,6 +57,7 @@ export default function AdminDashboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
   const [statusFilter, setStatusFilter] = useState(() => searchParams.get("status") ?? "all");
+  const [sortOrder, setSortOrder] = useState<TransactionSort>(() => searchParams.get("sort") === "oldest" ? "oldest" : "newest");
   const [currentPage, setCurrentPage] = useState(() => parsePositiveInt(searchParams.get("page"), 1));
   const [pageSize, setPageSize] = useState(() => parsePageSize(searchParams.get("pageSize")));
   const debouncedSearch = useDebouncedValue(search);
@@ -68,6 +78,7 @@ export default function AdminDashboardPage() {
         offset: (currentPage - 1) * pageSize,
         customerName: debouncedSearch || undefined,
         status: mapTransactionStatusFilterToApi(statusFilter as "all" | TransactionStatus),
+        orderBy: sortOrder === "oldest" ? "created:ASC" : "created:DESC",
       });
       if (res.success && res.data) {
         return {
@@ -78,13 +89,13 @@ export default function AdminDashboardPage() {
       }
       return { transactions: [], totalCount: 0, totalPages: 1 };
     },
-    [currentPage, pageSize, debouncedSearch, statusFilter],
+    [currentPage, pageSize, debouncedSearch, statusFilter, sortOrder],
   );
 
   const transactions = transactionRes?.transactions ?? [];
   const totalCount = transactionRes?.totalCount ?? 0;
   const totalPages = transactionRes?.totalPages ?? 1;
-  const dashboardParams = buildDashboardParams({ currentPage, pageSize, search: debouncedSearch, statusFilter });
+  const dashboardParams = buildDashboardParams({ currentPage, pageSize, search: debouncedSearch, statusFilter, sortOrder });
   const returnTo = `/internal-tb/admin${dashboardParams.toString() ? `?${dashboardParams.toString()}` : ""}`;
 
   const handleRealtimeMessage = useCallback((message: RealtimeMessage) => {
@@ -100,8 +111,8 @@ export default function AdminDashboardPage() {
   useRealtimeSubscription(["admin"], handleRealtimeMessage);
 
   useEffect(() => {
-    setSearchParams(buildDashboardParams({ currentPage, pageSize, search: debouncedSearch, statusFilter }), { replace: true });
-  }, [currentPage, pageSize, debouncedSearch, statusFilter, setSearchParams]);
+    setSearchParams(buildDashboardParams({ currentPage, pageSize, search: debouncedSearch, statusFilter, sortOrder }), { replace: true });
+  }, [currentPage, pageSize, debouncedSearch, statusFilter, sortOrder, setSearchParams]);
 
   useEffect(() => {
     if (!loadingTransactions && currentPage > totalPages) {
@@ -153,6 +164,14 @@ export default function AdminDashboardPage() {
               options={statusFilterOptions}
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+              label=""
+            />
+          </div>
+          <div className="w-full sm:w-40">
+            <Select
+              options={transactionSortOptions}
+              value={sortOrder}
+              onChange={(e) => { setSortOrder(e.target.value as TransactionSort); setCurrentPage(1); }}
               label=""
             />
           </div>

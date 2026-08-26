@@ -1,7 +1,7 @@
 import { apiFetch } from "~/core/api";
 import type { ApiResponse } from "~/core/api";
 import type { BuyerInfo, GatewayStatus, OrderItem, OrderResponse, OrderSummary, PaymentMethod, PaymentSessionMode, TicketHolder } from "../domain/checkout.types";
-import { normalizeIndonesianPhone } from "../domain/phone";
+import { validateIndonesianPhone } from "../domain/phone";
 
 interface TicketRequest {
   categoryId: string;
@@ -329,10 +329,11 @@ export const orderApi = {
       backendPaymentMethod = "QRIS";
     }
 
-    const normalizedPhone = normalizeIndonesianPhone(buyerInfo.phoneNumber);
-    if (!normalizedPhone) {
-      throw new Error("Nomor telepon harus menggunakan format 08… atau +628…");
+    const phoneValidation = validateIndonesianPhone(buyerInfo.phoneNumber);
+    if (!phoneValidation.normalized) {
+      throw new Error(phoneValidation.error ?? "Nomor telepon tidak valid.");
     }
+    const normalizedPhone = phoneValidation.normalized;
 
     const payload: StoreTempTransactionRq = {
       userId: lockId,

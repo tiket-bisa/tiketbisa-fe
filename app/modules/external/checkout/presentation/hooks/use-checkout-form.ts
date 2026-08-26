@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import type { BuyerInfo, TicketHolder } from "../../domain/checkout.types";
-import { normalizeIndonesianPhone } from "../../domain/phone";
+import { validateIndonesianPhone } from "../../domain/phone";
 
 const STORAGE_KEY = "tiketbisa_buyer_info";
 const HOLDERS_STORAGE_KEY = "tiketbisa_ticket_holders";
@@ -144,8 +144,9 @@ export function useCheckoutForm() {
 
     if (!buyerInfo.phoneNumber.trim()) {
       newErrors.phoneNumber = "Nomor telepon wajib diisi";
-    } else if (!normalizeIndonesianPhone(buyerInfo.phoneNumber)) {
-      newErrors.phoneNumber = "Gunakan format 08… atau +628…";
+    } else {
+      const phoneValidation = validateIndonesianPhone(buyerInfo.phoneNumber);
+      if (phoneValidation.error) newErrors.phoneNumber = phoneValidation.error;
     }
 
     if (!buyerInfo.identityNumber.trim()) {
