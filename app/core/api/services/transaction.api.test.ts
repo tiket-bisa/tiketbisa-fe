@@ -52,4 +52,8 @@ describe("transaction status filters", () => {
     expect(buildTransactionListQuery({ orderBy: "created:ASC" })).toBe("?orderBy=created%3AASC");
     expect(buildTransactionListQuery({ orderBy: "created:DESC" })).toBe("?orderBy=created%3ADESC");
   });
+
+  it("sends the dashboard search as a general transaction search", () => {
+    expect(buildTransactionListQuery({ search: "d637649eefa6" })).toBe("?search=d637649eefa6");
+  });
 });

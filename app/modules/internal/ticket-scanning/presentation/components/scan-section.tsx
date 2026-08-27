@@ -46,6 +46,7 @@ export function ScanSection({ brandId }: ScanSectionProps) {
   const {
     cameras,
     error,
+    ensureScanning,
     isFileScanning,
     isScanning,
     isTorchOn,
@@ -62,7 +63,7 @@ export function ScanSection({ brandId }: ScanSectionProps) {
     // Keep the MediaStream alive while the operator reads/confirms a result. Decoding is paused
     // until the result is closed, so the same frame cannot replace it and the next scan resumes
     // immediately without asking the operator to reactivate the camera.
-    disabled: isBusy || validateResult !== null,
+    disabled: isBusy || validateResult !== null || checkInResult !== null,
   });
   const [manualCode, setManualCode] = useState("");
   const backgroundClass = getScanBackgroundClass(validateResult, checkInResult, error);
@@ -80,6 +81,12 @@ export function ScanSection({ brandId }: ScanSectionProps) {
       window.sessionStorage,
     );
   }, [brandId, category, selectionRestored]);
+
+  useEffect(() => {
+    if (checkInResult?.status === "SUCCESS") {
+      void ensureScanning();
+    }
+  }, [checkInResult?.status, ensureScanning]);
 
   const handleManualSubmit = () => {
     const code = manualCode.trim();

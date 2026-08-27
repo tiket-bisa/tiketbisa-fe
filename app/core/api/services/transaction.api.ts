@@ -103,6 +103,7 @@ export interface TransactionListParams {
     eventId?: string;
     status?: string;
     customerName?: string;
+    search?: string;
     orderBy?: "created:ASC" | "created:DESC";
 }
 
@@ -139,6 +140,7 @@ export function buildTransactionListQuery(params?: TransactionListParams): strin
     if (params.eventId) qs.set("eventId", params.eventId);
     if (params.status) qs.set("status", params.status);
     if (params.customerName) qs.set("customerName", params.customerName);
+    if (params.search) qs.set("search", params.search);
     if (params.orderBy) qs.set("orderBy", params.orderBy);
     const str = qs.toString();
     return str ? `?${str}` : "";

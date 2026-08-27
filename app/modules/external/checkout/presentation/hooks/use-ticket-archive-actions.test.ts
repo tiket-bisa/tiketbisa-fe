@@ -17,6 +17,7 @@ vi.mock("../../infrastructure/ticket-delivery.api", () => ({
 }));
 
 const downloadArchive = vi.mocked(ticketDeliveryApi.downloadArchive);
+const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
 
 describe("useTicketArchiveActions", () => {
   beforeEach(() => {
@@ -26,6 +27,8 @@ describe("useTicketArchiveActions", () => {
       fileName: "tickets-order-1.zip",
     });
     Object.defineProperty(globalThis, "isSecureContext", { value: true, configurable: true });
+    Object.defineProperty(URL, "createObjectURL", { value: vi.fn(() => "blob:ticket"), configurable: true });
+    Object.defineProperty(URL, "revokeObjectURL", { value: vi.fn(), configurable: true });
   });
 
   it("prefetches once and shares the prepared ZIP from the click handler", async () => {
@@ -46,7 +49,7 @@ describe("useTicketArchiveActions", () => {
     await waitFor(() => expect(result.current.activeAction).toBeNull());
   });
 
-  it("shows an actionable message when Chrome denies Web Share permission", async () => {
+  it("downloads the archive when Chrome rejects ZIP file sharing", async () => {
     const share = vi.fn().mockRejectedValue(new DOMException("Permission denied", "NotAllowedError"));
     Object.defineProperty(navigator, "share", { value: share, configurable: true });
     Object.defineProperty(navigator, "canShare", { value: () => true, configurable: true });
@@ -56,8 +59,24 @@ describe("useTicketArchiveActions", () => {
 
     act(() => result.current.share());
 
-    await waitFor(() => expect(errorToast).toHaveBeenCalledWith(
-      "Izin berbagi ditolak. Pastikan halaman dibuka melalui HTTPS lalu coba lagi.",
+    await waitFor(() => expect(infoToast).toHaveBeenCalledWith(
+      "Berbagi file tidak didukung browser ini. Tiket otomatis diunduh.",
     ));
+    expect(anchorClick).toHaveBeenCalledTimes(1);
+    expect(errorToast).not.toHaveBeenCalled();
+  });
+
+  it("downloads the archive when browser capability detection throws", async () => {
+    Object.defineProperty(navigator, "share", { value: vi.fn(), configurable: true });
+    Object.defineProperty(navigator, "canShare", {
+      value: () => { throw new DOMException("Unsupported file type", "DataError"); },
+      configurable: true,
+    });
+
+    const { result } = renderHook(() => useTicketArchiveActions("order-1", "ticket-code"));
+    await waitFor(() => expect(result.current.isArchiveReady).toBe(true));
+
+    expect(() => act(() => result.current.share())).not.toThrow();
+    expect(anchorClick).toHaveBeenCalledTimes(1);
   });
 });

@@ -38,6 +38,7 @@ export function useQrScanner({ onScanSuccess, disabled = false }: UseQrScannerOp
   const lastScannedRef = useRef<string | null>(null);
   const onScanSuccessRef = useRef(onScanSuccess);
   const disabledRef = useRef(disabled);
+  const scanningRequestedRef = useRef(false);
   onScanSuccessRef.current = onScanSuccess;
   disabledRef.current = disabled;
 
@@ -59,6 +60,7 @@ export function useQrScanner({ onScanSuccess, disabled = false }: UseQrScannerOp
   }, []);
 
   const stopScanning = useCallback(async () => {
+    scanningRequestedRef.current = false;
     if (scannerRef.current?.isScanning) {
       await scannerRef.current.stop();
     }
@@ -70,6 +72,7 @@ export function useQrScanner({ onScanSuccess, disabled = false }: UseQrScannerOp
   }, []);
 
   const startScanning = useCallback(async (cameraId?: string) => {
+    scanningRequestedRef.current = true;
     try {
       setError(null);
       if (scannerRef.current?.isScanning) {
@@ -115,6 +118,15 @@ export function useQrScanner({ onScanSuccess, disabled = false }: UseQrScannerOp
       setIsTorchSupported(false);
     }
   }, [selectedCameraId]);
+
+  const ensureScanning = useCallback(async () => {
+    if (!scanningRequestedRef.current) return;
+    if (scannerRef.current?.isScanning) {
+      setIsScanning(true);
+      return;
+    }
+    await startScanning();
+  }, [startScanning]);
 
   const switchCamera = useCallback(async (cameraId: string) => {
     setSelectedCameraId(cameraId);
@@ -169,6 +181,7 @@ export function useQrScanner({ onScanSuccess, disabled = false }: UseQrScannerOp
     isScanning,
     isTorchOn,
     isTorchSupported,
+    ensureScanning,
     loadCameras,
     scanImageFile,
     scannerElementId,
