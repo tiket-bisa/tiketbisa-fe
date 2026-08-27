@@ -7,6 +7,11 @@ import { ScanSection } from "./scan-section";
 const scanner = vi.hoisted(() => ({
   useQrScanner: vi.fn(),
   stopScanning: vi.fn(),
+  ensureScanning: vi.fn(),
+}));
+
+const scanFlow = vi.hoisted(() => ({
+  checkInResult: { status: "SUCCESS", message: "Berhasil" },
 }));
 
 vi.mock("../hooks/use-qr-scanner", () => ({ useQrScanner: scanner.useQrScanner }));
@@ -18,7 +23,7 @@ vi.mock("../hooks/use-scan-flow", () => ({
       codeHash: "ticket-code",
       codeType: "QR_CODE",
     },
-    checkInResult: null,
+    checkInResult: scanFlow.checkInResult,
     isValidating: false,
     isCheckingIn: false,
     isBusy: false,
@@ -53,6 +58,7 @@ describe("ScanSection camera lifecycle", () => {
       selectedCameraId: "camera-1",
       startScanning: vi.fn(),
       stopScanning: scanner.stopScanning,
+      ensureScanning: scanner.ensureScanning,
       switchCamera: vi.fn(),
       toggleTorch: vi.fn(),
       scannerElementId: "qr-scanner-region",
@@ -64,5 +70,6 @@ describe("ScanSection camera lifecycle", () => {
       expect.objectContaining({ disabled: true }),
     ));
     expect(scanner.stopScanning).not.toHaveBeenCalled();
+    await waitFor(() => expect(scanner.ensureScanning).toHaveBeenCalled());
   });
 });

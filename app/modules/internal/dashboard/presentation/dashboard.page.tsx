@@ -52,7 +52,7 @@ export default function DashboardPage() {
         limit: pageSize,
         offset: (currentPage - 1) * pageSize,
         brandId: user.brand_id,
-        customerName: debouncedSearch || undefined,
+        search: debouncedSearch || undefined,
         status: mapTransactionStatusFilterToApi(statusFilter as "all" | TransactionStatus),
         orderBy: sortOrder === "oldest" ? "created:ASC" : "created:DESC",
       });
@@ -135,7 +135,7 @@ export default function DashboardPage() {
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <div className="flex-1">
             <SearchInput
-              placeholder="Cari transaksi..."
+              placeholder="Cari ID atau pembeli..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);

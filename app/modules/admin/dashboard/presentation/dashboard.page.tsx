@@ -76,7 +76,7 @@ export default function AdminDashboardPage() {
       const res = await transactionApi.getList({
         limit: pageSize,
         offset: (currentPage - 1) * pageSize,
-        customerName: debouncedSearch || undefined,
+        search: debouncedSearch || undefined,
         status: mapTransactionStatusFilterToApi(statusFilter as "all" | TransactionStatus),
         orderBy: sortOrder === "oldest" ? "created:ASC" : "created:DESC",
       });
@@ -153,7 +153,7 @@ export default function AdminDashboardPage() {
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <div className="flex-1">
             <SearchInput
-              placeholder="Cari transaksi..."
+              placeholder="Cari ID atau pembeli..."
               value={search}
               onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
               onClear={() => { setSearch(""); setCurrentPage(1); }}

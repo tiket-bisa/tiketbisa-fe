@@ -91,13 +91,23 @@ export function useTicketArchiveActions(transactionId: string, ticketCode?: stri
     }
 
     const file = new File([archive.blob], archive.fileName, { type: "application/zip" });
-    const canShareFile = globalThis.isSecureContext !== false
-      && typeof navigator.share === "function"
-      && (typeof navigator.canShare !== "function" || navigator.canShare({ files: [file] }));
+    const downloadFallback = () => {
+      saveArchive(archive);
+      infoToast("Berbagi file tidak didukung browser ini. Tiket otomatis diunduh.");
+    };
+
+    let canShareFile = false;
+    try {
+      canShareFile = globalThis.isSecureContext !== false
+        && typeof navigator.share === "function"
+        && (typeof navigator.canShare !== "function" || navigator.canShare({ files: [file] }));
+    } catch {
+      // Some desktop browsers expose Web Share but throw while probing ZIP support.
+      canShareFile = false;
+    }
 
     if (!canShareFile) {
-      saveArchive(archive);
-      infoToast("Browser ini belum mendukung berbagi file. Tiket otomatis diunduh.");
+      downloadFallback();
       return;
     }
 
@@ -108,15 +118,20 @@ export function useTicketArchiveActions(transactionId: string, ticketCode?: stri
       const shareResult = navigator.share({ files: [file], title: "E-Tiket TiketBisa" });
       void shareResult.catch((error) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        if (error instanceof DOMException && error.name === "NotAllowedError") {
-          errorToast("Izin berbagi ditolak. Pastikan halaman dibuka melalui HTTPS lalu coba lagi.");
-          return;
+        try {
+          downloadFallback();
+        } catch (fallbackError) {
+          errorToast(toUserFacingError(fallbackError, "Gagal membagikan atau mengunduh tiket."));
         }
-        errorToast(toUserFacingError(error, "Gagal membagikan tiket."));
       }).finally(() => setActiveAction(null));
     } catch (error) {
       setActiveAction(null);
-      errorToast(toUserFacingError(error, "Gagal membagikan tiket."));
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      try {
+        downloadFallback();
+      } catch (fallbackError) {
+        errorToast(toUserFacingError(fallbackError, "Gagal membagikan atau mengunduh tiket."));
+      }
     }
   };
 

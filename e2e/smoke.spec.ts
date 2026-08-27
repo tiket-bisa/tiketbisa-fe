@@ -49,9 +49,9 @@ async function openNativePayment(
   await page.locator('[data-checkout-consent]:visible input[type="checkbox"]').nth(1).check();
   await page.getByRole("button", { name: /Lanjut ke Pembayaran/i }).and(page.locator(":visible")).click();
   await page.getByRole("button", { name: "Ya, Lanjutkan" }).click();
-  await expect(page.getByRole("heading", {
-    name: method.id === "qris" ? "Pembayaran QRIS" : "Pembayaran Virtual Account",
-  })).toBeVisible();
+  await expect(page.getByText(
+    method.id === "qris" ? /Pembayaran QRIS/ : /Pembayaran Virtual Account/,
+  ).first()).toBeVisible();
   const transactionId = new URL(page.url()).searchParams.get("orderId");
   expect(transactionId).toBeTruthy();
   return transactionId as string;
@@ -173,6 +173,17 @@ test.describe.serial("local smoke flows", () => {
     expect(downloadResponse.headers()["x-request-id"]).toBeTruthy();
     expect((await downloadResponse.body()).subarray(0, 2).toString()).toBe("PK");
 
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, "canShare", { configurable: true, value: () => true });
+      Object.defineProperty(navigator, "share", {
+        configurable: true,
+        value: () => Promise.reject(new DOMException("Unsupported ZIP", "NotAllowedError")),
+      });
+    });
+    const fallbackDownload = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Bagikan", exact: true }).click();
+    await expect((await fallbackDownload).suggestedFilename()).toMatch(/\.zip$/);
+
     await setAdminSession(page, seeded.admin);
     await page.goto("/internal-tb/admin");
     await page.locator("select").filter({
@@ -180,6 +191,14 @@ test.describe.serial("local smoke flows", () => {
     }).selectOption("paid");
     const paidRow = page.getByRole("row").filter({ hasText: hostedTransactionId });
     await expect(paidRow.getByText("Lunas", { exact: true })).toBeVisible();
+
+    const partialTransactionId = hostedTransactionId.slice(-12);
+    const searchResponse = page.waitForResponse((response) =>
+      response.url().includes(`/transaction/list`) && response.url().includes(`search=${partialTransactionId}`),
+    );
+    await page.getByPlaceholder("Cari ID atau pembeli...").fill(partialTransactionId);
+    await expect((await searchResponse).ok()).toBeTruthy();
+    await expect(paidRow).toBeVisible();
   });
 
   test("dynamic VA bank selection is native and an expired session is recorded", async ({ page, request }) => {
