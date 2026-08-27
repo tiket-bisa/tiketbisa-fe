@@ -130,7 +130,9 @@ export function XenditComponentsRealPayment({
   };
 
   const checkStatus = () => {
-    componentsRef.current?.pollImmediately();
+    // The SDK's immediate poll rebuilds its action/channel UI when the session is still pending,
+    // which sends QRIS buyers back to the pre-generation screen. Our backend status endpoint is
+    // the authoritative check and already observes the verified webhook result.
     onCheckStatus();
   };
 

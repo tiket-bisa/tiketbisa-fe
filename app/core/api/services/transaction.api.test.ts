@@ -43,6 +43,11 @@ describe("transaction status filters", () => {
     expect(mapTransactionStatusFilterToApi("waiting_approval")).toBe("WAITING_APPROVAL");
   });
 
+  it("uses final backend statuses for paid and cancelled filters", () => {
+    expect(mapTransactionStatusFilterToApi("paid")).toBe("COMPLETED");
+    expect(mapTransactionStatusFilterToApi("cancelled")).toBe("CANCELED");
+  });
+
   it("sends the requested creation-time sorting to the list endpoint", () => {
     expect(buildTransactionListQuery({ orderBy: "created:ASC" })).toBe("?orderBy=created%3AASC");
     expect(buildTransactionListQuery({ orderBy: "created:DESC" })).toBe("?orderBy=created%3ADESC");

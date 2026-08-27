@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import {
   seedE2eData,
   getTransactionDetail,
+  postPaymentCaptureWebhook,
   postPaymentSessionWebhook,
   type E2eSeedResult,
 } from "./helpers/e2e-api";
@@ -150,13 +151,35 @@ test.describe.serial("local smoke flows", () => {
     await expect(page.getByText(/QRIS siap dipindai/)).toBeVisible();
     await expect(page.getByText(/Xendit/i)).toHaveCount(0);
 
-    await postPaymentSessionWebhook(request, hostedTransactionId, "payment_session.completed");
-    await postPaymentSessionWebhook(request, hostedTransactionId, "payment_session.completed");
+    // Xendit Components sends the channel-agnostic Payment API event through
+    // the legacy callback URL currently configured in production.
+    await postPaymentCaptureWebhook(request, hostedTransactionId);
+    await postPaymentCaptureWebhook(request, hostedTransactionId);
     await expect(page.getByRole("heading", { name: "Pembayaran Berhasil!" })).toBeVisible({ timeout: 15_000 });
 
     const detail = await getTransactionDetail(request, hostedTransactionId, seeded.admin.email);
     expect(detail.transaction.status).toBe("COMPLETED");
     expect(detail.ticketDetails[0]?.issuedTickets).toHaveLength(1);
+
+    const ticketCode = detail.ticketDetails[0]?.issuedTickets[0]?.codeHash;
+    expect(ticketCode).toBeTruthy();
+    const downloadResponse = await request.get(
+      `${process.env.E2E_API_BASE_URL ?? "http://localhost:8080"}`
+        + `/transaction/${hostedTransactionId}/tickets/download`,
+      { headers: { "x-tb-ticket-code": ticketCode as string } },
+    );
+    expect(downloadResponse.status()).toBe(200);
+    expect(downloadResponse.headers()["content-type"]).toContain("application/zip");
+    expect(downloadResponse.headers()["x-request-id"]).toBeTruthy();
+    expect((await downloadResponse.body()).subarray(0, 2).toString()).toBe("PK");
+
+    await setAdminSession(page, seeded.admin);
+    await page.goto("/internal-tb/admin");
+    await page.locator("select").filter({
+      has: page.locator('option[value="paid"]'),
+    }).selectOption("paid");
+    const paidRow = page.getByRole("row").filter({ hasText: hostedTransactionId });
+    await expect(paidRow.getByText("Lunas", { exact: true })).toBeVisible();
   });
 
   test("dynamic VA bank selection is native and an expired session is recorded", async ({ page, request }) => {

@@ -57,7 +57,13 @@ export function ScanSection({ brandId }: ScanSectionProps) {
     switchCamera,
     toggleTorch,
     scannerElementId,
-  } = useQrScanner({ onScanSuccess: handleScan, disabled: isBusy });
+  } = useQrScanner({
+    onScanSuccess: handleScan,
+    // Keep the MediaStream alive while the operator reads/confirms a result. Decoding is paused
+    // until the result is closed, so the same frame cannot replace it and the next scan resumes
+    // immediately without asking the operator to reactivate the camera.
+    disabled: isBusy || validateResult !== null,
+  });
   const [manualCode, setManualCode] = useState("");
   const backgroundClass = getScanBackgroundClass(validateResult, checkInResult, error);
 
@@ -74,14 +80,6 @@ export function ScanSection({ brandId }: ScanSectionProps) {
       window.sessionStorage,
     );
   }, [brandId, category, selectionRestored]);
-
-  // Freeze the scanner after the first result so the same camera frame cannot immediately replace
-  // VALID/SUCCESS with another scan. The operator explicitly closes the result before continuing.
-  useEffect(() => {
-    if (validateResult && isScanning) {
-      void stopScanning();
-    }
-  }, [isScanning, stopScanning, validateResult]);
 
   const handleManualSubmit = () => {
     const code = manualCode.trim();
