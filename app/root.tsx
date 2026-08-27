@@ -32,6 +32,17 @@ export const links: Route.LinksFunction = () => [
   },
 ];
 
+// The application shell references immutable, hashed JavaScript assets. Prevent browsers and
+// intermediaries from reusing an old shell after a deployment, otherwise an already-cached HTML
+// document can keep pointing at an outdated checkout bundle.
+export function headers() {
+  return {
+    "Cache-Control": "no-store, no-cache, must-revalidate",
+    Pragma: "no-cache",
+    Expires: "0",
+  };
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
