@@ -77,4 +77,42 @@ describe("useQrScanner keep-alive", () => {
     expect(scannerMocks.instances).toHaveLength(1);
     expect(result.current.isScanning).toBe(false);
   });
+
+  it("suppresses repeated frames but immediately accepts a different ticket", async () => {
+    const onScanSuccess = vi.fn();
+    const { result } = renderHook(() => useQrScanner({ onScanSuccess }));
+    await waitFor(() => expect(result.current.selectedCameraId).toBe("back-camera"));
+    await act(async () => result.current.startScanning());
+
+    const decoded = scannerMocks.instances[0].start.mock.calls[0][2] as (code: string) => void;
+    act(() => {
+      decoded("ticket-a");
+      decoded("ticket-a");
+      decoded("ticket-b");
+    });
+
+    expect(onScanSuccess.mock.calls).toEqual([["ticket-a"], ["ticket-b"]]);
+  });
+
+  it("does not consume the next ticket while validation is busy", async () => {
+    const onScanSuccess = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ disabled }) => useQrScanner({ onScanSuccess, disabled }),
+      { initialProps: { disabled: false } },
+    );
+    await waitFor(() => expect(result.current.selectedCameraId).toBe("back-camera"));
+    await act(async () => result.current.startScanning());
+    const decoded = scannerMocks.instances[0].start.mock.calls[0][2] as (code: string) => void;
+
+    act(() => decoded("ticket-a"));
+    rerender({ disabled: true });
+    act(() => {
+      decoded("ticket-a");
+      decoded("ticket-b");
+    });
+    rerender({ disabled: false });
+    act(() => decoded("ticket-b"));
+
+    expect(onScanSuccess.mock.calls).toEqual([["ticket-a"], ["ticket-b"]]);
+  });
 });

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, Badge, Button } from "~/core/design-system/components";
 import { useQrScanner } from "../hooks/use-qr-scanner";
 import { useScanFlow } from "../hooks/use-scan-flow";
@@ -32,6 +32,7 @@ interface ScanSectionProps {
 export function ScanSection({ brandId }: ScanSectionProps) {
   const [category, setCategory] = useState<SelectedCategory | null>(null);
   const [selectionRestored, setSelectionRestored] = useState(false);
+  const autoStartAttemptedRef = useRef(false);
   const {
     validateResult,
     checkInResult,
@@ -60,10 +61,9 @@ export function ScanSection({ brandId }: ScanSectionProps) {
     scannerElementId,
   } = useQrScanner({
     onScanSuccess: handleScan,
-    // Keep the MediaStream alive while the operator reads/confirms a result. Decoding is paused
-    // until the result is closed, so the same frame cannot replace it and the next scan resumes
-    // immediately without asking the operator to reactivate the camera.
-    disabled: isBusy || validateResult !== null || checkInResult !== null,
+    // Keep decoding active after a result is shown so the next ticket replaces the previous card.
+    // The scanner hook suppresses repeated frames of the same ticket while it remains in view.
+    disabled: isBusy,
   });
   const [manualCode, setManualCode] = useState("");
   const backgroundClass = getScanBackgroundClass(validateResult, checkInResult, error);
@@ -81,6 +81,19 @@ export function ScanSection({ brandId }: ScanSectionProps) {
       window.sessionStorage,
     );
   }, [brandId, category, selectionRestored]);
+
+  useEffect(() => {
+    if (
+      !selectionRestored
+      || !category
+      || cameras.length === 0
+      || isScanning
+      || autoStartAttemptedRef.current
+    ) return;
+
+    autoStartAttemptedRef.current = true;
+    void startScanning(selectedCameraId || cameras[0].id);
+  }, [cameras, category, isScanning, selectedCameraId, selectionRestored, startScanning]);
 
   useEffect(() => {
     if (checkInResult?.status === "SUCCESS") {

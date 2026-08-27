@@ -141,4 +141,31 @@ describe("useScanFlow state machine", () => {
     expect(result.current.checkInResult?.message).toBe("Ticket already used");
     expect(result.current.validateResult?.status).toBe("VALID");
   });
+
+  it("replaces the visible result when a different ticket is scanned", async () => {
+    mockValidate
+      .mockResolvedValueOnce({
+        success: true,
+        data: { status: "VALID", holder_name: "Budi" },
+        error: null,
+        reason: null,
+        status_code: 200,
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: { status: "VALID", holder_name: "Siti" },
+        error: null,
+        reason: null,
+        status_code: 200,
+      });
+
+    const { result } = renderHook(() => useScanFlow("event-1", "cat-1"));
+
+    await act(async () => result.current.handleScan("ticket-a"));
+    expect(result.current.validateResult?.holderName).toBe("Budi");
+
+    await act(async () => result.current.handleScan("ticket-b"));
+    expect(result.current.validateResult?.holderName).toBe("Siti");
+    expect(result.current.validateResult?.codeHash).toBe("ticket-b");
+  });
 });

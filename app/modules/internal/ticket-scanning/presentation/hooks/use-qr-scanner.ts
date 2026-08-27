@@ -36,6 +36,7 @@ export function useQrScanner({ onScanSuccess, disabled = false }: UseQrScannerOp
   const [isTorchOn, setIsTorchOn] = useState(false);
   const [isFileScanning, setIsFileScanning] = useState(false);
   const lastScannedRef = useRef<string | null>(null);
+  const lastScanResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onScanSuccessRef = useRef(onScanSuccess);
   const disabledRef = useRef(disabled);
   const scanningRequestedRef = useRef(false);
@@ -61,6 +62,10 @@ export function useQrScanner({ onScanSuccess, disabled = false }: UseQrScannerOp
 
   const stopScanning = useCallback(async () => {
     scanningRequestedRef.current = false;
+    if (lastScanResetTimerRef.current) {
+      clearTimeout(lastScanResetTimerRef.current);
+      lastScanResetTimerRef.current = null;
+    }
     if (scannerRef.current?.isScanning) {
       await scannerRef.current.stop();
     }
@@ -75,6 +80,11 @@ export function useQrScanner({ onScanSuccess, disabled = false }: UseQrScannerOp
     scanningRequestedRef.current = true;
     try {
       setError(null);
+      if (lastScanResetTimerRef.current) {
+        clearTimeout(lastScanResetTimerRef.current);
+        lastScanResetTimerRef.current = null;
+      }
+      lastScannedRef.current = null;
       if (scannerRef.current?.isScanning) {
         await scannerRef.current.stop();
       }
@@ -91,13 +101,27 @@ export function useQrScanner({ onScanSuccess, disabled = false }: UseQrScannerOp
           aspectRatio: 4 / 3,
         },
         (decodedText) => {
-          if (disabledRef.current) return;
-          if (decodedText === lastScannedRef.current) return;
-          lastScannedRef.current = decodedText;
+          const previousCode = lastScannedRef.current;
+          const rememberFrame = () => {
+            if (lastScanResetTimerRef.current) clearTimeout(lastScanResetTimerRef.current);
+            lastScannedRef.current = decodedText;
+            lastScanResetTimerRef.current = setTimeout(() => {
+              if (lastScannedRef.current === decodedText) lastScannedRef.current = null;
+              lastScanResetTimerRef.current = null;
+            }, 1200);
+          };
+
+          // While an API request is running, keep extending the guard for the ticket already in
+          // view but do not consume a different ticket. Once the request completes, that next
+          // ticket can be accepted immediately without making the operator move it away first.
+          if (disabledRef.current) {
+            if (decodedText === previousCode) rememberFrame();
+            return;
+          }
+
+          rememberFrame();
+          if (decodedText === previousCode) return;
           onScanSuccessRef.current(decodedText);
-          setTimeout(() => {
-            lastScannedRef.current = null;
-          }, 3000);
         },
         () => {
           // No QR/barcode found in frame - normal, ignore
@@ -168,6 +192,7 @@ export function useQrScanner({ onScanSuccess, disabled = false }: UseQrScannerOp
   useEffect(() => {
     loadCameras();
     return () => {
+      if (lastScanResetTimerRef.current) clearTimeout(lastScanResetTimerRef.current);
       if (scannerRef.current?.isScanning) {
         scannerRef.current.stop().catch(() => {});
       }
