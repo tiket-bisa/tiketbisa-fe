@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { act, fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { XenditComponentsRealPayment } from "./xendit-components-payment";
 
 const sdk = vi.hoisted(() => {
@@ -27,6 +27,8 @@ vi.mock("xendit-components-web", () => ({
 }));
 
 describe("XenditComponentsRealPayment", () => {
+  afterEach(cleanup);
+
   beforeEach(() => {
     vi.clearAllMocks();
     sdk.listeners.clear();
@@ -89,5 +91,25 @@ describe("XenditComponentsRealPayment", () => {
 
     expect(onCheckStatus).toHaveBeenCalledTimes(1);
     expect(screen.getByText("Menunggu konfirmasi pembayaran…")).toBeTruthy();
+  });
+
+  it("checks backend status without resetting the generated QRIS component", () => {
+    const onCheckStatus = vi.fn();
+    const view = render(
+      <XenditComponentsRealPayment
+        componentsSdkKey="session-key"
+        paymentMethodId="qris"
+        deadline="12.45"
+        onCheckStatus={onCheckStatus}
+        onBack={vi.fn()}
+        onExpire={vi.fn()}
+      />,
+    );
+
+    act(() => sdk.listeners.get("action-begin")?.());
+    fireEvent.click(view.getByRole("button", { name: "Cek Status Pembayaran" }));
+
+    expect(onCheckStatus).toHaveBeenCalledTimes(1);
+    expect(sdk.pollImmediately).not.toHaveBeenCalled();
   });
 });

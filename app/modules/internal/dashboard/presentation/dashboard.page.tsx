@@ -149,6 +149,7 @@ export default function DashboardPage() {
           </div>
           <div className="w-full sm:w-48">
             <Select
+              aria-label="Semua Status"
               options={statusFilterOptions}
               value={statusFilter}
               onChange={(e) => {

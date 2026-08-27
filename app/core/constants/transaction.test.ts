@@ -10,4 +10,10 @@ describe("transaction status configuration", () => {
     expect(statusFilterOptions).toContainEqual({ value: "expired", label: "Expired" });
     expect(mapTransactionStatusFilterToApi("expired")).toBe("EXPIRED");
   });
+
+  it("maps dashboard labels to persisted backend statuses", () => {
+    expect(mapTransactionStatusFilterToApi("paid")).toBe("COMPLETED");
+    expect(mapTransactionStatusFilterToApi("cancelled")).toBe("CANCELED");
+    expect(statusFilterOptions.some((option) => option.value === "refunded")).toBe(false);
+  });
 });

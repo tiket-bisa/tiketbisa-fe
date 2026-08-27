@@ -20,13 +20,16 @@ export const statusFilterOptions: Array<{ value: "all" | TransactionStatus; labe
   { value: "waiting_payment", label: "Menunggu Pembayaran" },
   { value: "waiting_approval", label: "Menunggu Approval" },
   { value: "cancelled", label: "Dibatalkan" },
-  { value: "refunded", label: "Refund" },
   { value: "expired", label: "Expired" },
 ];
 
 export function mapTransactionStatusFilterToApi(statusFilter: "all" | TransactionStatus): string | undefined {
   if (statusFilter === "all") return undefined;
+  // The dashboard's paid business state is COMPLETED. PAID is an intermediate gateway
+  // reconciliation state and therefore must not be used for the "Lunas" list filter.
+  if (statusFilter === "paid") return "COMPLETED";
   if (statusFilter === "waiting_payment") return "WAITING_PAYMENT";
   if (statusFilter === "waiting_approval") return "WAITING_APPROVAL";
+  if (statusFilter === "cancelled") return "CANCELED";
   return statusFilter.toUpperCase();
 }

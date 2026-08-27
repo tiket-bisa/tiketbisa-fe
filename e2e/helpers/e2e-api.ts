@@ -211,6 +211,28 @@ export async function postPaymentSessionWebhook(
   }
 }
 
+export async function postPaymentCaptureWebhook(
+  request: APIRequestContext,
+  transactionId: string,
+): Promise<void> {
+  const response = await request.post(
+    `${normalizeBaseUrl(E2E_API_BASE_URL)}/transaction/webhook/xendit/va`,
+    {
+      data: {
+        event: "payment.capture",
+        data: {
+          reference_id: transactionId,
+          status: "SUCCEEDED",
+        },
+      },
+    },
+  );
+  const payload = (await response.json()) as ApiResponse<unknown>;
+  if (!response.ok() || !payload.success) {
+    throw new Error(`Webhook failed: ${response.status()} ${JSON.stringify(payload.error)}`);
+  }
+}
+
 async function seedRoles(
   request: APIRequestContext,
   payload: { adminEmail?: string; partnerEmail?: string; brandId?: string },
