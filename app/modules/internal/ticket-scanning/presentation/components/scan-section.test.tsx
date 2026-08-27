@@ -6,6 +6,7 @@ import { ScanSection } from "./scan-section";
 
 const scanner = vi.hoisted(() => ({
   useQrScanner: vi.fn(),
+  startScanning: vi.fn(),
   stopScanning: vi.fn(),
   ensureScanning: vi.fn(),
 }));
@@ -46,7 +47,7 @@ describe("ScanSection camera lifecycle", () => {
     vi.clearAllMocks();
   });
 
-  it("keeps the camera running and only pauses decoding while a result is open", async () => {
+  it("keeps decoding enabled so a new ticket can replace the open result", async () => {
     scanner.useQrScanner.mockReturnValue({
       cameras: [],
       error: null,
@@ -56,7 +57,7 @@ describe("ScanSection camera lifecycle", () => {
       isTorchSupported: false,
       scanImageFile: vi.fn(),
       selectedCameraId: "camera-1",
-      startScanning: vi.fn(),
+      startScanning: scanner.startScanning,
       stopScanning: scanner.stopScanning,
       ensureScanning: scanner.ensureScanning,
       switchCamera: vi.fn(),
@@ -67,9 +68,33 @@ describe("ScanSection camera lifecycle", () => {
     render(<ScanSection />);
 
     await waitFor(() => expect(scanner.useQrScanner).toHaveBeenLastCalledWith(
-      expect.objectContaining({ disabled: true }),
+      expect.objectContaining({ disabled: false }),
     ));
     expect(scanner.stopScanning).not.toHaveBeenCalled();
     await waitFor(() => expect(scanner.ensureScanning).toHaveBeenCalled());
+  });
+
+  it("automatically starts the selected camera when the saved category is restored", async () => {
+    scanner.useQrScanner.mockReturnValue({
+      cameras: [{ id: "camera-1", label: "Back Camera" }],
+      error: null,
+      isFileScanning: false,
+      isScanning: false,
+      isTorchOn: false,
+      isTorchSupported: false,
+      scanImageFile: vi.fn(),
+      selectedCameraId: "camera-1",
+      startScanning: scanner.startScanning,
+      stopScanning: scanner.stopScanning,
+      ensureScanning: scanner.ensureScanning,
+      switchCamera: vi.fn(),
+      toggleTorch: vi.fn(),
+      scannerElementId: "qr-scanner-region",
+    });
+
+    render(<ScanSection />);
+
+    await waitFor(() => expect(scanner.startScanning).toHaveBeenCalledWith("camera-1"));
+    expect(scanner.startScanning).toHaveBeenCalledTimes(1);
   });
 });
