@@ -1,12 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useToast } from "~/core/design-system/components";
 import {
   ticketDeliveryApi,
   type TicketArchive,
 } from "../../infrastructure/ticket-delivery.api";
 import { ApiRequestError, toUserFacingError } from "~/core/api";
-
-type TicketArchiveAction = "download" | "share";
 
 function saveArchive({ blob, fileName }: TicketArchive): void {
   const url = URL.createObjectURL(blob);
@@ -20,120 +18,25 @@ function saveArchive({ blob, fileName }: TicketArchive): void {
 }
 
 export function useTicketArchiveActions(transactionId: string, ticketCode?: string) {
-  const [activeAction, setActiveAction] = useState<TicketArchiveAction | null>(null);
-  const [archive, setArchive] = useState<TicketArchive | null>(null);
-  const [isPreparingArchive, setIsPreparingArchive] = useState(false);
-  const archiveRequestRef = useRef<{ key: string; promise: Promise<TicketArchive> } | null>(null);
-  const { error: errorToast, info: infoToast, success: successToast } = useToast();
-
-  const loadArchive = useCallback((): Promise<TicketArchive> => {
-    if (!ticketCode) throw new ApiRequestError("Kode akses tiket tidak tersedia.");
-    const key = `${transactionId}:${ticketCode}`;
-    if (archiveRequestRef.current?.key === key) return archiveRequestRef.current.promise;
-
-    const promise = ticketDeliveryApi.downloadArchive(transactionId, ticketCode);
-    archiveRequestRef.current = { key, promise };
-    return promise;
-  }, [ticketCode, transactionId]);
-
-  const prepareArchive = useCallback(async () => {
-    if (!transactionId || !ticketCode) return null;
-    setIsPreparingArchive(true);
-    try {
-      const prepared = await loadArchive();
-      setArchive(prepared);
-      return prepared;
-    } catch (error) {
-      archiveRequestRef.current = null;
-      setArchive(null);
-      throw error;
-    } finally {
-      setIsPreparingArchive(false);
-    }
-  }, [loadArchive, ticketCode, transactionId]);
-
-  useEffect(() => {
-    let active = true;
-    setArchive(null);
-    if (!transactionId || !ticketCode) return () => { active = false; };
-
-    setIsPreparingArchive(true);
-    void loadArchive()
-      .then((prepared) => { if (active) setArchive(prepared); })
-      .catch(() => { if (active) archiveRequestRef.current = null; })
-      .finally(() => { if (active) setIsPreparingArchive(false); });
-    return () => { active = false; };
-  }, [loadArchive, ticketCode, transactionId]);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const { error: errorToast, success: successToast } = useToast();
 
   const download = async () => {
-    if (activeAction) return;
-    setActiveAction("download");
+    if (isDownloading) return;
+    setIsDownloading(true);
     try {
-      const prepared = archive ?? await prepareArchive();
-      if (!prepared) throw new ApiRequestError("Kode akses tiket tidak tersedia.");
-      saveArchive(prepared);
+      if (!transactionId || !ticketCode) {
+        throw new ApiRequestError("Kode akses tiket tidak tersedia.");
+      }
+      const archive = await ticketDeliveryApi.downloadArchive(transactionId, ticketCode);
+      saveArchive(archive);
       successToast("File tiket berhasil diunduh.");
     } catch (error) {
       errorToast(toUserFacingError(error, "Gagal mengunduh tiket."));
     } finally {
-      setActiveAction(null);
+      setIsDownloading(false);
     }
   };
 
-  const share = () => {
-    if (activeAction) return;
-    if (!archive) {
-      void prepareArchive().catch((error) => {
-        errorToast(toUserFacingError(error, "Gagal menyiapkan tiket."));
-      });
-      infoToast("Tiket sedang disiapkan. Tekan Bagikan lagi setelah selesai.");
-      return;
-    }
-
-    const file = new File([archive.blob], archive.fileName, { type: "application/zip" });
-    const downloadFallback = () => {
-      saveArchive(archive);
-      infoToast("Berbagi file tidak didukung browser ini. Tiket otomatis diunduh.");
-    };
-
-    let canShareFile = false;
-    try {
-      canShareFile = globalThis.isSecureContext !== false
-        && typeof navigator.share === "function"
-        && (typeof navigator.canShare !== "function" || navigator.canShare({ files: [file] }));
-    } catch {
-      // Some desktop browsers expose Web Share but throw while probing ZIP support.
-      canShareFile = false;
-    }
-
-    if (!canShareFile) {
-      downloadFallback();
-      return;
-    }
-
-    setActiveAction("share");
-    try {
-      // Invoke Web Share synchronously in the click handler. Awaiting a network request first loses
-      // Chrome Android's transient user activation and results in NotAllowedError/permission denied.
-      const shareResult = navigator.share({ files: [file], title: "E-Tiket TiketBisa" });
-      void shareResult.catch((error) => {
-        if (error instanceof DOMException && error.name === "AbortError") return;
-        try {
-          downloadFallback();
-        } catch (fallbackError) {
-          errorToast(toUserFacingError(fallbackError, "Gagal membagikan atau mengunduh tiket."));
-        }
-      }).finally(() => setActiveAction(null));
-    } catch (error) {
-      setActiveAction(null);
-      if (error instanceof DOMException && error.name === "AbortError") return;
-      try {
-        downloadFallback();
-      } catch (fallbackError) {
-        errorToast(toUserFacingError(fallbackError, "Gagal membagikan atau mengunduh tiket."));
-      }
-    }
-  };
-
-  return { activeAction, isPreparingArchive, isArchiveReady: archive !== null, download, share };
+  return { isDownloading, download };
 }
