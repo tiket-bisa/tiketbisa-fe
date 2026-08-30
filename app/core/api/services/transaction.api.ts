@@ -29,6 +29,8 @@ export interface TransactionApiData {
     created: string;
     paymentProofPath?: string | null;
     verifiedBy?: string | null;
+    promoId?: string | null;
+    discountAmount?: number | null;
 }
 
 export interface IssuedTicketDetail {
