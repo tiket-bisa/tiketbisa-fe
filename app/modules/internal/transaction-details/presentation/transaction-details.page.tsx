@@ -3,10 +3,10 @@ import { Link, useNavigate, useParams } from "react-router";
 import { Badge, Button, Card, useToast } from "~/core/design-system/components";
 import { ApiRequestError, toUserFacingError, toUserFacingResponseError, useApiQuery } from "~/core/api";
 import { transactionApi } from "~/core/api/services/transaction.api";
-import { formatIDR } from "~/core/utils";
 import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 import { TicketDeliveryActions } from "~/modules/internal/ticket-delivery/presentation/ticket-delivery-actions";
 import { PaymentProofActions } from "~/modules/internal/common/presentation/payment-proof-actions";
+import { TransactionTicketSummary } from "~/modules/internal/common/presentation/transaction-ticket-summary";
 
 const STATUS_MAP: Record<string, { label: string; variant: "success" | "warning" | "destructive" | "default" }> = {
   WAITING_PAYMENT: { label: "Menunggu Pembayaran", variant: "warning" },
@@ -212,28 +212,11 @@ export default function TransactionDetailsPage() {
             <span className="material-symbols-outlined text-brand-primary">confirmation_number</span>
             Detail Tiket
           </h2>
-          <div className="space-y-3">
-            {detail.ticketDetails.length === 0 && (
-              <p className="text-sm text-text-tertiary">Belum ada tiket pada transaksi ini.</p>
-            )}
-
-            {detail.ticketDetails.map((item) => (
-              <div key={item.category.id} className="border border-border-subtle rounded-xl p-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <div>
-                    <p className="text-text-primary font-semibold">{item.category.name}</p>
-                    <p className="text-sm text-text-tertiary">Qty: {item.ticketCount}</p>
-                  </div>
-                  <p className="text-text-primary font-bold">{formatIDR(item.subtotalPrice)}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="border-t border-border-subtle mt-4 pt-4 flex items-center justify-between">
-            <span className="text-text-primary font-semibold">Total Pembayaran</span>
-            <span className="text-text-primary font-bold text-lg">{formatIDR(tx.totalPrice)}</span>
-          </div>
+          <TransactionTicketSummary
+            ticketDetails={detail.ticketDetails}
+            totalPrice={tx.totalPrice}
+            discountAmount={tx.discountAmount}
+          />
         </Card>
       </div>
     </div>
