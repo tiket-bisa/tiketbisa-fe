@@ -116,6 +116,32 @@ body {
   animation: scroll-left-text 8s linear infinite;
 }
 
+/* Reveal long ticket-category names without taking space from the quantity controls. */
+@keyframes ticket-name-scroll {
+  0%,
+  15% {
+    transform: translateX(0);
+  }
+  45%,
+  65% {
+    transform: translateX(calc(-1 * var(--ticket-name-overflow)));
+  }
+  85%,
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.animate-ticket-name-scroll {
+  animation: ticket-name-scroll 10s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-ticket-name-scroll {
+    animation: none;
+  }
+}
+
 /* Light Theme Override
    Apply data-theme="light" to a container to flip all tokens
    to light-mode values. Used on external page content area. */
