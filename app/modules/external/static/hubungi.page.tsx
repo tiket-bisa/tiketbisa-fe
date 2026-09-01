@@ -4,6 +4,7 @@ import { Input } from "~/core/design-system/components/input";
 import { Card } from "~/core/design-system/components/card";
 import { sendContactMessage } from "./contact.api";
 import { toUserFacingError } from "~/core/api";
+import { TIKETBISA_CONTACT } from "~/core/constants/contact";
 
 const INITIAL_FORM = {
   name: "",
@@ -100,7 +101,15 @@ export default function HubungiPage() {
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-text-primary uppercase tracking-wider">WhatsApp</h3>
-                  <p className="mt-1 text-text-secondary font-medium">+62 xxx xxxx xxxx</p>
+                  <a
+                    href={TIKETBISA_CONTACT.whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 inline-block text-text-secondary font-medium hover:text-brand-primary hover:underline"
+                    aria-label={`Hubungi Tiketbisa melalui WhatsApp di ${TIKETBISA_CONTACT.whatsappDisplay}`}
+                  >
+                    {TIKETBISA_CONTACT.whatsappDisplay}
+                  </a>
                 </div>
               </div>
             </div>
