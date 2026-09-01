@@ -17,9 +17,7 @@ export function PaymentMethodSelection({
 }: PaymentMethodSelectionProps) {
   const [expandedCategory, setExpandedCategory] = useState<PaymentCategory | null>("BANK_TRANSFER");
 
-  const bankTransferMethods = methods.filter(
-    (m) => m.category === "BANK_TRANSFER" && m.id !== "manual" && m.id !== "manual_transfer"
-  );
+  const bankTransferMethods = methods.filter((m) => m.category === "BANK_TRANSFER");
   const eWalletMethods = methods.filter((m) => m.category === "E_WALLET_QRIS");
 
   const toggleCategory = (category: PaymentCategory) => {
@@ -30,7 +28,7 @@ export function PaymentMethodSelection({
     <div className={`space-y-4 ${className}`}>
       {/* Bank Transfer Section */}
       <Card className="overflow-hidden border-gray-100 rounded-3xl shadow-sm bg-white">
-        <button
+        <button 
           onClick={() => toggleCategory("BANK_TRANSFER")}
           className="w-full p-8 flex items-center justify-between hover:bg-gray-50/50 transition-colors text-left"
         >
@@ -45,49 +43,50 @@ export function PaymentMethodSelection({
               <p className="text-xs font-bold text-text-tertiary uppercase tracking-widest mt-0.5">Virtual Account</p>
             </div>
           </div>
-          <svg
-            className={`h-6 w-6 text-text-tertiary transition-transform duration-300 ${expandedCategory === "BANK_TRANSFER" ? "rotate-180" : ""}`}
-            fill="none"
-            viewBox="0 0 24 24"
+          <svg 
+            className={`h-6 w-6 text-text-tertiary transition-transform duration-300 ${expandedCategory === "BANK_TRANSFER" ? "rotate-180" : ""}`} 
+            fill="none" 
+            viewBox="0 0 24 24" 
             stroke="currentColor"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
           </svg>
         </button>
-
+        
         <div className={`transition-all duration-300 ease-in-out overflow-hidden ${expandedCategory === "BANK_TRANSFER" ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"}`}>
           <div className="p-8 pt-4 grid grid-cols-2 md:grid-cols-3 gap-4">
             {bankTransferMethods.map((method) => (
               <button
                 key={method.id}
                 onClick={() => onSelect(method.id)}
-                className={`relative flex items-center justify-center p-6 rounded-2xl border-2 transition-all h-24 ${selectedMethodId === method.id
+                className={`relative flex items-center justify-center p-6 rounded-2xl border-2 transition-all h-24 ${
+                  selectedMethodId === method.id
                     ? "border-brand-primary bg-brand-primary/[0.04] ring-1 ring-brand-primary/20"
                     : "border-gray-200 hover:border-gray-400 bg-white"
-                  }`}
+                }`}
               >
                 <span className={`text-sm font-black uppercase tracking-tighter ${selectedMethodId === method.id ? "text-brand-primary" : "text-text-primary"}`}>
                   {method.name}
                 </span>
                 {selectedMethodId === method.id && (
                   <div className="absolute top-2 right-2">
-                    <div className="bg-brand-primary rounded-full p-1 shadow-lg shadow-brand-primary/20 border-2 border-white">
-                      <svg className="h-2 w-2 text-base-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
+                     <div className="bg-brand-primary rounded-full p-1 shadow-lg shadow-brand-primary/20 border-2 border-white">
+                       <svg className="h-2 w-2 text-base-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={5}>
+                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                       </svg>
+                     </div>
                   </div>
                 )}
               </button>
             ))}
-          </div>
-        </div>
-      </Card>
+            </div>
+            </div>
+            </Card>
 
 
       {/* E-Wallet / QRIS Section */}
       <Card className="overflow-hidden border-gray-100 rounded-3xl shadow-sm bg-white">
-        <button
+        <button 
           onClick={() => toggleCategory("E_WALLET_QRIS")}
           className="w-full p-8 flex items-center justify-between hover:bg-gray-50/50 transition-colors text-left"
         >
@@ -102,10 +101,10 @@ export function PaymentMethodSelection({
               <p className="text-xs font-bold text-text-tertiary uppercase tracking-widest mt-0.5">Instant Payment</p>
             </div>
           </div>
-          <svg
-            className={`h-6 w-6 text-text-tertiary transition-transform duration-300 ${expandedCategory === "E_WALLET_QRIS" ? "rotate-180" : ""}`}
-            fill="none"
-            viewBox="0 0 24 24"
+          <svg 
+            className={`h-6 w-6 text-text-tertiary transition-transform duration-300 ${expandedCategory === "E_WALLET_QRIS" ? "rotate-180" : ""}`} 
+            fill="none" 
+            viewBox="0 0 24 24" 
             stroke="currentColor"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
@@ -115,27 +114,28 @@ export function PaymentMethodSelection({
         <div className={`transition-all duration-300 ease-in-out overflow-hidden ${expandedCategory === "E_WALLET_QRIS" ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"}`}>
           <div className="p-8 pt-4">
             <div className="flex flex-wrap gap-3">
-              {eWalletMethods.map((method) => (
-                <button
-                  key={method.id}
-                  onClick={() => onSelect(method.id)}
-                  className={`relative px-6 py-3 rounded-xl border-2 transition-all font-black text-xs uppercase tracking-widest ${selectedMethodId === method.id
-                      ? "border-brand-primary bg-brand-primary/5 text-brand-primary ring-1 ring-brand-primary/10"
-                      : "border-gray-200 bg-white text-text-secondary hover:border-gray-400"
+               {eWalletMethods.map((method) => (
+                  <button
+                    key={method.id}
+                    onClick={() => onSelect(method.id)}
+                    className={`relative px-6 py-3 rounded-xl border-2 transition-all font-black text-xs uppercase tracking-widest ${
+                      selectedMethodId === method.id
+                        ? "border-brand-primary bg-brand-primary/5 text-brand-primary ring-1 ring-brand-primary/10"
+                        : "border-gray-200 bg-white text-text-secondary hover:border-gray-400"
                     }`}
-                >
-                  {method.name}
-                  {selectedMethodId === method.id && (
-                    <div className="absolute top-1 right-1 z-10">
-                      <div className="bg-brand-primary rounded-full p-0.5 shadow-md border-2 border-white">
-                        <svg className="h-1.5 w-1.5 text-base-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={6}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
+                  >
+                    {method.name}
+                    {selectedMethodId === method.id && (
+                      <div className="absolute top-1 right-1 z-10">
+                        <div className="bg-brand-primary rounded-full p-0.5 shadow-md border-2 border-white">
+                          <svg className="h-1.5 w-1.5 text-base-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={6}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </button>
-              ))}
+                    )}
+                  </button>
+               ))}
             </div>
           </div>
         </div>
