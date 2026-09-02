@@ -96,17 +96,39 @@ curl --fail --silent http://127.0.0.1:3000/healthz >/dev/null
 
 deployed_container_id="$(docker compose --env-file .deploy.env ps -q tiketbisa-fe)"
 deployed_image="$(docker inspect --format='{{.Config.Image}}' "$deployed_container_id")"
-[[ "$deployed_image" == "$FRONTEND_IMAGE" ]] || {
-  printf 'Expected image %s but container uses %s\n' "$FRONTEND_IMAGE" "$deployed_image" >&2
-  exit 1
+# Returning non-zero trips the ERR trap so a failed verification actually rolls back. A bare
+# `exit` here would skip the trap and leave the new image and Nginx config live while the
+# deployment reports failure.
+fail() {
+  printf '%s\n' "$1" >&2
+  return 1
 }
 
+if [[ "$deployed_image" != "$FRONTEND_IMAGE" ]]; then
+  fail "Expected image $FRONTEND_IMAGE but container uses $deployed_image"
+fi
+
 sudo systemctl reload nginx
-cache_header="$(curl --fail --silent --show-error --insecure --resolve tiketbisa.com:443:127.0.0.1 --head https://tiketbisa.com/banner/Homepage.svg | tr -d '\r' | awk -F': ' 'tolower($1) == "cache-control" {print $2}')"
-[[ "$cache_header" == *'max-age=604800'* ]] || {
-  printf 'Expected the public asset cache policy after Nginx reload, got: %s\n' "$cache_header" >&2
-  exit 1
+
+# Reloading Nginx is graceful: workers started under the previous configuration keep serving
+# until their connections drain, so the new cache policy is not necessarily visible on the very
+# first request. Poll for it instead of reading the header once.
+verify_cache_policy() {
+  local deadline=$((SECONDS + 30)) cache_header
+  while :; do
+    cache_header="$(curl --fail --silent --show-error --insecure --resolve tiketbisa.com:443:127.0.0.1 --head https://tiketbisa.com/banner/Homepage.svg | tr -d '\r' | awk -F': ' 'tolower($1) == "cache-control" {print $2}')"
+    if [[ "$cache_header" == *'max-age=604800'* ]]; then
+      return 0
+    fi
+    if ((SECONDS >= deadline)); then
+      fail "Expected the public asset cache policy after Nginx reload, got: $cache_header"
+      return 1
+    fi
+    sleep 2
+  done
 }
+
+verify_cache_policy
 
 trap - ERR
 echo "Frontend deployment completed with image $FRONTEND_IMAGE"
