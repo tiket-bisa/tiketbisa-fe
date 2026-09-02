@@ -18,7 +18,13 @@ copy the same public client ID into the Environment variable before removing tha
 
 Pull requests run unit tests, TypeScript checks, and the production build. A merge to `main` repeats the
 quality gate, publishes an immutable commit-SHA image, deploys it, waits for `/healthz`, and verifies the
-running container uses the expected image. A failure restores the previous Compose file and image.
+running container uses the expected image. The same deployment installs a version-controlled Nginx
+site configuration, validates it before reload, and restores the previous Nginx file together with the
+image and Compose file if verification fails.
+
+Hashed `/assets/` responses use a one-year immutable cache. Public images, logos, and banners use a
+seven-day cache with stale-while-revalidate; HTML and `/healthz` remain uncached. The frontend container
+is capped at 512 MiB so it cannot starve the colocated backend, PostgreSQL, Redis, or RabbitMQ services.
 
 The `Frontend Release E2E` workflow is a manual release gate. Supply a deployed frontend URL and its API
 URL; Playwright diagnostics are retained as workflow artifacts even when the suite fails.

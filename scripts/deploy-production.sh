@@ -12,6 +12,7 @@ cd "$DEPLOY_DIR"
 backup_dir="$DEPLOY_DIR/.deploy-backups/$GITHUB_RUN_ID"
 mkdir -p "$backup_dir"
 cp docker-compose.yml "$backup_dir/docker-compose.yml"
+sudo cp /etc/nginx/sites-available/tiketbisa.com "$backup_dir/tiketbisa.com.nginx.conf"
 previous_container_id="$(docker compose ps -q tiketbisa-fe 2>/dev/null || true)"
 previous_image="$(docker inspect --format='{{.Config.Image}}' "$previous_container_id" 2>/dev/null || true)"
 [[ -n "$previous_image" ]] || { echo 'Could not determine the currently deployed frontend image' >&2; exit 1; }
@@ -55,10 +56,24 @@ cp "$RELEASE_DIR/docker-compose.yml" "$next_compose"
 printf 'FRONTEND_IMAGE=%s\n' "$FRONTEND_IMAGE" > "$next_env"
 docker compose --env-file "$next_env" -f "$next_compose" config >/dev/null
 
+nginx_staged=false
+sudo install -m 644 "$RELEASE_DIR/deploy/nginx/tiketbisa.com.conf" /etc/nginx/sites-available/tiketbisa.com
+nginx_staged=true
+if ! sudo nginx -t; then
+  sudo cp "$backup_dir/tiketbisa.com.nginx.conf" /etc/nginx/sites-available/tiketbisa.com
+  sudo nginx -t
+  exit 1
+fi
+
 activated=false
 rollback() {
   local failure_code=$?
   trap - ERR
+  if [[ "$nginx_staged" == true ]]; then
+    sudo cp "$backup_dir/tiketbisa.com.nginx.conf" /etc/nginx/sites-available/tiketbisa.com
+    sudo nginx -t
+    sudo systemctl reload nginx
+  fi
   if [[ "$activated" == true ]]; then
     echo 'Frontend deployment failed; restoring the previous image and Compose file' >&2
     cp "$backup_dir/docker-compose.yml" docker-compose.yml
@@ -83,6 +98,13 @@ deployed_container_id="$(docker compose --env-file .deploy.env ps -q tiketbisa-f
 deployed_image="$(docker inspect --format='{{.Config.Image}}' "$deployed_container_id")"
 [[ "$deployed_image" == "$FRONTEND_IMAGE" ]] || {
   printf 'Expected image %s but container uses %s\n' "$FRONTEND_IMAGE" "$deployed_image" >&2
+  exit 1
+}
+
+sudo systemctl reload nginx
+cache_header="$(curl --fail --silent --show-error --insecure --resolve tiketbisa.com:443:127.0.0.1 --head https://tiketbisa.com/banner/Homepage.svg | tr -d '\r' | awk -F': ' 'tolower($1) == "cache-control" {print $2}')"
+[[ "$cache_header" == *'max-age=604800'* ]] || {
+  printf 'Expected the public asset cache policy after Nginx reload, got: %s\n' "$cache_header" >&2
   exit 1
 }
 

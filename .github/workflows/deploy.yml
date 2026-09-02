@@ -99,7 +99,7 @@ jobs:
           host: ${{ secrets.VM_IP }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: docker-compose.yml,scripts/deploy-production.sh
+          source: docker-compose.yml,scripts/deploy-production.sh,deploy/nginx/tiketbisa.com.conf
           target: ${{ env.RELEASE_DIR }}
       - name: Deploy and verify production
         uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
