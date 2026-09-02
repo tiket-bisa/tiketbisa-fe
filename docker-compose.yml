@@ -23,7 +23,7 @@ services:
     deploy:
       resources:
         limits:
-          # SSR rendering is CPU-bound, so the frontend is capped at one of the VM's two vCPUs.
+          # SSR rendering is CPU-bound, so the frontend is capped at one of the VM's four vCPUs.
           # Without this it can starve the colocated backend and PostgreSQL during a traffic spike.
           cpus: "1.0"
-          memory: 512M
+          memory: 1024M
