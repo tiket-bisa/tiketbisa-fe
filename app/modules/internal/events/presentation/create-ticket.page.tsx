@@ -36,6 +36,27 @@ export default function CreateTicketPage() {
     e.preventDefault();
     if (!eventId) return;
 
+    const name = formData.name.trim();
+    const categoryCode = formData.categoryCode.trim().toUpperCase();
+    const totalTicket = Number(formData.totalTicket);
+    const price = parseIDRInput(formData.price);
+    if (name.length < 2) {
+      setErrorMsg("Nama tiket minimal 2 karakter.");
+      return;
+    }
+    if (!/^[A-Z0-9]{1,5}$/.test(categoryCode)) {
+      setErrorMsg("Kode kategori harus 1-5 karakter berupa huruf atau angka.");
+      return;
+    }
+    if (!Number.isInteger(totalTicket) || totalTicket < 1) {
+      setErrorMsg("Jumlah tiket harus berupa bilangan bulat minimal 1.");
+      return;
+    }
+    if (!Number.isFinite(price) || price < 0) {
+      setErrorMsg("Harga tiket harus berupa angka 0 atau lebih.");
+      return;
+    }
+
     setLoading(true);
     setErrorMsg(null);
     setSuccessMsg(null);
@@ -43,11 +64,11 @@ export default function CreateTicketPage() {
     try {
       const res = await ticketCategoryApi.create({
         eventId: eventId,
-        name: formData.name,
-        description: formData.description,
-        categoryCode: formData.categoryCode,
-        totalTicket: parseInt(formData.totalTicket) || 0,
-        price: parseIDRInput(formData.price),
+        name,
+        description: formData.description.trim(),
+        categoryCode,
+        totalTicket,
+        price,
       });
 
       if (res.success && res.data) {

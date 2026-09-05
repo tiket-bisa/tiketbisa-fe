@@ -8,6 +8,7 @@ import { toUserFacingError, useApiQuery } from "~/core/api";
 import { useAuth } from "~/core/auth";
 import { formatIDR } from "~/core/utils";
 import { normalizeIndonesianPhone } from "~/modules/external/checkout/domain/phone";
+import { isValidDotComEmail } from "~/core/utils/form-validation";
 
 interface GeneratedTicketRow extends IssuedTicketDetail {
   categoryName: string;
@@ -88,6 +89,14 @@ export default function GenerateComplimentaryTicketPage() {
     if (!eventId) return;
 
     const quantity = Number(formData.quantity);
+    if (formData.customerName.trim().length < 3) {
+      setErrorMsg("Nama penerima minimal 3 karakter.");
+      return;
+    }
+    if (!isValidDotComEmail(formData.customerEmail)) {
+      setErrorMsg("Email harus valid dan menggunakan domain .com.");
+      return;
+    }
     if (!formData.categoryId) {
       setErrorMsg("Pilih kategori tiket terlebih dahulu.");
       return;

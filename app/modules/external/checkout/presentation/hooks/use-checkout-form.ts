@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import type { BuyerInfo, TicketHolder } from "../../domain/checkout.types";
 import { validateIndonesianPhone } from "../../domain/phone";
+import { isValidDotComEmail, isValidNik } from "~/core/utils/form-validation";
 
 const STORAGE_KEY = "tiketbisa_buyer_info";
 const HOLDERS_STORAGE_KEY = "tiketbisa_ticket_holders";
@@ -13,8 +14,6 @@ const DEFAULT_BUYER_INFO: BuyerInfo = {
   identityType: "KTP",
   identityNumber: "",
 };
-
-const NIK_REGEX = /^[0-9]{16}$/;
 
 function emptyHolder(): TicketHolder {
   return { name: "", identityNumber: "" };
@@ -135,11 +134,10 @@ export function useCheckoutForm() {
       newErrors.fullName = "Nama minimal 3 karakter";
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!buyerInfo.email.trim()) {
       newErrors.email = "Alamat email wajib diisi";
-    } else if (!emailRegex.test(buyerInfo.email)) {
-      newErrors.email = "Format email tidak valid";
+    } else if (!isValidDotComEmail(buyerInfo.email)) {
+      newErrors.email = "Email harus valid dan menggunakan domain .com";
     }
 
     if (!buyerInfo.phoneNumber.trim()) {
@@ -151,7 +149,7 @@ export function useCheckoutForm() {
 
     if (!buyerInfo.identityNumber.trim()) {
       newErrors.identityNumber = "NIK wajib diisi";
-    } else if (!NIK_REGEX.test(buyerInfo.identityNumber.trim())) {
+    } else if (!isValidNik(buyerInfo.identityNumber)) {
       newErrors.identityNumber = "NIK harus 16 digit angka";
     }
 
@@ -170,7 +168,7 @@ export function useCheckoutForm() {
 
       if (!holder.identityNumber.trim()) {
         holderError.identityNumber = "NIK wajib diisi";
-      } else if (!NIK_REGEX.test(holder.identityNumber.trim())) {
+      } else if (!isValidNik(holder.identityNumber)) {
         holderError.identityNumber = "NIK harus 16 digit angka";
       }
 

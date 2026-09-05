@@ -5,6 +5,7 @@ import { Card } from "~/core/design-system/components/card";
 import { sendContactMessage } from "./contact.api";
 import { toUserFacingError } from "~/core/api";
 import { TIKETBISA_CONTACT } from "~/core/constants/contact";
+import { isValidDotComEmail } from "~/core/utils/form-validation";
 
 const INITIAL_FORM = {
   name: "",
@@ -38,8 +39,8 @@ export default function HubungiPage() {
       setError("Email wajib diisi.");
       return;
     }
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(formData.email.trim())) {
-      setError("Format email tidak valid.");
+    if (!isValidDotComEmail(formData.email)) {
+      setError("Email harus valid dan menggunakan domain .com.");
       return;
     }
     if (!formData.message.trim()) {
