@@ -37,13 +37,13 @@ describe("landingApi", () => {
     expect(eventApi.getEvents).toHaveBeenNthCalledWith(2, expect.objectContaining({
       status: "ONGOING",
       order_by: "date_asc",
-      start_date: expect.any(String),
       end_date: expect.any(String),
       min_price: 50_000,
       max_price: 100_000,
       city: "Jakarta",
       category: "musik",
     }));
+    expect(vi.mocked(eventApi.getEvents).mock.calls[1][0].start_date).toBeUndefined();
   });
 
   it("falls back to the nearest upcoming event when no curated featured event exists", async () => {
@@ -59,7 +59,18 @@ describe("landingApi", () => {
       limit: 1,
       status: "ONGOING",
       order_by: "date_asc",
-      start_date: expect.any(String),
     }));
+    expect(vi.mocked(eventApi.getEvents).mock.calls[2][0].start_date).toBeUndefined();
+  });
+
+  it("keeps an already-started ongoing event eligible for landing queries", async () => {
+    vi.mocked(eventApi.getEvents)
+      .mockResolvedValueOnce(eventResponse([{ id: "live-featured" }]) as any)
+      .mockResolvedValueOnce(eventResponse([{ id: "live-event" }]) as any);
+
+    await landingApi.getLandingData({} as any);
+
+    expect(vi.mocked(eventApi.getEvents).mock.calls[0][0].start_date).toBeUndefined();
+    expect(vi.mocked(eventApi.getEvents).mock.calls[1][0].start_date).toBeUndefined();
   });
 });
