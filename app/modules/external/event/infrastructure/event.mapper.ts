@@ -66,6 +66,7 @@ export function mapEventDtoToEntity(
 ): Event {
   const brandId = dto.brandId ?? dto.brand_id ?? "";
   const startDate = dto.startDate ?? dto.start_date ?? "";
+  const endDate = dto.endDate ?? dto.end_date ?? "";
   const bannerUrl = normalizeImageUrl(dto.bannerPath ?? dto.banner_path);
 
   return {
@@ -80,6 +81,7 @@ export function mapEventDtoToEntity(
     location: dto.city || dto.location || "Online",
     minPrice: dto.minPrice ?? dto.min_price ?? undefined,
     isFeatured: dto.isFeatured ?? dto.is_featured ?? false,
+    endDate: endDate || undefined,
     // Tickets are not yet supported by the backend in the list response
     tickets: [],
   };

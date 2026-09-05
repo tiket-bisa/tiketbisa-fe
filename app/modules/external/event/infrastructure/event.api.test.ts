@@ -12,6 +12,46 @@ import { eventApi } from "./event.api";
 describe("eventApi.getEvents", () => {
   beforeEach(() => {
     mockApiFetch.mockReset();
+    vi.useRealTimers();
+  });
+
+  it("keeps an in-progress event visible until its end time", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-05T08:30:00Z"));
+    mockApiFetch
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          limit: 12,
+          offset: 0,
+          totalCount: 2,
+          events: [
+            {
+              id: "in-progress",
+              brandId: "brand-123",
+              name: "In Progress",
+              startDate: "2026-09-05T08:00:00Z",
+              endDate: "2026-09-05T11:00:00Z",
+              status: "ONGOING",
+            },
+            {
+              id: "finished",
+              brandId: "brand-123",
+              name: "Finished",
+              startDate: "2026-09-05T07:00:00Z",
+              endDate: "2026-09-05T08:29:59Z",
+              status: "ONGOING",
+            },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({ success: true, data: { brands: [] } });
+
+    const result = await eventApi.getEvents({ limit: 12, offset: 0, status: "ONGOING" });
+    const events = result.data.event_list as Array<{ id: string; endDate?: string }>;
+
+    expect(events.map((event) => event.id)).toEqual(["in-progress"]);
+    expect(events[0].endDate).toBe("2026-09-05T11:00:00Z");
   });
 
   it("forwards brand, status, filters, pagination, and normalized sorting", async () => {

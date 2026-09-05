@@ -132,8 +132,17 @@ export const eventApi: EventRepository = {
       getBrandMap(),
     ]);
 
+    const visibilityBoundary = Date.now();
+    const visibleDtos = response.data.events.filter((dto) => {
+      if (params.status !== "ONGOING") return true;
+      const endDate = dto.endDate ?? dto.end_date;
+      if (!endDate) return true;
+      const endTime = new Date(endDate).getTime();
+      return Number.isNaN(endTime) || endTime > visibilityBoundary;
+    });
+
     const mappedEvents = await Promise.all(
-      response.data.events.map(async (dto, idx) => {
+      visibleDtos.map(async (dto, idx) => {
         const brandId = dto.brandId ?? dto.brand_id ?? "";
         const mapped = mapEventDtoToEntity(dto, idx, brandMap.get(brandId));
 

@@ -20,6 +20,8 @@ export interface Event {
   location: string;
   minPrice?: number;
   isFeatured?: boolean;
+  /** ISO end timestamp used to derive public visibility while backend status catches up. */
+  endDate?: string;
   time?: string;
   tickets: EventTicket[];
   terms?: string[];
