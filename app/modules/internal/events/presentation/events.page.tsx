@@ -22,6 +22,8 @@ import type { EventSummary } from "~/core/types";
 import { fileToBase64 } from "~/modules/internal/common/presentation/image-source-input";
 import { EventGalleryManager } from "~/modules/internal/common/presentation/event-gallery-manager";
 import { SearchableCitySelect } from "./components/searchable-city-select";
+import { internalBrandApi, normalizeInternalBrand } from "~/core/api/services/internal-brand.api";
+import { HOME_DOMICILE_OPTIONS, normalizeHomeDomicile } from "~/shared/constants/domicile.constants";
 
 const STATUS_MAP = {
   draft: { label: "Draft", variant: "default" as const },
@@ -51,6 +53,8 @@ const EMPTY_FORM_DATA = {
   termAndCondition: "",
   status: "ONGOING",
   isPublished: false,
+  homeOnly: false,
+  homeCity: "",
 };
 
 /** Partner — Event Management (filtered by partner's brand) */
@@ -67,6 +71,16 @@ export default function EventsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM_DATA);
+
+  const { data: currentBrand } = useApiQuery(
+    async () => {
+      if (!user?.brand_id) return null;
+      const response = await internalBrandApi.getById(user.brand_id);
+      return response.success && response.data ? normalizeInternalBrand(response.data) : null;
+    },
+    [user?.brand_id],
+  );
+  const isFootballBrand = currentBrand?.category?.trim().toLowerCase() === "sepak_bola";
 
   const { data: eventsRaw, loading, error, refetch } = useApiQuery(
     async () => {
@@ -156,6 +170,8 @@ export default function EventsPage() {
       termAndCondition: event.termAndCondition ?? "",
       status: event.status ?? "ONGOING",
       isPublished: Boolean(event.isPublished),
+      homeOnly: Boolean(event.homeOnly),
+      homeCity: normalizeHomeDomicile(event.homeCity),
     });
   };
 
@@ -199,6 +215,14 @@ export default function EventsPage() {
       setFormError("Format tanggal tidak valid.");
       return;
     }
+    if (new Date(startDate) > new Date(endDate)) {
+      setFormError("Tanggal mulai harus sebelum tanggal selesai.");
+      return;
+    }
+    if (isFootballBrand && formData.homeOnly && !formData.homeCity) {
+      setFormError("Kota atau provinsi domisili wajib dipilih untuk event Home Only.");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -215,6 +239,8 @@ export default function EventsPage() {
         city: formData.city.trim(),
         status: formData.status as InternalEventApiData["status"],
         isPublished: formData.isPublished,
+        homeOnly: isFootballBrand ? formData.homeOnly : false,
+        homeCity: isFootballBrand && formData.homeOnly ? formData.homeCity : null,
       };
 
       const result = formMode === "edit" && editingEvent
@@ -381,6 +407,32 @@ export default function EventsPage() {
               uploadFile={uploadEventBanner}
               disabled={isSubmitting}
             />
+
+            {isFootballBrand && (
+              <div className="space-y-3 rounded-lg border border-border-subtle p-4">
+                <label className="flex items-center gap-2 text-sm font-medium text-text-primary">
+                  <input
+                    type="checkbox"
+                    name="homeOnly"
+                    checked={formData.homeOnly}
+                    onChange={handleChange}
+                    className="h-4 w-4 rounded border-border-default accent-brand-primary"
+                  />
+                  Batasi pembelian event ini berdasarkan domisili KTP (Home Only)
+                </label>
+                {formData.homeOnly && (
+                  <Select
+                    label="Kota / Provinsi Domisili"
+                    name="homeCity"
+                    value={formData.homeCity}
+                    onChange={handleChange}
+                    options={HOME_DOMICILE_OPTIONS}
+                    placeholder="Pilih kota atau provinsi"
+                    required
+                  />
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Select

@@ -9,8 +9,6 @@ const form = {
   category: "sepak_bola",
   subCategory: "liga_1",
   sponsorPath: "",
-  homeOnly: true,
-  homeCity: "Jakarta",
 };
 
 describe("buildBrandMutationPayload", () => {
