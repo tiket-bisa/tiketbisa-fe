@@ -16,6 +16,8 @@ export interface InternalEventApiData {
   status?: "ONGOING" | "ENDED" | null;
   isPublished?: boolean | null;
   isFeatured?: boolean | null;
+  homeOnly?: boolean | null;
+  homeCity?: string | null;
   created?: string | null;
 }
 
@@ -44,6 +46,9 @@ export interface InternalEventListParams {
 export interface EventTicketDashboardParams {
   limit?: number;
   offset?: number;
+  search?: string;
+  categoryId?: string;
+  status?: string;
 }
 
 export interface EventBannerUploadResponse {
@@ -212,6 +217,9 @@ function buildTicketDashboardQuery(params?: EventTicketDashboardParams): string 
   const qs = new URLSearchParams();
   if (params.limit != null) qs.set("limit", String(params.limit));
   if (params.offset != null) qs.set("offset", String(params.offset));
+  if (params.search) qs.set("search", params.search);
+  if (params.categoryId) qs.set("categoryId", params.categoryId);
+  if (params.status) qs.set("status", params.status);
   const str = qs.toString();
   return str ? `?${str}` : "";
 }
@@ -232,6 +240,8 @@ function normalizeEvent(api: InternalEventApiData & Record<string, unknown>): In
     status: (api.status ?? null) as InternalEventApiData["status"],
     isPublished: (api.isPublished ?? api.is_published ?? null) as boolean | null,
     isFeatured: (api.isFeatured ?? api.is_featured ?? null) as boolean | null,
+    homeOnly: Boolean(api.homeOnly ?? api.home_only ?? false),
+    homeCity: (api.homeCity ?? api.home_city ?? null) as string | null,
     created: (api.created ?? null) as string | null,
   };
 }

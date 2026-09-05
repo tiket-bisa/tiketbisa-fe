@@ -21,11 +21,8 @@ import {
   internalBrandAccessApi,
 } from "~/core/api/services/internal-brand-access.api";
 import { fileToBase64, ImageSourceInput } from "~/modules/internal/common/presentation/image-source-input";
-import {
-  HOME_DOMICILE_OPTIONS,
-  normalizeHomeDomicile,
-} from "~/shared/constants/domicile.constants";
 import { buildBrandMutationPayload } from "../domain/brand-mutation.payload";
+import { isValidDotComEmail } from "~/core/utils/form-validation";
 
 const ITEMS_PER_PAGE = 8;
 
@@ -99,8 +96,6 @@ export default function AdminBrandsPage() {
     category: "",
     subCategory: "",
     sponsorPath: "",
-    homeOnly: false,
-    homeCity: "",
   });
 
   const { data: brandsResponse, loading, error, refetch } = useApiQuery(
@@ -195,7 +190,7 @@ export default function AdminBrandsPage() {
     setEditingBrand(null);
     setFormError(null);
     setFormSuccess(null);
-    setFormData({ name: "", logoPath: "", bannerPath: "", description: "", adminFee: "", category: "", subCategory: "", sponsorPath: "", homeOnly: false, homeCity: "" });
+    setFormData({ name: "", logoPath: "", bannerPath: "", description: "", adminFee: "", category: "", subCategory: "", sponsorPath: "" });
   };
 
   const startCreate = () => {
@@ -203,7 +198,7 @@ export default function AdminBrandsPage() {
     setEditingBrand(null);
     setFormError(null);
     setFormSuccess(null);
-    setFormData({ name: "", logoPath: "", bannerPath: "", description: "", adminFee: "", category: "", subCategory: "", sponsorPath: "", homeOnly: false, homeCity: "" });
+    setFormData({ name: "", logoPath: "", bannerPath: "", description: "", adminFee: "", category: "", subCategory: "", sponsorPath: "" });
   };
 
   const startEdit = (id: string) => {
@@ -222,8 +217,6 @@ export default function AdminBrandsPage() {
       category: brand.category ?? "",
       subCategory: brand.subCategory ?? "",
       sponsorPath: brand.sponsorPath ?? "",
-      homeOnly: Boolean(brand.homeOnly),
-      homeCity: normalizeHomeDomicile(brand.homeCity),
     });
     setActiveTab("brand");
   };
@@ -271,7 +264,7 @@ export default function AdminBrandsPage() {
       setFormSuccess(formMode === "edit" ? "Brand berhasil diperbarui." : "Brand berhasil dibuat.");
       await refetch();
       if (formMode === "create") {
-        setFormData({ name: "", logoPath: "", bannerPath: "", description: "", adminFee: "", category: "", subCategory: "", sponsorPath: "", homeOnly: false, homeCity: "" });
+        setFormData({ name: "", logoPath: "", bannerPath: "", description: "", adminFee: "", category: "", subCategory: "", sponsorPath: "" });
       }
     } catch (err) {
       setFormError(toUserFacingError(err, "Koneksi bermasalah."));
@@ -319,6 +312,10 @@ export default function AdminBrandsPage() {
 
   const handleAddPartner = async () => {
     if (!selectedAccessBrand?.id) return;
+    if (!isValidDotComEmail(partnerEmail)) {
+      setAccessError("Email partner harus valid dan menggunakan domain .com.");
+      return;
+    }
     setIsAccessSubmitting(true);
     setAccessError(null);
     setAccessSuccess(null);
@@ -558,37 +555,6 @@ export default function AdminBrandsPage() {
                       disabled={isSubmitting}
                       hint="Gabungkan semua logo sponsor ke dalam satu gambar."
                     />
-
-                    {formData.category.trim() === "sepak_bola" && (
-                      <div className="space-y-3 rounded-lg border border-border-subtle p-4">
-                        <label className="flex items-center gap-2 text-sm font-medium text-text-primary">
-                          <input
-                            type="checkbox"
-                            name="homeOnly"
-                            checked={formData.homeOnly}
-                            onChange={handleChange}
-                            className="h-4 w-4 rounded border-border-default accent-brand-primary"
-                          />
-                          Batasi pembelian untuk KTP berdomisili tertentu (Home Only)
-                        </label>
-                        {formData.homeOnly && (
-                          <Select
-                            label="Kota Domisili"
-                            name="homeCity"
-                            value={formData.homeCity}
-                            onChange={handleChange}
-                            options={HOME_DOMICILE_OPTIONS}
-                            placeholder="Pilih kota atau provinsi"
-                            required
-                          />
-                        )}
-                        {formData.homeOnly && (
-                          <p className="text-xs text-text-tertiary">
-                            Pembeli wajib memiliki KTP dari kota/kabupaten atau provinsi yang dipilih.
-                          </p>
-                        )}
-                      </div>
-                    )}
 
                     <div className="flex flex-col gap-1.5">
                       <label className="text-sm font-medium text-text-primary" htmlFor="brand-description">

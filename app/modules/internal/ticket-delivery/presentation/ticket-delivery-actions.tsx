@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button, Input } from "~/core/design-system/components";
 import { transactionApi, type TicketEmailDeliveryMode } from "~/core/api/services/transaction.api";
 import { ApiRequestError, toUserFacingError, toUserFacingResponseError } from "~/core/api";
+import { isValidDotComEmail } from "~/core/utils/form-validation";
 
 interface TicketDeliveryActionsProps {
   transactionId?: string | null;
@@ -76,8 +77,8 @@ export function TicketDeliveryActions({
       setError("Email tujuan wajib diisi.");
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail)) {
-      setError("Format email tujuan tidak valid.");
+    if (!isValidDotComEmail(recipientEmail)) {
+      setError("Email tujuan harus valid dan menggunakan domain .com.");
       return;
     }
 
