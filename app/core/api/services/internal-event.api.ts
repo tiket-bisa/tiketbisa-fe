@@ -212,7 +212,7 @@ function buildQuery(params?: InternalEventListParams): string {
   return str ? `?${str}` : "";
 }
 
-function buildTicketDashboardQuery(params?: EventTicketDashboardParams): string {
+export function buildTicketDashboardQuery(params?: EventTicketDashboardParams): string {
   if (!params) return "";
   const qs = new URLSearchParams();
   if (params.limit != null) qs.set("limit", String(params.limit));
