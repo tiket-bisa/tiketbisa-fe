@@ -32,7 +32,7 @@ const MOCK_BANNERS: Banner[] = [
   },
 ];
 
-function resolveTimeRange(value?: string): { startDate: string; endDate?: string } {
+function resolveTimeRange(value?: string): { endDate?: string } {
   const start = new Date();
   const end = new Date(start);
   if (value === "today") {
@@ -42,9 +42,9 @@ function resolveTimeRange(value?: string): { startDate: string; endDate?: string
   } else if (value === "this_month") {
     end.setMonth(end.getMonth() + 1);
   } else {
-    return { startDate: start.toISOString() };
+    return {};
   }
-  return { startDate: start.toISOString(), endDate: end.toISOString() };
+  return { endDate: end.toISOString() };
 }
 
 function resolvePriceRange(value?: string): { minPrice?: number; maxPrice?: number } {
@@ -56,7 +56,6 @@ function resolvePriceRange(value?: string): { minPrice?: number; maxPrice?: numb
 
 export const landingApi: LandingRepository = {
   async getLandingData(params: LandingParams): Promise<LandingData> {
-    const featuredStart = new Date().toISOString();
     const timeRange = resolveTimeRange(params.eventFilters?.time);
     const priceRange = resolvePriceRange(params.eventFilters?.price);
     const [brandRes, featuredRes, upcomingRes] = await Promise.all([
@@ -71,7 +70,6 @@ export const landingApi: LandingRepository = {
         order_by: "date_asc",
         is_featured: true,
         status: "ONGOING",
-        start_date: featuredStart,
       }),
       eventApi.getEvents({
         limit: 8,
@@ -80,7 +78,6 @@ export const landingApi: LandingRepository = {
         status: "ONGOING",
         city: params.eventFilters?.city,
         category: params.eventFilters?.category,
-        start_date: timeRange.startDate,
         end_date: timeRange.endDate,
         min_price: priceRange.minPrice,
         max_price: priceRange.maxPrice,
@@ -94,7 +91,6 @@ export const landingApi: LandingRepository = {
         offset: 0,
         order_by: "date_asc",
         status: "ONGOING",
-        start_date: featuredStart,
       });
       featuredEvents = fallback.data.event_list as Event[];
     }
