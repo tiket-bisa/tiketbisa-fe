@@ -26,7 +26,6 @@ import type { EventSummary } from "~/core/types";
 import { fileToBase64 } from "~/modules/internal/common/presentation/image-source-input";
 import { EventGalleryManager } from "~/modules/internal/common/presentation/event-gallery-manager";
 import { SearchableCitySelect } from "~/modules/internal/events/presentation/components/searchable-city-select";
-import { HOME_DOMICILE_OPTIONS, normalizeHomeDomicile } from "~/shared/constants/domicile.constants";
 
 const STATUS_MAP = {
   draft: { label: "Draft", variant: "default" as const },
@@ -72,7 +71,6 @@ export default function AdminEventsPage() {
     isPublished: false,
     isFeatured: false,
     homeOnly: false,
-    homeCity: "",
   });
 
   // Fetch brands for mapping brandId → brandName
@@ -165,7 +163,6 @@ export default function AdminEventsPage() {
       isPublished: false,
       isFeatured: false,
       homeOnly: false,
-      homeCity: "",
     });
   };
 
@@ -202,7 +199,6 @@ export default function AdminEventsPage() {
       isPublished: Boolean(event.isPublished),
       isFeatured: Boolean(event.isFeatured),
       homeOnly: Boolean(event.homeOnly),
-      homeCity: normalizeHomeDomicile(event.homeCity),
     });
   };
 
@@ -253,10 +249,6 @@ export default function AdminEventsPage() {
 
     const selectedBrand = brands.find((brand) => brand.id === formData.brandId);
     const isFootball = selectedBrand?.category?.trim().toLowerCase() === "sepak_bola";
-    if (isFootball && formData.homeOnly && !formData.homeCity) {
-      setFormError("Kota atau provinsi domisili wajib dipilih untuk event Home Only.");
-      return;
-    }
 
     setIsSubmitting(true);
     try {
@@ -275,7 +267,6 @@ export default function AdminEventsPage() {
         isPublished: formData.isPublished,
         isFeatured: formData.isFeatured,
         homeOnly: isFootball ? formData.homeOnly : false,
-        homeCity: isFootball && formData.homeOnly ? formData.homeCity : null,
       };
 
       const result = formMode === "edit" && editingEvent
@@ -461,17 +452,9 @@ export default function AdminEventsPage() {
                   />
                   Batasi pembelian event ini berdasarkan domisili KTP (Home Only)
                 </label>
-                {formData.homeOnly && (
-                  <Select
-                    label="Kota / Provinsi Domisili"
-                    name="homeCity"
-                    value={formData.homeCity}
-                    onChange={handleChange}
-                    options={HOME_DOMICILE_OPTIONS}
-                    placeholder="Pilih kota atau provinsi"
-                    required
-                  />
-                )}
+                <p className="text-xs text-text-secondary">
+                  Domisili dicocokkan dengan kota home milik klub. Ubah kotanya di pengaturan klub.
+                </p>
               </div>
             )}
 

@@ -54,7 +54,6 @@ const EMPTY_FORM_DATA = {
   status: "ONGOING",
   isPublished: false,
   homeOnly: false,
-  homeCity: "",
 };
 
 /** Partner — Event Management (filtered by partner's brand) */
@@ -171,7 +170,6 @@ export default function EventsPage() {
       status: event.status ?? "ONGOING",
       isPublished: Boolean(event.isPublished),
       homeOnly: Boolean(event.homeOnly),
-      homeCity: normalizeHomeDomicile(event.homeCity),
     });
   };
 
@@ -219,10 +217,6 @@ export default function EventsPage() {
       setFormError("Tanggal mulai harus sebelum tanggal selesai.");
       return;
     }
-    if (isFootballBrand && formData.homeOnly && !formData.homeCity) {
-      setFormError("Kota atau provinsi domisili wajib dipilih untuk event Home Only.");
-      return;
-    }
 
     setIsSubmitting(true);
     try {
@@ -240,7 +234,6 @@ export default function EventsPage() {
         status: formData.status as InternalEventApiData["status"],
         isPublished: formData.isPublished,
         homeOnly: isFootballBrand ? formData.homeOnly : false,
-        homeCity: isFootballBrand && formData.homeOnly ? formData.homeCity : null,
       };
 
       const result = formMode === "edit" && editingEvent
@@ -420,17 +413,9 @@ export default function EventsPage() {
                   />
                   Batasi pembelian event ini berdasarkan domisili KTP (Home Only)
                 </label>
-                {formData.homeOnly && (
-                  <Select
-                    label="Kota / Provinsi Domisili"
-                    name="homeCity"
-                    value={formData.homeCity}
-                    onChange={handleChange}
-                    options={HOME_DOMICILE_OPTIONS}
-                    placeholder="Pilih kota atau provinsi"
-                    required
-                  />
-                )}
+                <p className="text-xs text-text-secondary">
+                  Domisili dicocokkan dengan kota home milik klub. Ubah kotanya di pengaturan klub.
+                </p>
               </div>
             )}
 

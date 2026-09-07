@@ -17,7 +17,6 @@ export interface InternalEventApiData {
   isPublished?: boolean | null;
   isFeatured?: boolean | null;
   homeOnly?: boolean | null;
-  homeCity?: string | null;
   created?: string | null;
 }
 
@@ -241,7 +240,6 @@ function normalizeEvent(api: InternalEventApiData & Record<string, unknown>): In
     isPublished: (api.isPublished ?? api.is_published ?? null) as boolean | null,
     isFeatured: (api.isFeatured ?? api.is_featured ?? null) as boolean | null,
     homeOnly: Boolean(api.homeOnly ?? api.home_only ?? false),
-    homeCity: (api.homeCity ?? api.home_city ?? null) as string | null,
     created: (api.created ?? null) as string | null,
   };
 }
