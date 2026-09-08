@@ -1,20 +1,24 @@
 # Define the version once at the top
 ARG NODE_VERSION=22-alpine
+ARG PNPM_VERSION=11.13.0
 
 FROM node:${NODE_VERSION} AS development-dependencies-env
-RUN corepack enable && corepack prepare pnpm@latest --activate
+ARG PNPM_VERSION
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 COPY . /app
 WORKDIR /app
 RUN pnpm install --frozen-lockfile
 
 FROM node:${NODE_VERSION} AS production-dependencies-env
-RUN corepack enable && corepack prepare pnpm@latest --activate
+ARG PNPM_VERSION
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 COPY ./package.json pnpm-lock.yaml /app/
 WORKDIR /app
 RUN pnpm install --frozen-lockfile --prod
 
 FROM node:${NODE_VERSION} AS build-env
-RUN corepack enable && corepack prepare pnpm@latest --activate
+ARG PNPM_VERSION
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 ARG VITE_API_BASE_URL
 ARG VITE_API_INTERNAL_BASE_URL
 ARG VITE_GOOGLE_AUTH_CLIENT_ID
@@ -33,7 +37,8 @@ WORKDIR /app
 RUN pnpm run build
 
 FROM node:${NODE_VERSION}
-RUN corepack enable && corepack prepare pnpm@latest --activate
+ARG PNPM_VERSION
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 COPY ./package.json pnpm-lock.yaml /app/
 COPY --from=production-dependencies-env /app/node_modules /app/node_modules
 COPY --from=build-env /app/build /app/build
