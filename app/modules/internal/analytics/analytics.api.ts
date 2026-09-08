@@ -3,6 +3,7 @@ import { internalHttpClient } from "~/core/api/http-client";
 export interface DashboardStats {
   totalRevenue: number;
   totalTicketsSold: number;
+  totalBulkTicketsIssued: number;
   totalEvents: number;
   totalCheckedIn: number;
   totalTransactions?: number;
@@ -13,6 +14,7 @@ export interface RevenueSummary {
   totalRevenue: number;
   totalTransactions: number;
   totalTicketsSold: number;
+  totalBulkTicketsIssued: number;
   period: string;
 }
 
@@ -21,6 +23,7 @@ export interface RevenueByBrand {
   revenue: number;
   transactions: number;
   ticketsSold: number;
+  bulkTicketsIssued: number;
 }
 
 export interface RevenueByEvent {
@@ -28,6 +31,7 @@ export interface RevenueByEvent {
   brand: string;
   revenue: number;
   ticketsSold: number;
+  bulkTicketsIssued: number;
 }
 
 export interface RevenueTimeline {

@@ -17,6 +17,10 @@ export function RevenueSummaryCards({ summary }: { summary: RevenueSummary }) {
         <p className="text-text-tertiary text-xs uppercase tracking-wide">Tiket Terjual</p>
         <p className="text-text-primary text-2xl font-bold mt-1">{summary.totalTicketsSold}</p>
       </Card>
+      <Card padding="md">
+        <p className="text-text-tertiary text-xs uppercase tracking-wide">Tiket Bulk Terbit</p>
+        <p className="text-text-primary text-2xl font-bold mt-1">{summary.totalBulkTicketsIssued ?? 0}</p>
+      </Card>
     </div>
   );
 }
