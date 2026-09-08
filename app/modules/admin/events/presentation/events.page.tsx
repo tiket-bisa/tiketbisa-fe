@@ -62,7 +62,6 @@ export default function AdminEventsPage() {
     startDate: "",
     endDate: "",
     venue: "",
-    location: "",
     city: "",
     bannerPath: "",
     description: "",
@@ -70,6 +69,7 @@ export default function AdminEventsPage() {
     status: "ONGOING",
     isPublished: false,
     isFeatured: false,
+    homeOnly: false,
   });
 
   // Fetch brands for mapping brandId → brandName
@@ -99,7 +99,7 @@ export default function AdminEventsPage() {
     return new Map(
       brands.map((brand) => [
         brand.id,
-        { name: brand.name, slug: brand.name.toLowerCase().replace(/\s+/g, "-") },
+        { name: brand.name, slug: brand.name.toLowerCase().replace(/\s+/g, "-"), category: brand.category },
       ]),
     );
   }, [brands]);
@@ -153,7 +153,6 @@ export default function AdminEventsPage() {
       startDate: "",
       endDate: "",
       venue: "",
-      location: "",
       city: "",
       bannerPath: "",
       description: "",
@@ -161,6 +160,7 @@ export default function AdminEventsPage() {
       status: "ONGOING",
       isPublished: false,
       isFeatured: false,
+      homeOnly: false,
     });
   };
 
@@ -188,7 +188,6 @@ export default function AdminEventsPage() {
       startDate: toDateTimeLocal(event.startDate),
       endDate: toDateTimeLocal(event.endDate),
       venue: event.venue ?? "",
-      location: event.location ?? "",
       city: event.city ?? "",
       bannerPath: event.bannerPath ?? "",
       description: event.description ?? "",
@@ -196,6 +195,7 @@ export default function AdminEventsPage() {
       status: event.status ?? "ONGOING",
       isPublished: Boolean(event.isPublished),
       isFeatured: Boolean(event.isFeatured),
+      homeOnly: Boolean(event.homeOnly),
     });
   };
 
@@ -228,8 +228,8 @@ export default function AdminEventsPage() {
       setFormError("Tanggal mulai dan selesai wajib diisi.");
       return;
     }
-    if (!formData.venue.trim() || !formData.location.trim() || !formData.city.trim()) {
-      setFormError("Venue, lokasi, dan kota wajib diisi.");
+    if (!formData.venue.trim() || !formData.city.trim()) {
+      setFormError("Venue dan kota wajib diisi.");
       return;
     }
 
@@ -239,6 +239,13 @@ export default function AdminEventsPage() {
       setFormError("Format tanggal tidak valid.");
       return;
     }
+    if (new Date(startDate) > new Date(endDate)) {
+      setFormError("Tanggal mulai harus sebelum tanggal selesai.");
+      return;
+    }
+
+    const selectedBrand = brands.find((brand) => brand.id === formData.brandId);
+    const isFootball = selectedBrand?.category?.trim().toLowerCase() === "sepak_bola";
 
     setIsSubmitting(true);
     try {
@@ -251,11 +258,11 @@ export default function AdminEventsPage() {
         description: formData.description.trim() || null,
         termAndCondition: formData.termAndCondition.trim() || null,
         venue: formData.venue.trim(),
-        location: formData.location.trim(),
         city: formData.city.trim(),
         status: formData.status as InternalEventApiData["status"],
         isPublished: formData.isPublished,
         isFeatured: formData.isFeatured,
+        homeOnly: isFootball ? formData.homeOnly : false,
       };
 
       const result = formMode === "edit" && editingEvent
@@ -408,13 +415,6 @@ export default function AdminEventsPage() {
                 onChange={handleChange}
                 required
               />
-              <Input
-                label="Lokasi"
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-                required
-              />
               <SearchableCitySelect
                 value={formData.city}
                 onChange={(city) => setFormData((prev) => ({ ...prev, city }))}
@@ -428,6 +428,24 @@ export default function AdminEventsPage() {
               uploadFile={uploadEventBanner}
               disabled={isSubmitting}
             />
+
+            {brands.find((brand) => brand.id === formData.brandId)?.category?.trim().toLowerCase() === "sepak_bola" && (
+              <div className="space-y-3 rounded-lg border border-border-subtle p-4">
+                <label className="flex items-center gap-2 text-sm font-medium text-text-primary">
+                  <input
+                    type="checkbox"
+                    name="homeOnly"
+                    checked={formData.homeOnly}
+                    onChange={handleChange}
+                    className="h-4 w-4 rounded border-border-default accent-brand-primary"
+                  />
+                  Batasi pembelian event ini berdasarkan domisili KTP (Home Only)
+                </label>
+                <p className="text-xs text-text-secondary">
+                  Domisili dicocokkan dengan kota home milik klub. Ubah kotanya di pengaturan klub.
+                </p>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Select

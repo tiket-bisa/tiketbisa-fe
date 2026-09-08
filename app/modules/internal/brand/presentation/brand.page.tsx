@@ -9,10 +9,6 @@ import {
   type InternalBrandApiData,
 } from "~/core/api/services/internal-brand.api";
 import { fileToBase64, ImageSourceInput } from "~/modules/internal/common/presentation/image-source-input";
-import {
-  HOME_DOMICILE_OPTIONS,
-  normalizeHomeDomicile,
-} from "~/shared/constants/domicile.constants";
 
 /** Partner — Brand detail page (shows partner's own brand info) */
 export default function BrandPage() {
@@ -27,8 +23,6 @@ export default function BrandPage() {
     category: "",
     subCategory: "",
     sponsorPath: "",
-    homeOnly: false,
-    homeCity: "",
   });
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
@@ -57,8 +51,6 @@ export default function BrandPage() {
       category: brandRaw.category ?? "",
       subCategory: brandRaw.subCategory ?? "",
       sponsorPath: brandRaw.sponsorPath ?? "",
-      homeOnly: Boolean(brandRaw.homeOnly),
-      homeCity: normalizeHomeDomicile(brandRaw.homeCity),
     });
   }, [brandRaw]);
 
@@ -83,21 +75,23 @@ export default function BrandPage() {
       setFormError("Nama brand wajib diisi.");
       return;
     }
+    const adminFee = formData.adminFee.trim() === "" ? 0 : Number(formData.adminFee);
+    if (!Number.isFinite(adminFee) || adminFee < 0) {
+      setFormError("Biaya layanan harus berupa angka 0 atau lebih.");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      const isFootball = formData.category.trim() === "sepak_bola";
       const payload: Partial<InternalBrandApiData> = {
         name: formData.name.trim(),
         logoPath: formData.logoPath.trim() || null,
         bannerPath: formData.bannerPath.trim() || null,
         description: formData.description.trim() || null,
-        adminFee: formData.adminFee.trim() === "" ? 0 : Number(formData.adminFee) || 0,
+        adminFee: Math.round(adminFee),
         category: formData.category.trim() || null,
         subCategory: formData.subCategory.trim() || null,
         sponsorPath: formData.sponsorPath.trim() || null,
-        homeOnly: isFootball ? formData.homeOnly : false,
-        homeCity: isFootball && formData.homeOnly ? formData.homeCity.trim() || null : null,
       };
 
       const result = await internalBrandApi.update(brandRaw.id, payload);
@@ -148,8 +142,6 @@ export default function BrandPage() {
     );
   }
 
-  const isFootballCategory = formData.category.trim() === "sepak_bola";
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -178,11 +170,6 @@ export default function BrandPage() {
               )}
               {brandRaw?.adminFee != null && (
                 <span className="bg-surface-hover px-2 py-1 rounded">Biaya Layanan: Rp{brandRaw.adminFee}</span>
-              )}
-              {brandRaw?.homeOnly && (
-                <span className="bg-surface-hover px-2 py-1 rounded">
-                  Domisili: {brandRaw.homeCity || "-"}
-                </span>
               )}
             </div>
           </div>
@@ -286,37 +273,6 @@ export default function BrandPage() {
               disabled={isSubmitting}
               hint="Gabungkan semua logo sponsor ke dalam satu gambar."
             />
-
-            {isFootballCategory && (
-              <div className="space-y-3 rounded-lg border border-border-subtle p-4">
-                <label className="flex items-center gap-2 text-sm font-medium text-text-primary">
-                  <input
-                    type="checkbox"
-                    name="homeOnly"
-                    checked={formData.homeOnly}
-                    onChange={handleChange}
-                    className="h-4 w-4 rounded border-border-default accent-brand-primary"
-                  />
-                  Batasi pembelian untuk KTP berdomisili tertentu (Home Only)
-                </label>
-                {formData.homeOnly && (
-                  <Select
-                    label="Kota Domisili"
-                    name="homeCity"
-                    value={formData.homeCity}
-                    onChange={handleChange}
-                    options={HOME_DOMICILE_OPTIONS}
-                    placeholder="Pilih kota atau provinsi"
-                    required
-                  />
-                )}
-                {formData.homeOnly && (
-                  <p className="text-xs text-text-tertiary">
-                    Pembeli wajib memiliki KTP dari kota/kabupaten atau provinsi yang dipilih.
-                  </p>
-                )}
-              </div>
-            )}
 
             <div className="flex justify-end">
               <Button type="submit" variant="primary" isLoading={isSubmitting}>

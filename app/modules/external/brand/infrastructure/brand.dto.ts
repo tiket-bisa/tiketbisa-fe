@@ -17,8 +17,4 @@ export interface BrandDto {
   sub_category?: string | null;
   sponsorPath?: string | null;
   sponsor_path?: string | null;
-  homeOnly?: boolean | null;
-  home_only?: boolean | null;
-  homeCity?: string | null;
-  home_city?: string | null;
 }

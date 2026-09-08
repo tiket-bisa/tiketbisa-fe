@@ -22,6 +22,8 @@ import type { EventSummary } from "~/core/types";
 import { fileToBase64 } from "~/modules/internal/common/presentation/image-source-input";
 import { EventGalleryManager } from "~/modules/internal/common/presentation/event-gallery-manager";
 import { SearchableCitySelect } from "./components/searchable-city-select";
+import { internalBrandApi, normalizeInternalBrand } from "~/core/api/services/internal-brand.api";
+import { HOME_DOMICILE_OPTIONS, normalizeHomeDomicile } from "~/shared/constants/domicile.constants";
 
 const STATUS_MAP = {
   draft: { label: "Draft", variant: "default" as const },
@@ -44,13 +46,13 @@ const EMPTY_FORM_DATA = {
   startDate: "",
   endDate: "",
   venue: "",
-  location: "",
   city: "",
   bannerPath: "",
   description: "",
   termAndCondition: "",
   status: "ONGOING",
   isPublished: false,
+  homeOnly: false,
 };
 
 /** Partner — Event Management (filtered by partner's brand) */
@@ -67,6 +69,16 @@ export default function EventsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM_DATA);
+
+  const { data: currentBrand } = useApiQuery(
+    async () => {
+      if (!user?.brand_id) return null;
+      const response = await internalBrandApi.getById(user.brand_id);
+      return response.success && response.data ? normalizeInternalBrand(response.data) : null;
+    },
+    [user?.brand_id],
+  );
+  const isFootballBrand = currentBrand?.category?.trim().toLowerCase() === "sepak_bola";
 
   const { data: eventsRaw, loading, error, refetch } = useApiQuery(
     async () => {
@@ -149,13 +161,13 @@ export default function EventsPage() {
       startDate: toDateTimeLocal(event.startDate),
       endDate: toDateTimeLocal(event.endDate),
       venue: event.venue ?? "",
-      location: event.location ?? "",
       city: event.city ?? "",
       bannerPath: event.bannerPath ?? "",
       description: event.description ?? "",
       termAndCondition: event.termAndCondition ?? "",
       status: event.status ?? "ONGOING",
       isPublished: Boolean(event.isPublished),
+      homeOnly: Boolean(event.homeOnly),
     });
   };
 
@@ -188,8 +200,8 @@ export default function EventsPage() {
       setFormError("Tanggal mulai dan selesai wajib diisi.");
       return;
     }
-    if (!formData.venue.trim() || !formData.location.trim() || !formData.city.trim()) {
-      setFormError("Venue, lokasi, dan kota wajib diisi.");
+    if (!formData.venue.trim() || !formData.city.trim()) {
+      setFormError("Venue dan kota wajib diisi.");
       return;
     }
 
@@ -197,6 +209,10 @@ export default function EventsPage() {
     const endDate = toIsoString(formData.endDate);
     if (!startDate || !endDate) {
       setFormError("Format tanggal tidak valid.");
+      return;
+    }
+    if (new Date(startDate) > new Date(endDate)) {
+      setFormError("Tanggal mulai harus sebelum tanggal selesai.");
       return;
     }
 
@@ -211,10 +227,10 @@ export default function EventsPage() {
         description: formData.description.trim() || null,
         termAndCondition: formData.termAndCondition.trim() || null,
         venue: formData.venue.trim(),
-        location: formData.location.trim(),
         city: formData.city.trim(),
         status: formData.status as InternalEventApiData["status"],
         isPublished: formData.isPublished,
+        homeOnly: isFootballBrand ? formData.homeOnly : false,
       };
 
       const result = formMode === "edit" && editingEvent
@@ -359,15 +375,6 @@ export default function EventsPage() {
                 onChange={handleChange}
                 required
               />
-              <Input
-                label="Lokasi (link Google Maps)"
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-                required
-                placeholder="https://maps.app.goo.gl/..."
-                hint="Tempel link Google Maps, bukan alamat biasa."
-              />
               <SearchableCitySelect
                 value={formData.city}
                 onChange={(city) => setFormData((prev) => ({ ...prev, city }))}
@@ -381,6 +388,24 @@ export default function EventsPage() {
               uploadFile={uploadEventBanner}
               disabled={isSubmitting}
             />
+
+            {isFootballBrand && (
+              <div className="space-y-3 rounded-lg border border-border-subtle p-4">
+                <label className="flex items-center gap-2 text-sm font-medium text-text-primary">
+                  <input
+                    type="checkbox"
+                    name="homeOnly"
+                    checked={formData.homeOnly}
+                    onChange={handleChange}
+                    className="h-4 w-4 rounded border-border-default accent-brand-primary"
+                  />
+                  Batasi pembelian event ini berdasarkan domisili KTP (Home Only)
+                </label>
+                <p className="text-xs text-text-secondary">
+                  Domisili dicocokkan dengan kota home milik klub. Ubah kotanya di pengaturan klub.
+                </p>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Select

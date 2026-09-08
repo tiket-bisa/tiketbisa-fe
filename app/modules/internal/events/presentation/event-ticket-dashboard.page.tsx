@@ -10,6 +10,7 @@ import {
 import { formatIDR } from "~/core/utils";
 import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 import { TicketDeliveryActions } from "~/modules/internal/ticket-delivery/presentation/ticket-delivery-actions";
+import { useDebouncedValue } from "~/modules/internal/common/presentation/use-debounced-value";
 
 const statusOptions = [
   { value: "all", label: "Semua Status" },
@@ -38,8 +39,8 @@ export default function EventTicketDashboardPage() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [liveData, setLiveData] = useState<EventTicketDashboard | null>(null);
   const [issuedTicketOffset, setIssuedTicketOffset] = useState(0);
+  const debouncedSearch = useDebouncedValue(search);
 
   const { data: fetchedData, loading, error, refetch } = useApiQuery(
     async () => {
@@ -47,22 +48,21 @@ export default function EventTicketDashboardPage() {
       const result = await internalEventApi.getTicketDashboard(eventId, {
         limit: ISSUED_TICKET_PAGE_SIZE,
         offset: issuedTicketOffset,
+        search: debouncedSearch.trim() || undefined,
+        categoryId: categoryFilter === "all" ? undefined : categoryFilter,
+        status: statusFilter === "all" ? undefined : statusFilter,
       });
       if (!result.success || !result.data) {
         throw new Error(result.error || "Gagal memuat data tiket event.");
       }
       return result.data as EventTicketDashboard;
     },
-    [eventId, issuedTicketOffset],
+    [eventId, issuedTicketOffset, debouncedSearch, categoryFilter, statusFilter],
   );
 
   const handleRealtimeMessage = useCallback((message: RealtimeMessage) => {
     if (message.type === "event_ticket_dashboard.updated" && message.payload) {
-      if (issuedTicketOffset === 0) {
-        setLiveData(message.payload as EventTicketDashboard);
-      } else {
-        void refetch();
-      }
+      void refetch();
       return;
     }
     if (
@@ -72,19 +72,15 @@ export default function EventTicketDashboardPage() {
     ) {
       void refetch();
     }
-  }, [issuedTicketOffset, refetch]);
+  }, [refetch]);
 
   useRealtimeSubscription(eventId ? [`event:${eventId}`] : [], handleRealtimeMessage);
 
   useEffect(() => {
-    setLiveData(null);
-  }, [eventId, issuedTicketOffset]);
-
-  useEffect(() => {
     setIssuedTicketOffset(0);
-  }, [eventId]);
+  }, [eventId, debouncedSearch, categoryFilter, statusFilter]);
 
-  const data = liveData ?? fetchedData;
+  const data = fetchedData;
 
   const categoryOptions = useMemo(() => {
     const categories = data?.categories ?? [];
@@ -94,24 +90,7 @@ export default function EventTicketDashboardPage() {
     ];
   }, [data?.categories]);
 
-  const filteredIssuedTickets = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return (data?.issuedTickets ?? []).filter((ticket) => {
-      const matchesCategory = categoryFilter === "all" || ticket.ticketCategoryId === categoryFilter;
-      const matchesStatus = statusFilter === "all" || ticket.status === statusFilter;
-      const searchable = [
-        ticket.id,
-        ticket.codeHash,
-        ticket.categoryName,
-        ticket.ticketTransactionId,
-        ticket.customerName,
-        ticket.customerEmail,
-        ticket.customerPhone,
-      ].filter(Boolean).join(" ").toLowerCase();
-      const matchesSearch = !query || searchable.includes(query);
-      return matchesCategory && matchesStatus && matchesSearch;
-    });
-  }, [categoryFilter, data?.issuedTickets, search, statusFilter]);
+  const filteredIssuedTickets = data?.issuedTickets ?? [];
 
   if (loading) {
     return (
@@ -140,8 +119,8 @@ export default function EventTicketDashboardPage() {
   const checkedInTicket = data.categories.reduce((sum, category) => sum + category.checkedInTicket, 0);
   const displayedStart = data.totalCount === 0 ? 0 : data.offset + 1;
   const displayedEnd = Math.min(data.offset + data.issuedTickets.length, data.totalCount);
-  const canGoPrevious = data.hasPreviousPage && data.offset > 0;
-  const canGoNext = data.hasNextPage;
+  const canGoPrevious = data.offset > 0;
+  const canGoNext = data.offset + data.issuedTickets.length < data.totalCount;
   const goToPreviousPage = () => {
     setIssuedTicketOffset((current) => Math.max(current - ISSUED_TICKET_PAGE_SIZE, 0));
   };
