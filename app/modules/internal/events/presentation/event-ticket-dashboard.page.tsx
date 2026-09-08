@@ -5,12 +5,14 @@ import { useApiQuery } from "~/core/api";
 import {
   internalEventApi,
   type EventTicketDashboard,
+  type EventTicketCategorySummary,
   type IssuedTicketSummary,
 } from "~/core/api/services/internal-event.api";
 import { formatIDR } from "~/core/utils";
 import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 import { TicketDeliveryActions } from "~/modules/internal/ticket-delivery/presentation/ticket-delivery-actions";
 import { useDebouncedValue } from "~/modules/internal/common/presentation/use-debounced-value";
+import { ticketCategoryApi } from "~/core/api/services/ticket-category.api";
 
 const statusOptions = [
   { value: "all", label: "Semua Status" },
@@ -40,6 +42,7 @@ export default function EventTicketDashboardPage() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [issuedTicketOffset, setIssuedTicketOffset] = useState(0);
+  const [adjustingCategory, setAdjustingCategory] = useState<EventTicketCategorySummary | null>(null);
   const debouncedSearch = useDebouncedValue(search);
 
   const { data: fetchedData, loading, error, refetch } = useApiQuery(
@@ -115,12 +118,15 @@ export default function EventTicketDashboardPage() {
 
   const totalTicket = data.categories.reduce((sum, category) => sum + category.totalTicket, 0);
   const soldTicket = data.categories.reduce((sum, category) => sum + category.soldTicket, 0);
+  const bulkTicket = data.categories.reduce((sum, category) => sum + (category.bulkType ? category.issuedTicket : 0), 0);
   const remainingTicket = data.categories.reduce((sum, category) => sum + category.remainingTicket, 0);
   const checkedInTicket = data.categories.reduce((sum, category) => sum + category.checkedInTicket, 0);
   const displayedStart = data.totalCount === 0 ? 0 : data.offset + 1;
   const displayedEnd = Math.min(data.offset + data.issuedTickets.length, data.totalCount);
   const canGoPrevious = data.offset > 0;
   const canGoNext = data.offset + data.issuedTickets.length < data.totalCount;
+  const eventEnded = data.event.status === "ENDED"
+    || (data.event.endDate ? new Date(data.event.endDate).getTime() <= Date.now() : false);
   const goToPreviousPage = () => {
     setIssuedTicketOffset((current) => Math.max(current - ISSUED_TICKET_PAGE_SIZE, 0));
   };
@@ -140,6 +146,7 @@ export default function EventTicketDashboardPage() {
           <p className="text-text-tertiary text-sm font-medium">
             Kelola Tiket &amp; Penjualan · Kuota, tiket terjual, sisa tiket, dan status check-in
           </p>
+          {eventEnded && <Badge variant="destructive">Event Selesai · Penjualan ditutup</Badge>}
         </div>
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="secondary" onClick={() => void refetch()}>
@@ -148,15 +155,16 @@ export default function EventTicketDashboardPage() {
           <Button type="button" variant="secondary" onClick={() => navigate(`${basePath}/events/${eventId}/tickets/new`)}>
             Tambah Tiket
           </Button>
-          <Button type="button" variant="secondary" onClick={() => navigate(`${basePath}/events/${eventId}/complimentary/new`)}>
-            Tiket Complimentary
+          <Button type="button" variant="secondary" disabled={eventEnded} onClick={() => navigate(`${basePath}/events/${eventId}/bulk/new`)}>
+            Tiket Bulk
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <SummaryCard label="Kuota" value={totalTicket} />
         <SummaryCard label="Terjual" value={soldTicket} />
+        <SummaryCard label="Bulk Terbit" value={bulkTicket} />
         <SummaryCard label="Sisa" value={remainingTicket} />
         <SummaryCard label="Checked In" value={checkedInTicket} />
       </div>
@@ -170,10 +178,12 @@ export default function EventTicketDashboardPage() {
                 <th className="px-3 py-2 font-medium">Kategori</th>
                 <th className="px-3 py-2 font-medium">Kode</th>
                 <th className="px-3 py-2 font-medium">Harga</th>
+                <th className="px-3 py-2 font-medium">Visibilitas</th>
                 <th className="px-3 py-2 font-medium">Kuota</th>
                 <th className="px-3 py-2 font-medium">Terjual</th>
                 <th className="px-3 py-2 font-medium">Sisa</th>
                 <th className="px-3 py-2 font-medium">Checked In</th>
+                <th className="px-3 py-2 font-medium">Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -182,10 +192,20 @@ export default function EventTicketDashboardPage() {
                   <td className="px-3 py-3 font-medium text-text-primary">{category.name}</td>
                   <td className="px-3 py-3 text-text-secondary">{category.categoryCode || "-"}</td>
                   <td className="px-3 py-3 text-text-secondary">{formatIDR(category.price)}</td>
+                  <td className="px-3 py-3">
+                    <Badge variant={category.salesClosed || category.isHidden ? "warning" : "success"}>
+                      {eventEnded ? "Event Selesai" : category.bulkType ? "Bulk" : category.salesClosed ? "Penjualan Ditutup" : "Publik"}
+                    </Badge>
+                  </td>
                   <td className="px-3 py-3 text-text-secondary">{category.totalTicket.toLocaleString()}</td>
                   <td className="px-3 py-3 text-text-secondary">{category.soldTicket.toLocaleString()}</td>
                   <td className="px-3 py-3 text-text-secondary">{category.remainingTicket.toLocaleString()}</td>
                   <td className="px-3 py-3 text-text-secondary">{category.checkedInTicket.toLocaleString()}</td>
+                  <td className="px-3 py-3">
+                    <Button type="button" size="sm" variant="secondary" onClick={() => setAdjustingCategory(category)}>
+                      Adjust
+                    </Button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -195,6 +215,17 @@ export default function EventTicketDashboardPage() {
           <p className="py-6 text-center text-sm text-text-tertiary">Belum ada kategori tiket.</p>
         )}
       </Card>
+
+      {adjustingCategory && (
+        <AdjustCategoryModal
+          category={adjustingCategory}
+          onClose={() => setAdjustingCategory(null)}
+          onSaved={async () => {
+            setAdjustingCategory(null);
+            await refetch();
+          }}
+        />
+      )}
 
       <Card padding="md">
         <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end">
@@ -285,6 +316,70 @@ export default function EventTicketDashboardPage() {
               Berikutnya
             </Button>
           </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function AdjustCategoryModal({
+  category,
+  onClose,
+  onSaved,
+}: {
+  category: EventTicketCategorySummary;
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const [totalTicket, setTotalTicket] = useState(String(category.totalTicket));
+  const [salesClosed, setSalesClosed] = useState(category.salesClosed);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const save = async () => {
+    const parsedTotal = Number(totalTicket);
+    if (!Number.isInteger(parsedTotal) || parsedTotal < category.issuedTicket) {
+      setError(`Total kuota minimal ${category.issuedTicket.toLocaleString()} karena tiket tersebut sudah diterbitkan.`);
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const response = await ticketCategoryApi.update(category.id, {
+        totalTicket: parsedTotal,
+        salesClosed: category.bulkType ? undefined : salesClosed,
+      });
+      if (!response.success) throw new Error(response.error || "Gagal menyesuaikan kategori.");
+      await onSaved();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Gagal menyesuaikan kategori.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label="Adjust Ticket Category">
+      <Card padding="lg" className="w-full max-w-md space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold text-text-primary">Adjust Ticket Category</h2>
+          <p className="text-sm text-text-tertiary">{category.name}</p>
+        </div>
+        {error && <div className="rounded-md bg-red-50 p-3 text-sm text-destructive-text">{error}</div>}
+        <div className="grid grid-cols-2 gap-3 rounded-md bg-surface-hover p-3 text-sm">
+          <span>Sudah diterbitkan</span><strong className="text-right">{category.issuedTicket.toLocaleString()}</strong>
+          <span>Sisa saat ini</span><strong className="text-right">{category.remainingTicket.toLocaleString()}</strong>
+        </div>
+        <Input label="Total Kuota" type="number" min={category.issuedTicket} value={totalTicket} onChange={(event) => setTotalTicket(event.target.value)} />
+        {!category.bulkType && (
+          <label className="flex items-start gap-3 rounded-md border border-border-subtle p-3 text-sm">
+            <input type="checkbox" checked={salesClosed} onChange={(event) => setSalesClosed(event.target.checked)} className="mt-0.5 accent-brand-primary" />
+            <span><strong className="block">Tutup penjualan</strong><span className="text-text-tertiary">Tampilkan kategori sebagai Sold Out meskipun kursi masih tersedia.</span></span>
+          </label>
+        )}
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>Batal</Button>
+          <Button type="button" variant="primary" onClick={() => void save()} disabled={saving}>{saving ? "Menyimpan..." : "Simpan"}</Button>
         </div>
       </Card>
     </div>
