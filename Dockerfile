@@ -1,6 +1,6 @@
 # Define the version once at the top
 ARG NODE_VERSION=22-alpine
-ARG PNPM_VERSION=11.13.0
+ARG PNPM_VERSION=11.25.0
 
 FROM node:${NODE_VERSION} AS development-dependencies-env
 ARG PNPM_VERSION

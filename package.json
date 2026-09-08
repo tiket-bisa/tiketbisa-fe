@@ -1,7 +1,6 @@
 {
   "name": "tiketbisa-fe",
   "private": true,
-  "packageManager": "pnpm@11.13.0",
   "type": "module",
   "scripts": {
     "build": "react-router build",
