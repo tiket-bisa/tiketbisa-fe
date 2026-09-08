@@ -174,6 +174,7 @@ export default function EventPage({ loaderData }: Route.ComponentProps) {
                   location: event.location,
                   minPrice: event.minPrice,
                   tickets: event.tickets,
+                  lifecycleStatus: event.lifecycleStatus,
                   brandName: event.brand,
                   brandLogoUrl: event.brandLogoUrl,
                 }}

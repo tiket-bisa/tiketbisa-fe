@@ -26,6 +26,8 @@ export function EventDetailSidebar({
   onQuantityChange,
 }: EventDetailSidebarProps) {
   const hasSelectedTickets = totalPrice > 0;
+  const eventEnded = event.lifecycleStatus === "ENDED"
+    || (event.tickets.length > 0 && event.tickets.every((ticket) => ticket.purchaseStatus === "EVENT_ENDED"));
 
   // Derive the starting price from the ticket list
   const minPrice =
@@ -39,6 +41,13 @@ export function EventDetailSidebar({
         <h2 className="text-lg font-extrabold text-text-primary leading-tight">
           {event.name}
         </h2>
+
+        {eventEnded && (
+          <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
+            <p className="font-bold text-destructive-text">Event Selesai</p>
+            <p className="mt-1 text-xs text-text-secondary">Acara dan penjualan tiket telah berakhir.</p>
+          </div>
+        )}
 
         <div className="space-y-4">
           <SidebarInfo
