@@ -222,7 +222,7 @@ export const transactionApi = {
     reviewManualTransfer: (id: string, request: ManualTransferReviewRequest) =>
         internalHttpClient.post<TransactionApiData>(`/transaction/detail/${id}/review`, request),
 
-    /** Generate complimentary tickets from admin/partner dashboard */
+    /** Generate bulk tickets from admin/partner dashboard (legacy COMPLIMENTARY contract) */
     manualGenerateTickets: (request: ManualGenerateTicketsRequest) =>
         internalHttpClient.post<TransactionApiData>("/transaction/manual-generate", request),
 

@@ -14,7 +14,7 @@ interface GeneratedTicketRow extends IssuedTicketDetail {
   categoryName: string;
 }
 
-export default function GenerateComplimentaryTicketPage() {
+export default function GenerateBulkTicketPage() {
   const { eventId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -49,14 +49,14 @@ export default function GenerateComplimentaryTicketPage() {
   const { data: categoriesRaw, loading: loadingCategories } = useApiQuery(
     async () => {
       if (!eventId) return [];
-      const res = await ticketCategoryApi.getByEvent(eventId);
+      const res = await ticketCategoryApi.getInternalByEvent(eventId);
       return res.success && res.data ? res.data : [];
     },
     [eventId],
   );
 
   const categories = useMemo(
-    () => (categoriesRaw ?? []).map(mapTicketCategoryToFe),
+    () => (categoriesRaw ?? []).filter((category) => category.is_hidden).map(mapTicketCategoryToFe),
     [categoriesRaw],
   );
 
@@ -68,7 +68,10 @@ export default function GenerateComplimentaryTicketPage() {
     [categories],
   );
 
-  const fallbackPath = user?.role === "admin" ? "/internal-tb/admin/events" : "/internal-tb/partner/events";
+  const eventsPath = user?.role === "admin" ? "/internal-tb/admin/events" : "/internal-tb/partner/events";
+  const returnPath = eventId ? `${eventsPath}/${eventId}/tickets` : eventsPath;
+  const eventEnded = event?.status === "ENDED"
+    || (event?.endDate ? new Date(event.endDate).getTime() <= Date.now() : false);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -106,7 +109,11 @@ export default function GenerateComplimentaryTicketPage() {
       return;
     }
     const selectedCategory = categories.find((category) => category.id === formData.categoryId);
-    if (selectedCategory && quantity > selectedCategory.available) {
+    if (!selectedCategory) {
+      setErrorMsg("Kategori harus merupakan kategori hidden yang tersedia untuk Tiket Bulk.");
+      return;
+    }
+    if (quantity > selectedCategory.available) {
       setErrorMsg(`Jumlah melebihi sisa stok kategori (${selectedCategory.available}).`);
       return;
     }
@@ -134,7 +141,7 @@ export default function GenerateComplimentaryTicketPage() {
       });
 
       if (res.success) {
-        setSuccessMsg("Tiket complimentary berhasil dibuat dan dikirim jika template email aktif.");
+        setSuccessMsg("Tiket Bulk berhasil dibuat dan dikirim jika template email aktif.");
         setFormData((prev) => ({
           ...prev,
           customerName: "",
@@ -157,7 +164,7 @@ export default function GenerateComplimentaryTicketPage() {
           }
         }
       } else {
-        setErrorMsg(res.error || "Gagal membuat tiket complimentary.");
+        setErrorMsg(res.error || "Gagal membuat Tiket Bulk.");
       }
     } catch {
       setErrorMsg("Koneksi bermasalah.");
@@ -225,14 +232,14 @@ export default function GenerateComplimentaryTicketPage() {
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
         <button
-          onClick={() => navigate(fallbackPath)}
+          onClick={() => navigate(returnPath)}
           className="text-text-secondary hover:text-text-primary"
           aria-label="Kembali"
         >
           <span className="material-symbols-outlined text-xl leading-none">arrow_back</span>
         </button>
         <div>
-          <h1 className="text-text-primary text-2xl font-bold">Generate Tiket Complimentary</h1>
+          <h1 className="text-text-primary text-2xl font-bold">Generate Tiket Bulk</h1>
           <p className="text-text-tertiary text-sm mt-1">{event?.name ?? "Event"}</p>
         </div>
       </div>
@@ -247,6 +254,11 @@ export default function GenerateComplimentaryTicketPage() {
           {successMsg && (
             <div className="bg-green-50 text-success-text p-3 rounded-md text-sm">
               {successMsg}
+            </div>
+          )}
+          {eventEnded && (
+            <div className="rounded-md bg-red-50 p-3 text-sm text-destructive-text">
+              Event telah selesai. Tiket Bulk baru tidak dapat diterbitkan.
             </div>
           )}
 
@@ -301,7 +313,7 @@ export default function GenerateComplimentaryTicketPage() {
             value={formData.categoryId}
             onChange={handleChange}
             options={[
-              { value: "", label: loadingCategories ? "Memuat kategori..." : "Pilih kategori" },
+              { value: "", label: loadingCategories ? "Memuat kategori..." : categories.length === 0 ? "Belum ada kategori hidden" : "Pilih kategori hidden" },
               ...categoryOptions,
             ]}
             name="categoryId"
@@ -337,11 +349,11 @@ export default function GenerateComplimentaryTicketPage() {
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="ghost" onClick={() => navigate(fallbackPath)}>
+            <Button type="button" variant="ghost" onClick={() => navigate(returnPath)}>
               Kembali
             </Button>
-            <Button type="submit" isLoading={loading} disabled={loadingCategories}>
-              Generate Complimentary
+            <Button type="submit" isLoading={loading} disabled={eventEnded || loadingCategories || categories.length === 0}>
+              Generate Tiket Bulk
             </Button>
           </div>
         </form>

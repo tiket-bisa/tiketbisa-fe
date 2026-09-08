@@ -276,9 +276,9 @@ export default function EventsPage() {
     }
   };
 
-  const navigateToEventAction = (id: string, action: "tickets" | "complimentary" | "dashboard") => {
+  const navigateToEventAction = (id: string, action: "tickets" | "bulk" | "dashboard") => {
     setPendingAction(`${action}-${id}`);
-    const suffix = action === "tickets" ? "tickets/new" : action === "complimentary" ? "complimentary/new" : "tickets";
+    const suffix = action === "tickets" ? "tickets/new" : action === "bulk" ? "bulk/new" : "tickets";
     navigate(`/internal-tb/partner/events/${id}/${suffix}`);
   };
 
@@ -569,12 +569,12 @@ export default function EventsPage() {
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => navigateToEventAction(evt.id, "complimentary")}
-                    isLoading={pendingAction === `complimentary-${evt.id}`}
+                    onClick={() => navigateToEventAction(evt.id, "bulk")}
+                    isLoading={pendingAction === `bulk-${evt.id}`}
                     className="flex items-center gap-1"
                   >
                     <span className="material-symbols-outlined text-sm">redeem</span>
-                    Tiket Complimentary
+                    Tiket Bulk
                   </Button>
                   <Button
                     variant="ghost"
