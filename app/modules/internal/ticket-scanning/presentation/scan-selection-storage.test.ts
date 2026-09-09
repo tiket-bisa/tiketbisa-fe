@@ -5,8 +5,7 @@ import { persistScanSelection, readScanSelection } from "./scan-selection-storag
 const selection = {
   eventId: "event-1",
   eventName: "Konser",
-  categoryId: "category-1",
-  categoryName: "Regular",
+  categories: [{ id: "category-1", name: "Regular" }, { id: "category-2", name: "Komunitas" }],
 };
 
 describe("scan selection storage", () => {
@@ -27,5 +26,14 @@ describe("scan selection storage", () => {
   it("ignores malformed or incomplete stored state", () => {
     sessionStorage.setItem("tiketbisa_scan_category:brand-1", JSON.stringify({ eventId: "event-1" }));
     expect(readScanSelection("brand-1", sessionStorage)).toBeNull();
+  });
+
+  it("migrates a legacy single category selection", () => {
+    sessionStorage.setItem("tiketbisa_scan_category:brand-1", JSON.stringify({
+      eventId: "event-1", eventName: "Konser", categoryId: "cat-1", categoryName: "Regular",
+    }));
+    expect(readScanSelection("brand-1", sessionStorage)).toEqual({
+      eventId: "event-1", eventName: "Konser", categories: [{ id: "cat-1", name: "Regular" }],
+    });
   });
 });

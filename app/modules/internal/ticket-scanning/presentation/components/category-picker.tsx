@@ -5,8 +5,7 @@ import { useCategoryPicker, useEventCategories } from "../hooks/use-category-pic
 export interface SelectedCategory {
   eventId: string;
   eventName: string;
-  categoryId: string;
-  categoryName: string;
+  categories: { id: string; name: string }[];
 }
 
 interface CategoryPickerProps {
@@ -16,14 +15,15 @@ interface CategoryPickerProps {
   onChange: (selection: SelectedCategory | null) => void;
 }
 
-/** Event → ticket category picker used to scope scan/check-in to one category. */
+/** Select the categories accepted at this gate within one event. */
 export function CategoryPicker({ brandId, selected, onChange }: CategoryPickerProps) {
   const { events, loading, error } = useCategoryPicker(brandId);
   const [eventId, setEventId] = useState("");
-  const [categoryId, setCategoryId] = useState("");
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
+  const [search, setSearch] = useState("");
 
   // Categories are fetched lazily for the selected event only (avoids one request per event).
-  const { categories, loading: loadingCategories } = useEventCategories(eventId || undefined);
+  const { categories, loading: loadingCategories, error: categoryError } = useEventCategories(eventId || undefined);
 
   const selectedEvent = useMemo(
     () => events.find((e) => e.id === eventId),
@@ -40,18 +40,17 @@ export function CategoryPicker({ brandId, selected, onChange }: CategoryPickerPr
   );
 
   const categoryOptions = useMemo(
-    () => categories.map((c) => ({ value: c.id, label: c.name })),
-    [categories],
+    () => categories.filter((c) => c.event_id === eventId && c.name.toLowerCase().includes(search.toLowerCase())),
+    [categories, eventId, search],
   );
 
   const handleConfirm = () => {
-    const category = categories.find((c) => c.id === categoryId);
-    if (!selectedEvent || !category) return;
+    const chosen = categories.filter((c) => c.event_id === eventId && categoryIds.includes(c.id));
+    if (!selectedEvent || chosen.length === 0 || loadingCategories || categoryError) return;
     onChange({
       eventId: selectedEvent.id,
       eventName: selectedEvent.name,
-      categoryId: category.id,
-      categoryName: category.name,
+      categories: chosen.map(({ id, name }) => ({ id, name })),
     });
   };
 
@@ -62,15 +61,16 @@ export function CategoryPicker({ brandId, selected, onChange }: CategoryPickerPr
           <div>
             <p className="text-text-tertiary text-xs uppercase tracking-wide">Kategori Aktif</p>
             <p className="text-text-primary font-semibold">
-              {selected.eventName} — {selected.categoryName}
+              {selected.eventName} — {selected.categories.map((c) => c.name).join(", ")}
             </p>
           </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => {
-              setEventId("");
-              setCategoryId("");
+              setEventId(selected.eventId);
+              setCategoryIds(selected.categories.map((c) => c.id));
+              setSearch("");
               onChange(null);
             }}
           >
@@ -101,21 +101,35 @@ export function CategoryPicker({ brandId, selected, onChange }: CategoryPickerPr
               value={eventId}
               onChange={(e) => {
                 setEventId(e.target.value);
-                setCategoryId("");
+                setCategoryIds([]);
+                setSearch("");
               }}
             />
           </div>
           <div className="flex-1">
-            <Select
-              label="Kategori Tiket"
-              placeholder={loadingCategories ? "Memuat kategori..." : "Pilih kategori"}
-              options={categoryOptions}
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              disabled={!eventId || loadingCategories}
-            />
+            <fieldset disabled={!eventId || loadingCategories || !!categoryError}>
+              <legend className="text-sm font-medium mb-2">Kategori Tiket</legend>
+              <input aria-label="Cari kategori" placeholder="Cari kategori" value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full rounded-lg border border-border-default p-2 mb-2" />
+              <div className="max-h-56 overflow-y-auto space-y-2">
+                {!loadingCategories && categoryOptions.map((category) => (
+                  <label key={category.id} className="flex items-center gap-2 p-2 cursor-pointer">
+                    <input type="checkbox" checked={categoryIds.includes(category.id)}
+                      onChange={(e) => setCategoryIds((ids) => e.target.checked
+                        ? [...ids, category.id] : ids.filter((id) => id !== category.id))} />
+                    {category.name}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            {loadingCategories && <p className="text-sm">Memuat kategori...</p>}
+            {categoryError && <p role="alert">Gagal memuat kategori: {categoryError}</p>}
+            {!loadingCategories && eventId && !categoryError && categoryOptions.length === 0 && (
+              <p className="text-sm">Tidak ada kategori yang cocok.</p>
+            )}
           </div>
-          <Button variant="primary" onClick={handleConfirm} disabled={!eventId || !categoryId}>
+          <Button variant="primary" onClick={handleConfirm} disabled={!eventId || categoryIds.length === 0 || loadingCategories || !!categoryError}>
             Terapkan
           </Button>
         </div>
