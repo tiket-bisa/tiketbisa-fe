@@ -11,7 +11,7 @@ export interface CategoryPickerEvent {
 
 /**
  * Loads the list of events (optionally scoped to a single brand) for the scan
- * "expected_category_id" picker — WITHOUT their ticket categories. Categories are loaded lazily,
+ * category-scope picker — WITHOUT their ticket categories. Categories are loaded lazily,
  * per selected event, via {@link useEventCategories}. This keeps opening the picker at a constant
  * 1–2 requests instead of firing one getByEvent call per event (which for an admin with dozens or
  * hundreds of events would flood the backend and stall the browser's connection pool).

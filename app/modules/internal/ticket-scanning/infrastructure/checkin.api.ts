@@ -7,7 +7,6 @@ export interface CheckInRequest {
   code_type: ScanCodeType;
   verify_by: string;
   expected_event_id?: string;
-  expected_category_id?: string;
   expected_category_ids?: string[];
 }
 
@@ -26,7 +25,6 @@ export interface ValidateRequest {
   code_hash: string;
   code_type: ScanCodeType;
   expected_event_id?: string;
-  expected_category_id?: string;
   expected_category_ids?: string[];
 }
 
