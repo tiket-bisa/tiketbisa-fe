@@ -42,6 +42,7 @@ export interface Ticket extends AuditableEntity {
   available: number;
   sold: number;
   checked_in: number;
+  is_hidden?: boolean;
   max_per_order?: number;
 }
 

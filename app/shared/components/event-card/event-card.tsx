@@ -23,13 +23,16 @@ export function EventCard({ event, className = "" }: EventCardProps) {
         data-theme="light"
         className={`flex flex-col h-full ${className}`}
       >
-        <div className="h-auto overflow-hidden aspect-[1062/427] w-full rounded-t-xl bg-slate-200">
+        <div className="relative h-auto overflow-hidden aspect-[1062/427] w-full rounded-t-xl bg-slate-200">
           <img
             src={event.imageUrl}
             alt={event.title}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
             loading="lazy"
           />
+          {event.lifecycleStatus === "ENDED" && (
+            <span className="absolute left-3 top-3 rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white">Event Selesai</span>
+          )}
         </div>
 
         <div className="flex flex-1 flex-col p-4">

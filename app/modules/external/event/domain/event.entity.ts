@@ -3,6 +3,7 @@ export interface EventTicket {
   name: string;
   price: number;
   available: boolean;
+  purchaseStatus?: "AVAILABLE" | "SOLD_OUT" | "SALES_CLOSED" | "EVENT_ENDED";
   maxPerOrder?: number;
 }
 
@@ -25,4 +26,5 @@ export interface Event {
   time?: string;
   tickets: EventTicket[];
   terms?: string[];
+  lifecycleStatus?: "ONGOING" | "ENDED";
 }

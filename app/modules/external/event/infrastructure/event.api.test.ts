@@ -132,4 +132,32 @@ describe("eventApi.getEvents", () => {
     expect(event?.brand).toBe("Test 123");
     expect(event?.brandLogoUrl).toBe("https://cdn.test/detail-logo.png");
   });
+
+  it("does not expose hidden ticket categories in event detail", async () => {
+    mockApiFetch
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          id: "event-1",
+          brandId: "brand-123",
+          name: "Event Test",
+          startDate: "2026-07-30T10:00:00Z",
+          status: "ONGOING",
+          isPublished: true,
+        },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: [
+          { id: "public", name: "VIP A", price: 100_000, totalTicket: 10, issuedTicket: 0 },
+          { id: "bulk", name: "VIP A (Komunitas)", price: 0, totalTicket: 10, issuedTicket: 0, isHidden: true },
+        ],
+      })
+      .mockResolvedValueOnce({ success: true, data: { images: [] } })
+      .mockResolvedValueOnce({ success: true, data: { id: "brand-123", name: "Test 123" } });
+
+    const event = await eventApi.getEventById("event-1");
+
+    expect(event?.tickets.map((ticket) => ticket.id)).toEqual(["public"]);
+  });
 });

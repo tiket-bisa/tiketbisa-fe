@@ -25,6 +25,11 @@ export function TicketRow({
   formatPrice = defaultFormatPrice,
   className = "",
 }: TicketRowProps) {
+  const unavailableLabel = ticket.purchaseStatus === "EVENT_ENDED"
+    ? "Event Selesai"
+    : ticket.purchaseStatus === "SALES_CLOSED"
+      ? "Penjualan Ditutup"
+      : "Habis Terjual";
   return (
     <div
       className={`flex items-center justify-between gap-4 rounded-lg border border-border-default bg-surface-alt px-4 py-3 ${className}`}
@@ -34,7 +39,7 @@ export function TicketRow({
         <OverflowingTicketName name={ticket.name} />
         <div>
           <Badge variant={ticket.available ? "success" : "destructive"}>
-            {ticket.available ? "Tersedia" : "Habis Terjual"}
+            {ticket.available ? "Tersedia" : unavailableLabel}
           </Badge>
         </div>
         <span className="text-sm font-semibold text-brand-primary">

@@ -16,6 +16,16 @@ export interface TicketCategoryApiData {
     checkedInTicket?: number;
     price: number;
     created: string | null;
+    is_hidden: boolean;
+    isHidden?: boolean;
+    bulk_type: "COMMUNITY" | "COMPLIMENTARY" | null;
+    bulkType?: "COMMUNITY" | "COMPLIMENTARY" | null;
+    sales_closed: boolean;
+    salesClosed?: boolean;
+    is_purchasable: boolean;
+    isPurchasable?: boolean;
+    purchase_status: "AVAILABLE" | "SOLD_OUT" | "SALES_CLOSED" | "EVENT_ENDED";
+    purchaseStatus?: "AVAILABLE" | "SOLD_OUT" | "SALES_CLOSED" | "EVENT_ENDED";
 }
 
 type RawTicketCategory = Partial<TicketCategoryApiData>;
@@ -31,6 +41,11 @@ export function normalizeTicketCategory(api: RawTicketCategory): TicketCategoryA
         checked_in_ticket: Number(api.checked_in_ticket ?? api.checkedInTicket ?? 0),
         price: Number(api.price ?? 0),
         created: (api.created ?? null) as string | null,
+        is_hidden: api.is_hidden ?? api.isHidden ?? false,
+        bulk_type: api.bulk_type ?? api.bulkType ?? null,
+        sales_closed: api.sales_closed ?? api.salesClosed ?? false,
+        is_purchasable: api.is_purchasable ?? api.isPurchasable ?? false,
+        purchase_status: api.purchase_status ?? api.purchaseStatus ?? "SOLD_OUT",
     };
 }
 
@@ -46,6 +61,16 @@ export interface TicketCategoryListResponse {
 export const ticketCategoryApi = {
     getByEvent: async (eventId: string) => {
         const response = await httpClient.get<RawTicketCategory[]>(`/ticket-category/event/${eventId}`);
+        return {
+            ...response,
+            data: response.data
+                ? response.data.map(normalizeTicketCategory).filter((category) => !category.is_hidden)
+                : response.data,
+        };
+    },
+
+    getInternalByEvent: async (eventId: string) => {
+        const response = await internalHttpClient.get<RawTicketCategory[]>(`/ticket-category/event/${eventId}`);
         return { ...response, data: response.data ? response.data.map(normalizeTicketCategory) : response.data };
     },
 
@@ -70,8 +95,11 @@ export const ticketCategoryApi = {
         }));
     },
 
-    create: (data: { eventId: string; name: string; description?: string; categoryCode: string; totalTicket: number; price: number }) =>
+    create: (data: { eventId: string; name: string; description?: string; categoryCode: string; totalTicket: number; price: number; bulkType: "COMMUNITY" | "COMPLIMENTARY" | null }) =>
         internalHttpClient.post<TicketCategoryApiData>("/ticket-category", data),
+
+    update: (id: string, data: { totalTicket?: number; salesClosed?: boolean }) =>
+        internalHttpClient.put<TicketCategoryApiData>(`/ticket-category/${id}`, data),
 };
 
 /* ── Mapper: BE → FE type ── */
@@ -87,6 +115,7 @@ export function mapTicketCategoryToFe(api: TicketCategoryApiData): Ticket {
         available: api.total_ticket - api.issued_ticket,
         sold: api.issued_ticket,
         checked_in: api.checked_in_ticket,
+        is_hidden: api.is_hidden,
     };
 }
 

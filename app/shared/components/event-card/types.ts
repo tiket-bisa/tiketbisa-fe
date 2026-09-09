@@ -10,6 +10,7 @@ export interface EventCardData {
   tickets: EventTicket[];
   brandName?: string;
   brandLogoUrl?: string;
+  lifecycleStatus?: "ONGOING" | "ENDED";
 }
 
 export interface EventCardProps {

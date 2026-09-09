@@ -75,9 +75,14 @@ export default [
       { id: "admin-event-ticket-dashboard" },
     ),
     route(
+      "internal-tb/admin/events/:eventId/bulk/new",
+      "modules/internal/events/presentation/generate-complimentary-ticket.page.tsx",
+      { id: "admin-generate-bulk-ticket" },
+    ),
+    route(
       "internal-tb/admin/events/:eventId/complimentary/new",
       "modules/internal/events/presentation/generate-complimentary-ticket.page.tsx",
-      { id: "admin-generate-complimentary-ticket" },
+      { id: "admin-generate-complimentary-ticket-legacy" },
     ),
     route(
       "internal-tb/admin/analytics",
@@ -132,9 +137,14 @@ export default [
       { id: "partner-event-ticket-dashboard" },
     ),
     route(
+      "internal-tb/partner/events/:eventId/bulk/new",
+      "modules/internal/events/presentation/generate-complimentary-ticket.page.tsx",
+      { id: "partner-generate-bulk-ticket" },
+    ),
+    route(
       "internal-tb/partner/events/:eventId/complimentary/new",
       "modules/internal/events/presentation/generate-complimentary-ticket.page.tsx",
-      { id: "partner-generate-complimentary-ticket" },
+      { id: "partner-generate-complimentary-ticket-legacy" },
     ),
     route(
       "internal-tb/partner/analytics",

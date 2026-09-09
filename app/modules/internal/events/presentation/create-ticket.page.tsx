@@ -15,6 +15,8 @@ export default function CreateTicketPage() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
+    ticketKind: "REGULAR" as "REGULAR" | "BULK",
+    bulkType: "" as "" | "COMMUNITY" | "COMPLIMENTARY",
     name: "",
     description: "",
     categoryCode: "",
@@ -23,7 +25,11 @@ export default function CreateTicketPage() {
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+    if (type === "checkbox") {
+      setFormData((prev) => ({ ...prev, [name]: (e.target as HTMLInputElement).checked }));
+      return;
+    }
     if (name === "price") {
       setFormData((prev) => ({ ...prev, price: formatIDRInput(value) }));
       return;
@@ -39,7 +45,8 @@ export default function CreateTicketPage() {
     const name = formData.name.trim();
     const categoryCode = formData.categoryCode.trim().toUpperCase();
     const totalTicket = Number(formData.totalTicket);
-    const price = parseIDRInput(formData.price);
+    const isBulk = formData.ticketKind === "BULK";
+    const price = isBulk ? 0 : parseIDRInput(formData.price);
     if (name.length < 2) {
       setErrorMsg("Nama tiket minimal 2 karakter.");
       return;
@@ -56,6 +63,10 @@ export default function CreateTicketPage() {
       setErrorMsg("Harga tiket harus berupa angka 0 atau lebih.");
       return;
     }
+    if (isBulk && !formData.bulkType) {
+      setErrorMsg("Pilih tipe Tiket Bulk: Komunitas atau Komplimen.");
+      return;
+    }
 
     setLoading(true);
     setErrorMsg(null);
@@ -69,6 +80,7 @@ export default function CreateTicketPage() {
         categoryCode,
         totalTicket,
         price,
+        bulkType: isBulk ? formData.bulkType || null : null,
       });
 
       if (res.success && res.data) {
@@ -76,9 +88,9 @@ export default function CreateTicketPage() {
         setTimeout(() => {
           // Navigating back
           if (user?.role === "admin") {
-            navigate("/internal-tb/admin/events");
+            navigate(`/internal-tb/admin/events/${eventId}/tickets`);
           } else {
-            navigate("/internal-tb/partner/events");
+            navigate(`/internal-tb/partner/events/${eventId}/tickets`);
           }
         }, 1500);
       } else {
@@ -118,6 +130,44 @@ export default function CreateTicketPage() {
             </div>
           )}
 
+          <fieldset>
+            <legend className="block text-sm font-medium mb-2">Jenis Tiket</legend>
+            <div className="grid grid-cols-2 gap-3">
+              {(["REGULAR", "BULK"] as const).map((kind) => (
+                <label key={kind} className={`cursor-pointer rounded-lg border p-3 ${formData.ticketKind === kind ? "border-brand-primary bg-brand-primary/5" : "border-border-subtle"}`}>
+                  <input
+                    type="radio"
+                    name="ticketKind"
+                    value={kind}
+                    checked={formData.ticketKind === kind}
+                    onChange={() => setFormData((prev) => ({ ...prev, ticketKind: kind, bulkType: kind === "BULK" ? prev.bulkType : "", price: kind === "BULK" ? "0" : "" }))}
+                    className="mr-2 accent-brand-primary"
+                  />
+                  {kind === "REGULAR" ? "Reguler" : "Bulk"}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          {formData.ticketKind === "BULK" && (
+            <div>
+              <label className="block text-sm font-medium mb-1" htmlFor="bulkType">
+                Tipe Bulk <span className="text-destructive-text">*</span>
+              </label>
+              <select
+                required
+                id="bulkType"
+                value={formData.bulkType}
+                onChange={(event) => setFormData((prev) => ({ ...prev, bulkType: event.target.value as typeof prev.bulkType }))}
+                className="w-full rounded-md border border-gray-300 p-2"
+              >
+                <option value="">Pilih tipe Bulk</option>
+                <option value="COMMUNITY">Komunitas</option>
+                <option value="COMPLIMENTARY">Komplimen</option>
+              </select>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium mb-1" htmlFor="name">
               Nama Tiket <span className="text-destructive-text">*</span>
@@ -132,6 +182,11 @@ export default function CreateTicketPage() {
               value={formData.name}
               onChange={handleChange}
             />
+            {formData.ticketKind === "BULK" && formData.name.trim() && formData.bulkType && (
+              <p className="text-xs text-text-secondary mt-1">
+                Nama tersimpan: {formData.name.trim()} ({formData.bulkType === "COMMUNITY" ? "Komunitas" : "Komplimen"})
+              </p>
+            )}
           </div>
 
           <div>
@@ -178,8 +233,9 @@ export default function CreateTicketPage() {
                 inputMode="numeric"
                 className="w-full rounded-md border border-gray-300 p-2"
                 placeholder="Contoh: 150.000"
-                value={formData.price}
+                value={formData.ticketKind === "BULK" ? "0" : formData.price}
                 onChange={handleChange}
+                disabled={formData.ticketKind === "BULK"}
               />
             </div>
             <div>
@@ -204,7 +260,7 @@ export default function CreateTicketPage() {
             <Button
               type="submit"
               variant="primary"
-              disabled={loading || !formData.name || !formData.categoryCode || !formData.price || !formData.totalTicket}
+              disabled={loading || !formData.name || !formData.categoryCode || (formData.ticketKind === "REGULAR" && !formData.price) || !formData.totalTicket || (formData.ticketKind === "BULK" && !formData.bulkType)}
             >
               {loading ? "Menyimpan..." : "Simpan Tiket"}
             </Button>

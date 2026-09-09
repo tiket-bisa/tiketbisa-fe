@@ -82,6 +82,7 @@ export function mapEventDtoToEntity(
     minPrice: dto.minPrice ?? dto.min_price ?? undefined,
     isFeatured: dto.isFeatured ?? dto.is_featured ?? false,
     endDate: endDate || undefined,
+    lifecycleStatus: dto.status === "ENDED" ? "ENDED" : "ONGOING",
     // Tickets are not yet supported by the backend in the list response
     tickets: [],
   };
