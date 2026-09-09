@@ -163,7 +163,7 @@ export default function EventTicketDashboardPage() {
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <SummaryCard label="Kuota" value={totalTicket} />
-        <SummaryCard label="Terjual" value={soldTicket} />
+        <SummaryCard label="Terjual (termasuk bulk)" value={soldTicket} />
         <SummaryCard label="Bulk Terbit" value={bulkTicket} />
         <SummaryCard label="Sisa" value={remainingTicket} />
         <SummaryCard label="Checked In" value={checkedInTicket} />

@@ -109,7 +109,7 @@ export default function DashboardPage() {
         </Card>
         <Card padding="md">
           <p className="text-text-tertiary text-xs uppercase tracking-wide">
-            Tiket Terjual
+            Tiket Terjual (termasuk bulk)
           </p>
           <p className="text-text-primary text-2xl font-bold mt-1">
             {isStatsLoading ? "..." : (stats?.totalTicketsSold ?? 0)}
@@ -117,6 +117,7 @@ export default function DashboardPage() {
         </Card>
         <Card padding="md">
           <p className="text-text-tertiary text-xs uppercase tracking-wide">Tiket Bulk Terbit</p>
+          <p className="text-xs text-text-tertiary">Bagian dari total tiket terjual</p>
           <p className="text-text-primary text-2xl font-bold mt-1">{isStatsLoading ? "..." : (stats?.totalBulkTicketsIssued ?? 0)}</p>
         </Card>
         <Card padding="md">
