@@ -23,7 +23,12 @@ export function CategoryPicker({ brandId, selected, onChange }: CategoryPickerPr
   const [search, setSearch] = useState("");
 
   // Categories are fetched lazily for the selected event only (avoids one request per event).
-  const { categories, loading: loadingCategories, error: categoryError } = useEventCategories(eventId || undefined);
+  const {
+    categories,
+    loading: loadingCategories,
+    error: categoryError,
+    refetch: refetchCategories,
+  } = useEventCategories(eventId || undefined);
 
   const selectedEvent = useMemo(
     () => events.find((e) => e.id === eventId),
@@ -141,8 +146,11 @@ export function CategoryPicker({ brandId, selected, onChange }: CategoryPickerPr
                   </div>
                 )}
                 {categoryError && (
-                  <div role="alert" className="flex min-h-24 items-center justify-center text-sm text-destructive-text">
-                    Gagal memuat kategori: {categoryError}
+                  <div role="alert" className="flex min-h-24 flex-col items-center justify-center gap-3 text-sm text-destructive-text">
+                    <span>Gagal memuat kategori: {categoryError}</span>
+                    <Button variant="secondary" size="sm" onClick={refetchCategories}>
+                      Coba Lagi
+                    </Button>
                   </div>
                 )}
                 {!loadingCategories && !categoryError && categoryOptions.length === 0 && (

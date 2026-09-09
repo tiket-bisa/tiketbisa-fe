@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useApiQuery } from "~/core/api";
+import { ApiRequestError, toUserFacingResponseError, useApiQuery } from "~/core/api";
 import { internalEventApi, normalizeInternalEvent } from "~/core/api/services/internal-event.api";
 import { ticketCategoryApi, type TicketCategoryApiData } from "~/core/api/services/ticket-category.api";
 
@@ -19,7 +19,10 @@ export interface CategoryPickerEvent {
 export function useCategoryPicker(brandId?: string) {
   const { data, loading, error, refetch } = useApiQuery(async () => {
     const eventsRes = await internalEventApi.getList({ limit: 100, offset: 0, brandId });
-    if (!eventsRes.success || !eventsRes.data) return [] as CategoryPickerEvent[];
+    if (!eventsRes.success) {
+      throw new ApiRequestError(toUserFacingResponseError(eventsRes, "Gagal memuat event."));
+    }
+    if (!eventsRes.data) return [] as CategoryPickerEvent[];
 
     return (eventsRes.data.events ?? []).map(
       (raw): CategoryPickerEvent => {
@@ -40,14 +43,17 @@ export function useCategoryPicker(brandId?: string) {
  * fan out a category request per event up-front.
  */
 export function useEventCategories(eventId?: string) {
-  const { data, loading, error } = useApiQuery(async () => {
+  const { data, loading, error, refetch } = useApiQuery(async () => {
     if (!eventId) return [] as TicketCategoryApiData[];
     const catRes = await ticketCategoryApi.getInternalByEvent(eventId);
-    if (!catRes.success || !catRes.data) return [] as TicketCategoryApiData[];
+    if (!catRes.success) {
+      throw new ApiRequestError(toUserFacingResponseError(catRes, "Gagal memuat kategori tiket."));
+    }
+    if (!catRes.data) return [] as TicketCategoryApiData[];
     return Array.isArray(catRes.data) ? catRes.data : [];
   }, [eventId]);
 
   const categories = useMemo(() => data ?? [], [data]);
 
-  return { categories, loading, error };
+  return { categories, loading, error, refetch };
 }

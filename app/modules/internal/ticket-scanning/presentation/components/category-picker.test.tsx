@@ -3,15 +3,24 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { CategoryPicker } from "./category-picker";
 
+const hookState = vi.hoisted(() => ({
+  categoryError: null as string | null,
+  refetchCategories: vi.fn(),
+}));
+
 vi.mock("../hooks/use-category-picker", () => ({
   useCategoryPicker: () => ({ events: [{ id: "event", name: "Match" }, { id: "other", name: "Other" }], loading: false }),
   useEventCategories: () => ({ categories: [
     { id: "A", name: "Barat A", event_id: "event" },
     { id: "B", name: "Barat A (Komunitas)", event_id: "event" },
     { id: "C", name: "Ekonomi D", event_id: "other" },
-  ], loading: false }),
+  ], loading: false, error: hookState.categoryError, refetch: hookState.refetchCategories }),
 }));
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  hookState.categoryError = null;
+  hookState.refetchCategories.mockReset();
+});
 
 it("selects multiple categories and clears them when the event changes", () => {
   const onChange = vi.fn();
@@ -46,4 +55,16 @@ it("shows active categories as wrapping chips", () => {
   expect(chips.className).toContain("flex-wrap");
   expect(screen.getByText("Barat A")).toBeTruthy();
   expect(screen.getByText("Barat A (Komunitas)")).toBeTruthy();
+});
+
+it("shows category loading failures and lets the scanner retry", () => {
+  hookState.categoryError = "Permintaan tidak dapat diproses.";
+  render(<CategoryPicker selected={null} onChange={vi.fn()} />);
+
+  fireEvent.change(screen.getByRole("combobox"), { target: { value: "event" } });
+
+  expect(screen.getByRole("alert").textContent).toContain("Permintaan tidak dapat diproses.");
+  fireEvent.click(screen.getByRole("button", { name: "Coba Lagi" }));
+  expect(hookState.refetchCategories).toHaveBeenCalledOnce();
+  expect((screen.getByText("Terapkan") as HTMLButtonElement).disabled).toBe(true);
 });
