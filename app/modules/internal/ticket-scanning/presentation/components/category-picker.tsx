@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Card, Select, Button } from "~/core/design-system/components";
+import { Badge, Button, Card, SearchInput, Select } from "~/core/design-system/components";
 import { useCategoryPicker, useEventCategories } from "../hooks/use-category-picker";
 
 export interface SelectedCategory {
@@ -57,16 +57,22 @@ export function CategoryPicker({ brandId, selected, onChange }: CategoryPickerPr
   if (selected) {
     return (
       <Card padding="md">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1">
             <p className="text-text-tertiary text-xs uppercase tracking-wide">Kategori Aktif</p>
-            <p className="text-text-primary font-semibold">
-              {selected.eventName} — {selected.categories.map((c) => c.name).join(", ")}
+            <p className="mt-1 truncate text-text-primary font-semibold" title={selected.eventName}>
+              {selected.eventName}
             </p>
+            <div className="mt-3 flex flex-wrap gap-2" aria-label="Kategori terpilih">
+              {selected.categories.map((category) => (
+                <Badge key={category.id} variant="brand">{category.name}</Badge>
+              ))}
+            </div>
           </div>
           <Button
             variant="ghost"
             size="sm"
+            className="w-full shrink-0 sm:w-auto"
             onClick={() => {
               setEventId(selected.eventId);
               setCategoryIds(selected.categories.map((c) => c.id));
@@ -92,8 +98,8 @@ export function CategoryPicker({ brandId, selected, onChange }: CategoryPickerPr
       {error && <p className="text-destructive-text text-sm">Gagal memuat event: {error}</p>}
 
       {!loading && !error && (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="flex-1">
+        <div className="space-y-5">
+          <div className="w-full">
             <Select
               label="Event"
               placeholder="Pilih event"
@@ -106,32 +112,88 @@ export function CategoryPicker({ brandId, selected, onChange }: CategoryPickerPr
               }}
             />
           </div>
-          <div className="flex-1">
-            <fieldset disabled={!eventId || loadingCategories || !!categoryError}>
-              <legend className="text-sm font-medium mb-2">Kategori Tiket</legend>
-              <input aria-label="Cari kategori" placeholder="Cari kategori" value={search}
+
+          {eventId && (
+            <fieldset
+              disabled={loadingCategories || !!categoryError}
+              className="rounded-xl border border-border-default bg-surface-hover/30 p-4"
+            >
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <legend className="text-sm font-semibold text-text-primary">Kategori Tiket</legend>
+                <span className="rounded-full bg-brand-primary-subtle px-2.5 py-1 text-xs font-medium text-brand-primary">
+                  {categoryIds.length} dipilih
+                </span>
+              </div>
+
+              <SearchInput
+                aria-label="Cari kategori"
+                placeholder="Cari kategori tiket"
+                value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-lg border border-border-default p-2 mb-2" />
-              <div className="max-h-56 overflow-y-auto space-y-2">
-                {!loadingCategories && categoryOptions.map((category) => (
-                  <label key={category.id} className="flex items-center gap-2 p-2 cursor-pointer">
-                    <input type="checkbox" checked={categoryIds.includes(category.id)}
-                      onChange={(e) => setCategoryIds((ids) => e.target.checked
-                        ? [...ids, category.id] : ids.filter((id) => id !== category.id))} />
-                    {category.name}
-                  </label>
-                ))}
+                onClear={() => setSearch("")}
+                disabled={loadingCategories || !!categoryError}
+              />
+
+              <div className="mt-3 min-h-28 max-h-64 overflow-y-auto rounded-lg border border-border-default bg-surface-alt p-2">
+                {loadingCategories && (
+                  <div className="flex min-h-24 items-center justify-center text-sm text-text-tertiary">
+                    Memuat kategori...
+                  </div>
+                )}
+                {categoryError && (
+                  <div role="alert" className="flex min-h-24 items-center justify-center text-sm text-destructive-text">
+                    Gagal memuat kategori: {categoryError}
+                  </div>
+                )}
+                {!loadingCategories && !categoryError && categoryOptions.length === 0 && (
+                  <div className="flex min-h-24 items-center justify-center text-center text-sm text-text-tertiary">
+                    Tidak ada kategori yang cocok.
+                  </div>
+                )}
+                {!loadingCategories && !categoryError && categoryOptions.length > 0 && (
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {categoryOptions.map((category) => {
+                      const checked = categoryIds.includes(category.id);
+                      return (
+                        <label
+                          key={category.id}
+                          className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                            checked
+                              ? "border-brand-primary bg-brand-primary-subtle text-text-primary"
+                              : "border-border-default bg-surface-alt text-text-secondary hover:bg-surface-hover"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => setCategoryIds((ids) => e.target.checked
+                              ? [...ids, category.id]
+                              : ids.filter((id) => id !== category.id))}
+                            className="h-4 w-4 shrink-0 accent-brand-primary"
+                          />
+                          <span className="min-w-0 break-words font-medium">{category.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-text-tertiary">
+                  Pilih semua kategori yang dilayani pada gate ini.
+                </p>
+                <Button
+                  variant="primary"
+                  className="w-full sm:w-auto"
+                  onClick={handleConfirm}
+                  disabled={categoryIds.length === 0 || loadingCategories || !!categoryError}
+                >
+                  Terapkan
+                </Button>
               </div>
             </fieldset>
-            {loadingCategories && <p className="text-sm">Memuat kategori...</p>}
-            {categoryError && <p role="alert">Gagal memuat kategori: {categoryError}</p>}
-            {!loadingCategories && eventId && !categoryError && categoryOptions.length === 0 && (
-              <p className="text-sm">Tidak ada kategori yang cocok.</p>
-            )}
-          </div>
-          <Button variant="primary" onClick={handleConfirm} disabled={!eventId || categoryIds.length === 0 || loadingCategories || !!categoryError}>
-            Terapkan
-          </Button>
+          )}
         </div>
       )}
 
