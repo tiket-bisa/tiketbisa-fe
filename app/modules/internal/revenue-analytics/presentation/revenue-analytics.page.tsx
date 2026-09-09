@@ -51,7 +51,7 @@ export default function RevenueAnalyticsPage() {
         </Card>
         <Card padding="md">
           <p className="text-text-tertiary text-xs uppercase tracking-wide">
-            Tiket Terjual
+            Tiket Terjual (termasuk bulk)
           </p>
           <p className="text-text-primary text-2xl font-bold mt-1">
             {totalTicketsSold}
@@ -59,6 +59,7 @@ export default function RevenueAnalyticsPage() {
         </Card>
         <Card padding="md">
           <p className="text-text-tertiary text-xs uppercase tracking-wide">Tiket Bulk Terbit</p>
+          <p className="text-xs text-text-tertiary">Bagian dari total tiket terjual</p>
           <p className="text-text-primary text-2xl font-bold mt-1">{totalBulkTicketsIssued}</p>
         </Card>
       </div>

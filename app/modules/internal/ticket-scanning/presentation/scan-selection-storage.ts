@@ -9,9 +9,15 @@ function storageKey(brandId?: string): string {
 function isSelectedCategory(value: unknown): value is SelectedCategory {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Record<string, unknown>;
-  return ["eventId", "eventName", "categoryId", "categoryName"].every(
+  return ["eventId", "eventName"].every(
     (key) => typeof candidate[key] === "string" && candidate[key] !== "",
-  );
+  ) && Array.isArray(candidate.categories) && candidate.categories.length > 0
+    && candidate.categories.every((category: unknown) => {
+      if (!category || typeof category !== "object") return false;
+      const item = category as Record<string, unknown>;
+      return typeof item.id === "string" && item.id.trim() !== ""
+        && typeof item.name === "string" && item.name.trim() !== "";
+    });
 }
 
 export function readScanSelection(brandId?: string, storage?: Storage): SelectedCategory | null {
@@ -19,7 +25,13 @@ export function readScanSelection(brandId?: string, storage?: Storage): Selected
   try {
     const raw = storage.getItem(storageKey(brandId));
     if (!raw) return null;
-    const parsed: unknown = JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (parsed && !parsed.categories && typeof parsed.categoryId === "string"
+      && typeof parsed.categoryName === "string") {
+      parsed.categories = [{ id: parsed.categoryId, name: parsed.categoryName }];
+      delete parsed.categoryId;
+      delete parsed.categoryName;
+    }
     return isSelectedCategory(parsed) ? parsed : null;
   } catch {
     return null;

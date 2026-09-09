@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ScanCheckInResult, ScanValidateResult } from "~/core/types";
 import {
   checkinApi,
@@ -16,30 +16,48 @@ import { toUserFacingError, toUserFacingResponseError } from "~/core/api";
  *  2. When status is VALID, the operator explicitly clicks "Check In" which calls
  *     `confirmCheckIn` (the existing mutating checkin endpoint).
  */
-export function useScanFlow(expectedEventId?: string, expectedCategoryId?: string) {
+export function useScanFlow(expectedEventId?: string, expectedCategoryIds?: string[]) {
   const { user } = useAuth();
   const [validateResult, setValidateResult] = useState<ScanValidateResult | null>(null);
   const [checkInResult, setCheckInResult] = useState<ScanCheckInResult | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const isBusyRef = useRef(false);
+  const generationRef = useRef(0);
+  const completedCodeRef = useRef<string | null>(null);
+  const scopeKey = JSON.stringify([expectedEventId, expectedCategoryIds]);
+
+  useEffect(() => {
+    generationRef.current += 1;
+    isBusyRef.current = false;
+    completedCodeRef.current = null;
+    setValidateResult(null);
+    setCheckInResult(null);
+    setIsValidating(false);
+    setIsCheckingIn(false);
+    return () => { generationRef.current += 1; };
+  }, [scopeKey]);
 
   const handleScan = useCallback(
     async (decodedText: string) => {
       if (isBusyRef.current) return;
       const normalizedCode = decodedText.trim();
       if (!normalizedCode) return;
+      if (normalizedCode === completedCodeRef.current) return;
 
       isBusyRef.current = true;
+      const generation = generationRef.current;
       setIsValidating(true);
-      setCheckInResult(null);
 
       const codeType = detectCodeType(normalizedCode);
 
       try {
         const response = await checkinApi.validate(
-          normalizedCode, codeType, expectedEventId, expectedCategoryId,
+          normalizedCode, codeType, expectedEventId, expectedCategoryIds,
         );
+        if (generation !== generationRef.current) return;
+        setCheckInResult(null);
+        completedCodeRef.current = null;
 
         if (response.success && response.data) {
           const data = response.data as ValidateResponse;
@@ -65,6 +83,9 @@ export function useScanFlow(expectedEventId?: string, expectedCategoryId?: strin
           );
         }
       } catch (error) {
+        if (generation !== generationRef.current) return;
+        setCheckInResult(null);
+        completedCodeRef.current = null;
         setValidateResult({
           status: "INVALID",
           message: toUserFacingError(error, "Gagal memproses scan."),
@@ -72,18 +93,22 @@ export function useScanFlow(expectedEventId?: string, expectedCategoryId?: strin
           codeType,
         });
       } finally {
-        isBusyRef.current = false;
-        setIsValidating(false);
+        if (generation === generationRef.current) {
+          isBusyRef.current = false;
+          setIsValidating(false);
+        }
       }
     },
-    [expectedEventId, expectedCategoryId],
+    [expectedEventId, expectedCategoryIds],
   );
 
   const confirmCheckIn = useCallback(async () => {
     if (!validateResult || validateResult.status !== "VALID") return;
     if (isBusyRef.current) return;
+    if (checkInResult) return;
 
     isBusyRef.current = true;
+    const generation = generationRef.current;
     setIsCheckingIn(true);
 
     try {
@@ -92,8 +117,10 @@ export function useScanFlow(expectedEventId?: string, expectedCategoryId?: strin
         code_type: validateResult.codeType,
         verify_by: user?.email ?? "unknown",
         expected_event_id: expectedEventId,
-        expected_category_id: expectedCategoryId,
+        expected_category_ids: expectedCategoryIds,
       });
+      if (generation !== generationRef.current) return;
+      completedCodeRef.current = validateResult.codeHash;
 
       if (response.success) {
         const data = response.data as CheckInResponse;
@@ -109,17 +136,23 @@ export function useScanFlow(expectedEventId?: string, expectedCategoryId?: strin
         });
       }
     } catch (error) {
+      if (generation !== generationRef.current) return;
+      completedCodeRef.current = validateResult.codeHash;
       setCheckInResult({
         status: "FAILED",
         message: toUserFacingError(error, "Check-in gagal, silakan coba lagi."),
       });
     } finally {
-      isBusyRef.current = false;
-      setIsCheckingIn(false);
+      if (generation === generationRef.current) {
+        isBusyRef.current = false;
+        setIsCheckingIn(false);
+      }
     }
-  }, [validateResult, user?.email, expectedEventId, expectedCategoryId]);
+  }, [validateResult, checkInResult, user?.email, expectedEventId, expectedCategoryIds]);
 
   const clearResult = useCallback(() => {
+    if (isBusyRef.current) return;
+    completedCodeRef.current = null;
     setValidateResult(null);
     setCheckInResult(null);
   }, []);

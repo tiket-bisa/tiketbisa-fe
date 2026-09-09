@@ -37,7 +37,7 @@ vi.mock("./category-picker", () => ({
   CategoryPicker: () => <div data-testid="category-picker" />,
 }));
 vi.mock("../scan-selection-storage", () => ({
-  readScanSelection: () => ({ eventId: "event-1", categoryId: "category-1", label: "Category" }),
+  readScanSelection: () => ({ eventId: "event-1", categories: [{ id: "category-1", name: "Category" }] }),
   persistScanSelection: vi.fn(),
 }));
 

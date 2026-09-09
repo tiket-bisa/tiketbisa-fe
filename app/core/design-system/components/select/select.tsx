@@ -17,7 +17,7 @@ export interface SelectProps extends Omit<
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   (
-    { label, error, options, placeholder, className = "", id, ...props },
+    { label, error, options, placeholder, className = "", id, required, ...props },
     ref,
   ) => {
     const selectId = id ?? label?.toLowerCase().replace(/\s+/g, "-");
@@ -30,12 +30,16 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             className="text-sm font-medium text-text-primary"
           >
             {label}
+            {required && (
+              <span className="ml-1 text-destructive-text" aria-hidden="true">*</span>
+            )}
           </label>
         )}
         <div className="relative">
           <select
             ref={ref}
             id={selectId}
+            required={required}
             className={`w-full appearance-none rounded-lg border bg-surface-alt px-3 py-2 pr-8 text-sm text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent ${
               error
                 ? "border-destructive"

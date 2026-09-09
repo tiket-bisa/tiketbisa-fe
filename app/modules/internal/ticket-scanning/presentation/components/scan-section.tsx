@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, Badge, Button } from "~/core/design-system/components";
 import { useQrScanner } from "../hooks/use-qr-scanner";
 import { useScanFlow } from "../hooks/use-scan-flow";
@@ -33,6 +33,7 @@ export function ScanSection({ brandId }: ScanSectionProps) {
   const [category, setCategory] = useState<SelectedCategory | null>(null);
   const [selectionRestored, setSelectionRestored] = useState(false);
   const autoStartAttemptedRef = useRef(false);
+  const categoryIds = useMemo(() => category?.categories.map((c) => c.id), [category]);
   const {
     validateResult,
     checkInResult,
@@ -42,7 +43,7 @@ export function ScanSection({ brandId }: ScanSectionProps) {
     handleScan,
     confirmCheckIn,
     clearResult,
-  } = useScanFlow(category?.eventId, category?.categoryId);
+  } = useScanFlow(category?.eventId, categoryIds);
 
   const {
     cameras,
@@ -63,7 +64,7 @@ export function ScanSection({ brandId }: ScanSectionProps) {
     onScanSuccess: handleScan,
     // Keep decoding active after a result is shown so the next ticket replaces the previous card.
     // The scanner hook suppresses repeated frames of the same ticket while it remains in view.
-    disabled: isBusy,
+    disabled: isBusy || !category,
   });
   const [manualCode, setManualCode] = useState("");
   const backgroundClass = getScanBackgroundClass(validateResult, checkInResult, error);
@@ -111,7 +112,13 @@ export function ScanSection({ brandId }: ScanSectionProps) {
   return (
     <div className={`space-y-6 rounded-2xl p-3 transition-colors duration-300 ${backgroundClass}`}>
       {/* Category scope gate */}
-      <CategoryPicker brandId={brandId} selected={category} onChange={setCategory} />
+      <CategoryPicker brandId={brandId} selected={category} onChange={(selection) => {
+        if (!selection) {
+          autoStartAttemptedRef.current = false;
+          void stopScanning();
+        }
+        setCategory(selection);
+      }} />
 
       {!category && (
         <Card padding="md">
@@ -129,6 +136,7 @@ export function ScanSection({ brandId }: ScanSectionProps) {
               validateResult={validateResult}
               checkInResult={checkInResult}
               isCheckingIn={isCheckingIn}
+              isBusy={isBusy}
               onCheckIn={confirmCheckIn}
               clearResult={clearResult}
             />
@@ -264,12 +272,14 @@ function ScanResultCard({
   validateResult,
   checkInResult,
   isCheckingIn,
+  isBusy,
   onCheckIn,
   clearResult,
 }: {
   validateResult: ScanValidateResult;
   checkInResult: ScanCheckInResult | null;
   isCheckingIn: boolean;
+  isBusy: boolean;
   onCheckIn: () => void;
   clearResult: () => void;
 }) {
@@ -297,6 +307,7 @@ function ScanResultCard({
             {checkInInfo && <Badge variant={checkInInfo.variant}>{checkInInfo.label}</Badge>}
             <button
               onClick={clearResult}
+              disabled={isBusy}
               className="ml-auto text-text-tertiary hover:text-text-primary transition-colors cursor-pointer"
               aria-label="Tutup hasil scan"
             >
@@ -334,7 +345,7 @@ function ScanResultCard({
 
           {validateResult.status === "VALID" && !checkInResult && (
             <div className="mt-4">
-              <Button variant="primary" onClick={onCheckIn} disabled={isCheckingIn} fullWidth>
+              <Button variant="primary" onClick={onCheckIn} disabled={isBusy} fullWidth>
                 {isCheckingIn ? "Memproses Check In..." : "CHECK IN"}
               </Button>
             </div>

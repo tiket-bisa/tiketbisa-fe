@@ -231,7 +231,7 @@ export default function CreateTicketPage() {
                 name="price"
                 type="text"
                 inputMode="numeric"
-                className="w-full rounded-md border border-gray-300 p-2"
+                className="w-full rounded-md border border-gray-300 p-2 disabled:cursor-not-allowed disabled:border-gray-400 disabled:bg-gray-100 disabled:text-gray-500"
                 placeholder="Contoh: 150.000"
                 value={formData.ticketKind === "BULK" ? "0" : formData.price}
                 onChange={handleChange}

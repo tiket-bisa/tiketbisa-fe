@@ -51,6 +51,43 @@ describe("useScanFlow state machine", () => {
     vi.clearAllMocks();
   });
 
+  it("retains the completed result until a different ticket finishes validation", async () => {
+    mockValidate.mockResolvedValue({ success: true, data: { status: "VALID" }, error: null, reason: null, status_code: 200 });
+    mockCheckIn.mockResolvedValue({ success: true, data: {}, error: null, reason: null, status_code: 200 });
+    const { result } = renderHook(() => useScanFlow("event", ["A", "B"]));
+    await act(async () => { await result.current.handleScan("first"); });
+    await act(async () => { await result.current.confirmCheckIn(); });
+    await act(async () => { await result.current.handleScan("first"); });
+    expect(mockValidate).toHaveBeenCalledTimes(1);
+    let resolve!: (value: Awaited<ReturnType<typeof checkinApi.validate>>) => void;
+    mockValidate.mockImplementationOnce(() => new Promise((done) => { resolve = done; }));
+    let pending!: Promise<void>;
+    act(() => { pending = result.current.handleScan("second"); });
+    expect(result.current.checkInResult?.status).toBe("SUCCESS");
+    expect(result.current.validateResult?.codeHash).toBe("first");
+    await act(async () => {
+      resolve({ success: true, data: { status: "VALID" }, error: null, reason: null, status_code: 200 });
+      await pending;
+    });
+    expect(result.current.checkInResult).toBeNull();
+    expect(result.current.validateResult?.codeHash).toBe("second");
+  });
+
+  it("ignores an old response after the operator changes scope", async () => {
+    let resolve!: (value: Awaited<ReturnType<typeof checkinApi.validate>>) => void;
+    mockValidate.mockImplementationOnce(() => new Promise((done) => { resolve = done; }));
+    const { result, rerender } = renderHook(({ event }) => useScanFlow(event, ["A"]), { initialProps: { event: "old" } });
+    let pending!: Promise<void>;
+    act(() => { pending = result.current.handleScan("first"); });
+    rerender({ event: "new" });
+    await act(async () => {
+      resolve({ success: true, data: { status: "VALID" }, error: null, reason: null, status_code: 200 });
+      await pending;
+    });
+    expect(result.current.validateResult).toBeNull();
+    expect(result.current.isBusy).toBe(false);
+  });
+
   it("does not allow check-in until a VALID validate result is present, then transitions to SUCCESS", async () => {
     mockValidate.mockResolvedValueOnce({
       success: true,
@@ -71,7 +108,7 @@ describe("useScanFlow state machine", () => {
       status_code: 200,
     });
 
-    const { result } = renderHook(() => useScanFlow("event-1", "cat-1"));
+    const { result } = renderHook(() => useScanFlow("event-1", ["cat-1", "cat-2"]));
 
     // Calling confirmCheckIn before any validate result is a no-op.
     await act(async () => {
@@ -87,7 +124,7 @@ describe("useScanFlow state machine", () => {
     await waitFor(() => {
       expect(result.current.validateResult?.status).toBe("VALID");
     });
-    expect(mockValidate).toHaveBeenCalledWith("TKBsomecode123", "QR_CODE", "event-1", "cat-1");
+    expect(mockValidate).toHaveBeenCalledWith("TKBsomecode123", "QR_CODE", "event-1", ["cat-1", "cat-2"]);
 
     await act(async () => {
       await result.current.confirmCheckIn();
@@ -98,7 +135,7 @@ describe("useScanFlow state machine", () => {
         code_hash: "TKBsomecode123",
         code_type: "QR_CODE",
         expected_event_id: "event-1",
-        expected_category_id: "cat-1",
+        expected_category_ids: ["cat-1", "cat-2"],
       }),
     );
     await waitFor(() => {
@@ -159,7 +196,7 @@ describe("useScanFlow state machine", () => {
         status_code: 200,
       });
 
-    const { result } = renderHook(() => useScanFlow("event-1", "cat-1"));
+    const { result } = renderHook(() => useScanFlow("event-1", ["cat-1"]));
 
     await act(async () => result.current.handleScan("ticket-a"));
     expect(result.current.validateResult?.holderName).toBe("Budi");

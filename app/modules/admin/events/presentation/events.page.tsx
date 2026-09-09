@@ -377,6 +377,7 @@ export default function AdminEventsPage() {
               onChange={handleChange}
               options={brandOptionsForForm}
               placeholder="Pilih Brand"
+              required
             />
 
             <Input

@@ -35,28 +35,6 @@ export default function AdminScanPage() {
 
   const dashboard = ticketDashboard ?? [];
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <h1 className="text-text-primary text-2xl font-bold">Scan Tiket</h1>
-        <div className="flex items-center justify-center py-16">
-          <p className="text-text-tertiary">Memuat data tiket...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <h1 className="text-text-primary text-2xl font-bold">Scan Tiket</h1>
-        <div className="flex items-center justify-center py-16">
-          <p className="text-destructive-text">Gagal memuat data: {error}</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
@@ -69,7 +47,7 @@ export default function AdminScanPage() {
       </div>
 
       {/* Scanning component is imported from partner ticket-scanning module */}
-      <ScanTabsSection dashboard={dashboard} />
+      <ScanTabsSection dashboard={dashboard} loading={loading} error={error} />
     </div>
   );
 }
@@ -82,7 +60,11 @@ const tabItems = [
   { value: "dashboard", label: "Dashboard Tiket" },
 ];
 
-function ScanTabsSection({ dashboard }: { dashboard: TicketDashboardSummary[] }) {
+function ScanTabsSection({ dashboard, loading, error }: {
+  dashboard: TicketDashboardSummary[];
+  loading: boolean;
+  error: string | null;
+}) {
   const [tab, setTab] = useState("scan");
 
   return (
@@ -92,7 +74,13 @@ function ScanTabsSection({ dashboard }: { dashboard: TicketDashboardSummary[] })
       {tab === "scan" && <ScanSection />}
       {/* Admin sees events across every brand, so no brandSlug scoping is passed here. */}
       {tab === "generate" && <QrGeneratorSection />}
-      {tab === "dashboard" && <AdminDashboardSection dashboard={dashboard} />}
+      {tab === "dashboard" && (
+        <>
+          {loading && <p role="status">Memperbarui dashboard...</p>}
+          {error && <p role="alert">Gagal memperbarui dashboard: {error}</p>}
+          <AdminDashboardSection dashboard={dashboard} />
+        </>
+      )}
     </>
   );
 }
