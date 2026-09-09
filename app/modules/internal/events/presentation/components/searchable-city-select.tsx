@@ -67,6 +67,9 @@ export function SearchableCitySelect({
     <div ref={containerRef} className="relative flex flex-col gap-1.5">
       <label htmlFor={name} className="text-sm font-medium text-text-primary">
         {label}
+        {required && (
+          <span className="ml-1 text-destructive-text" aria-hidden="true">*</span>
+        )}
       </label>
       <div className="relative">
         <input

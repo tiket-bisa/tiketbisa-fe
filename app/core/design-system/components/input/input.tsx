@@ -7,7 +7,7 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, hint, className = "", id, ...props }, ref) => {
+  ({ label, error, hint, className = "", id, required, ...props }, ref) => {
     const inputId = id ?? label?.toLowerCase().replace(/\s+/g, "-");
 
     return (
@@ -18,11 +18,15 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             className="text-sm font-medium text-text-primary"
           >
             {label}
+            {required && (
+              <span className="ml-1 text-destructive-text" aria-hidden="true">*</span>
+            )}
           </label>
         )}
         <input
           ref={ref}
           id={inputId}
+          required={required}
           className={`w-full rounded-lg border bg-surface-alt px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent ${
             error
               ? "border-destructive"
