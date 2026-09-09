@@ -98,7 +98,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card padding="md">
           <p className="text-text-tertiary text-xs uppercase tracking-wide">
             Total Revenue
@@ -114,6 +114,10 @@ export default function DashboardPage() {
           <p className="text-text-primary text-2xl font-bold mt-1">
             {isStatsLoading ? "..." : (stats?.totalTicketsSold ?? 0)}
           </p>
+        </Card>
+        <Card padding="md">
+          <p className="text-text-tertiary text-xs uppercase tracking-wide">Tiket Bulk Terbit</p>
+          <p className="text-text-primary text-2xl font-bold mt-1">{isStatsLoading ? "..." : (stats?.totalBulkTicketsIssued ?? 0)}</p>
         </Card>
         <Card padding="md">
           <p className="text-text-tertiary text-xs uppercase tracking-wide">

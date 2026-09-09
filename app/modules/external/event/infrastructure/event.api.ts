@@ -15,6 +15,8 @@ interface EventListResponseData {
 
 interface TicketCategoryListItem {
   price: number | string;
+  isHidden?: boolean;
+  is_hidden?: boolean;
 }
 
 interface TicketCategoryDto {
@@ -23,6 +25,16 @@ interface TicketCategoryDto {
   price: number | string;
   totalTicket: number;
   issuedTicket: number;
+  isHidden?: boolean;
+  is_hidden?: boolean;
+  isPurchasable?: boolean;
+  is_purchasable?: boolean;
+  purchaseStatus?: "AVAILABLE" | "SOLD_OUT" | "SALES_CLOSED" | "EVENT_ENDED";
+  purchase_status?: "AVAILABLE" | "SOLD_OUT" | "SALES_CLOSED" | "EVENT_ENDED";
+}
+
+function isPublicTicketCategory(ticket: { isHidden?: boolean; is_hidden?: boolean }): boolean {
+  return !(ticket.isHidden ?? ticket.is_hidden ?? false);
 }
 
 interface BrandListResponseData {
@@ -156,6 +168,7 @@ export const eventApi: EventRepository = {
           );
 
           const prices = (ticketResponse.data || [])
+            .filter(isPublicTicketCategory)
             .map((ticket) => Number(ticket.price))
             .filter((price) => Number.isFinite(price) && price >= 0);
 
@@ -212,11 +225,12 @@ export const eventApi: EventRepository = {
             "Dilarang membawa makanan dan minuman dari luar.",
             "Penyelenggara berhak menolak pengunjung yang melanggar aturan.",
           ],
-      tickets: (ticketsResponse.data || []).map((t) => ({
+      tickets: (ticketsResponse.data || []).filter(isPublicTicketCategory).map((t) => ({
         id: t.id,
         name: t.name,
         price: Number(t.price),
-        available: t.totalTicket > t.issuedTicket,
+        available: t.isPurchasable ?? t.is_purchasable ?? t.totalTicket > t.issuedTicket,
+        purchaseStatus: t.purchaseStatus ?? t.purchase_status ?? (t.totalTicket > t.issuedTicket ? "AVAILABLE" : "SOLD_OUT"),
       })),
     };
   },

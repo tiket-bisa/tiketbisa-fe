@@ -5,6 +5,7 @@ import { transactionApi } from "~/core/api/services/transaction.api";
 export function useRevenueAnalyticsData(brandId?: string) {
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [totalTicketsSold, setTotalTicketsSold] = useState(0);
+  const [totalBulkTicketsIssued, setTotalBulkTicketsIssued] = useState(0);
   const [totalTransactions, setTotalTransactions] = useState(0);
   const [revenueByEvent, setRevenueByEvent] = useState<RevenueByEvent[]>([]);
   const [revenueTimeline, setRevenueTimeline] = useState<RevenueTimeline[]>([]);
@@ -23,6 +24,7 @@ export function useRevenueAnalyticsData(brandId?: string) {
         
         setTotalRevenue(summary.totalRevenue);
         setTotalTicketsSold(summary.totalTicketsSold);
+        setTotalBulkTicketsIssued(summary.totalBulkTicketsIssued ?? 0);
         setTotalTransactions(summary.totalTransactions);
         
         // Convert to camelCase/snake_case as expected by UI
@@ -49,6 +51,7 @@ export function useRevenueAnalyticsData(brandId?: string) {
     totalTransactions,
     totalRevenue,
     totalTicketsSold,
+    totalBulkTicketsIssued,
     revenueByEvent,
     revenueTimeline,
     maxRevenue,

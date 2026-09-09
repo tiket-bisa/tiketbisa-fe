@@ -56,7 +56,7 @@ export default function PartnerTicketIngestPage() {
 
   const { data: categoriesData, loading: loadingCategories } = useApiQuery(async () => {
     if (!eventId) return [];
-    const res = await ticketCategoryApi.getByEvent(eventId);
+    const res = await ticketCategoryApi.getInternalByEvent(eventId);
     return res.success && res.data ? res.data : [];
   }, [eventId]);
 

@@ -42,7 +42,7 @@ export function useCategoryPicker(brandId?: string) {
 export function useEventCategories(eventId?: string) {
   const { data, loading, error } = useApiQuery(async () => {
     if (!eventId) return [] as TicketCategoryApiData[];
-    const catRes = await ticketCategoryApi.getByEvent(eventId);
+    const catRes = await ticketCategoryApi.getInternalByEvent(eventId);
     if (!catRes.success || !catRes.data) return [] as TicketCategoryApiData[];
     return Array.isArray(catRes.data) ? catRes.data : [];
   }, [eventId]);

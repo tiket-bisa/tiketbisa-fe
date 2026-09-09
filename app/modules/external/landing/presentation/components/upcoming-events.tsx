@@ -57,6 +57,7 @@ export function UpcomingEvents({
               date: event.date,
               location: event.location,
               tickets: event.tickets,
+              lifecycleStatus: event.lifecycleStatus,
               minPrice: event.minPrice,
               brandName: event.brand,
               brandLogoUrl: event.brandLogoUrl,
