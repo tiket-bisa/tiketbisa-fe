@@ -46,7 +46,6 @@ const EMPTY_FORM_DATA = {
   startDate: "",
   endDate: "",
   venue: "",
-  location: "",
   city: "",
   bannerPath: "",
   description: "",
@@ -162,7 +161,6 @@ export default function EventsPage() {
       startDate: toDateTimeLocal(event.startDate),
       endDate: toDateTimeLocal(event.endDate),
       venue: event.venue ?? "",
-      location: event.location ?? "",
       city: event.city ?? "",
       bannerPath: event.bannerPath ?? "",
       description: event.description ?? "",
@@ -202,8 +200,8 @@ export default function EventsPage() {
       setFormError("Tanggal mulai dan selesai wajib diisi.");
       return;
     }
-    if (!formData.venue.trim() || !formData.location.trim() || !formData.city.trim()) {
-      setFormError("Venue, lokasi, dan kota wajib diisi.");
+    if (!formData.venue.trim() || !formData.city.trim()) {
+      setFormError("Venue dan kota wajib diisi.");
       return;
     }
 
@@ -229,7 +227,6 @@ export default function EventsPage() {
         description: formData.description.trim() || null,
         termAndCondition: formData.termAndCondition.trim() || null,
         venue: formData.venue.trim(),
-        location: formData.location.trim(),
         city: formData.city.trim(),
         status: formData.status as InternalEventApiData["status"],
         isPublished: formData.isPublished,
@@ -377,15 +374,6 @@ export default function EventsPage() {
                 value={formData.venue}
                 onChange={handleChange}
                 required
-              />
-              <Input
-                label="Lokasi (link Google Maps)"
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-                required
-                placeholder="https://maps.app.goo.gl/..."
-                hint="Tempel link Google Maps, bukan alamat biasa."
               />
               <SearchableCitySelect
                 value={formData.city}
