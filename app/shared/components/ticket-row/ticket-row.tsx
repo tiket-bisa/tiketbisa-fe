@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Badge, Counter } from "~/core/design-system/components";
+import { MAX_TICKETS_PER_TRANSACTION } from "~/shared/constants/transaction";
 import type { TicketRowData } from "./types";
 
 export interface TicketRowProps {
@@ -31,6 +32,15 @@ export function TicketRow({
   const unavailableLabel = ticket.purchaseStatus === "EVENT_ENDED"
     ? "Event Selesai"
     : "Habis Terjual";
+  const availableLabel = ticket.remaining === undefined
+    ? "Tersedia"
+    : `Sisa ${ticket.remaining} tiket`;
+  // The stepper must never offer a seat that does not exist; useTicketSelection applies the
+  // same cap authoritatively, this only keeps the + button from looking enabled past the limit.
+  const perOrderMax = ticket.maxPerOrder ?? MAX_TICKETS_PER_TRANSACTION;
+  const max = ticket.available
+    ? Math.min(perOrderMax, ticket.remaining ?? Infinity)
+    : 0;
   return (
     <div
       className={`flex items-center justify-between gap-4 rounded-lg border border-border-default bg-surface-alt px-4 py-3 ${className}`}
@@ -40,7 +50,7 @@ export function TicketRow({
         <OverflowingTicketName name={ticket.name} />
         <div>
           <Badge variant={ticket.available ? "success" : "destructive"}>
-            {ticket.available ? "Tersedia" : unavailableLabel}
+            {ticket.available ? availableLabel : unavailableLabel}
           </Badge>
         </div>
         <span className="text-sm font-semibold text-brand-primary">
@@ -53,7 +63,7 @@ export function TicketRow({
         className="shrink-0"
         value={quantity}
         min={0}
-        max={ticket.available ? (ticket.maxPerOrder ?? 10) : 0}
+        max={max}
         onChange={(val) => onQuantityChange(ticket.id, val)}
       />
     </div>

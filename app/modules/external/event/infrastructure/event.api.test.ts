@@ -160,4 +160,32 @@ describe("eventApi.getEvents", () => {
 
     expect(event?.tickets.map((ticket) => ticket.id)).toEqual(["public"]);
   });
+  it("maps remaining seats from the backend availability, falling back to quota minus issued", async () => {
+    mockApiFetch
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          id: "event-1",
+          brandId: "brand-123",
+          name: "Event Test",
+          startDate: "2026-07-30T10:00:00Z",
+          status: "ONGOING",
+          isPublished: true,
+        },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: [
+          { id: "held", name: "VIP A", price: 100_000, totalTicket: 10, issuedTicket: 2, availableTicket: 3 },
+          { id: "plain", name: "VIP B", price: 100_000, totalTicket: 10, issuedTicket: 4 },
+        ],
+      })
+      .mockResolvedValueOnce({ success: true, data: { images: [] } })
+      .mockResolvedValueOnce({ success: true, data: { id: "brand-123", name: "Test 123" } });
+
+    const event = await eventApi.getEventById("event-1");
+
+    expect(event?.tickets.find((ticket) => ticket.id === "held")?.remaining).toBe(3);
+    expect(event?.tickets.find((ticket) => ticket.id === "plain")?.remaining).toBe(6);
+  });
 });
