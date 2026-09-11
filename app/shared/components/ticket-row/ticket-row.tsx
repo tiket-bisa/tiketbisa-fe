@@ -25,11 +25,12 @@ export function TicketRow({
   formatPrice = defaultFormatPrice,
   className = "",
 }: TicketRowProps) {
+  // Buyers read "Penjualan Ditutup" as the whole event being off. A manually closed category is
+  // gone for the same practical reason a genuinely exhausted one is, so both read "Habis Terjual";
+  // the dashboard keeps the distinction.
   const unavailableLabel = ticket.purchaseStatus === "EVENT_ENDED"
     ? "Event Selesai"
-    : ticket.purchaseStatus === "SALES_CLOSED"
-      ? "Penjualan Ditutup"
-      : "Habis Terjual";
+    : "Habis Terjual";
   return (
     <div
       className={`flex items-center justify-between gap-4 rounded-lg border border-border-default bg-surface-alt px-4 py-3 ${className}`}
