@@ -326,8 +326,6 @@ export function useCheckoutSteps(
   useEffect(() => {
     if (currentStep !== 4 || isManualTransferPayment) return;
     if (existingOrder?.qrPayload || existingOrder?.virtualAccount || existingOrder?.paymentUrl) return;
-    // A Components-mode order is already renderable once it has an SDK key, even with no QR/VA yet.
-    if (existingOrder?.componentsSdkKey) return;
 
     const activeLockId = getActiveLockId();
     if (!activeLockId || gatewayInvoiceRequestedRef.current === activeLockId) return;
@@ -355,9 +353,7 @@ export function useCheckoutSteps(
           setSearchParams(nextParams);
         }
       } catch (error) {
-        // Release the guard so the retry button can actually re-fire; it is claimed before the
-        // await, so leaving it set makes a single transient failure permanent for this lock.
-        gatewayInvoiceRequestedRef.current = null;
+        // Leave the placeholder QR/VA state up; the "Bayar Sekarang" button remains as a retry.
         console.error("Failed to auto-create gateway invoice", error);
       } finally {
         setIsActionLoading(false);
@@ -369,7 +365,6 @@ export function useCheckoutSteps(
     existingOrder?.qrPayload,
     existingOrder?.virtualAccount,
     existingOrder?.paymentUrl,
-    existingOrder?.componentsSdkKey,
     getActiveLockId,
     ensureCheckoutSessionActive,
     paymentSummary.totalPrice,

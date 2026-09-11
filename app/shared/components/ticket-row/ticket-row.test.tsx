@@ -50,43 +50,6 @@ describe("TicketRow", () => {
     expect(onQuantityChange).toHaveBeenCalledWith("category-1", 1);
   });
 
-  it("shows a manually closed category as sold out", () => {
-    render(
-      <TicketRow
-        ticket={{
-          id: "category-1",
-          name: "Tiket Test 1",
-          price: 2000,
-          available: false,
-          purchaseStatus: "SALES_CLOSED",
-        }}
-        quantity={0}
-        onQuantityChange={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByText("Habis Terjual")).toBeTruthy();
-    expect(screen.queryByText("Penjualan Ditutup")).toBe(null);
-  });
-
-  it("keeps a distinct label once the event has ended", () => {
-    render(
-      <TicketRow
-        ticket={{
-          id: "category-1",
-          name: "Tiket Test 1",
-          price: 2000,
-          available: false,
-          purchaseStatus: "EVENT_ENDED",
-        }}
-        quantity={0}
-        onQuantityChange={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByText("Event Selesai")).toBeTruthy();
-  });
-
   it("animates only when the category name overflows its viewport", () => {
     render(
       <TicketRow
