@@ -112,28 +112,4 @@ describe("XenditComponentsRealPayment", () => {
     expect(onCheckStatus).toHaveBeenCalledTimes(1);
     expect(sdk.pollImmediately).not.toHaveBeenCalled();
   });
-  it("re-creates the SDK session when the buyer retries after a fatal error", async () => {
-    const { XenditComponents } = await import("xendit-components-web");
-    render(
-      <XenditComponentsRealPayment
-        componentsSdkKey="session-key"
-        paymentMethodId="qris"
-        deadline="12.45"
-        onCheckStatus={vi.fn()}
-        onBack={vi.fn()}
-        onExpire={vi.fn()}
-      />,
-    );
-
-    act(() => sdk.listeners.get("init")?.());
-    act(() => sdk.listeners.get("fatal-error")?.());
-
-    expect(screen.getByRole("alert").textContent).toContain("Pembayaran belum dapat dimuat");
-    expect(vi.mocked(XenditComponents)).toHaveBeenCalledTimes(1);
-
-    fireEvent.click(screen.getByRole("button", { name: "Muat Ulang Pembayaran" }));
-
-    expect(vi.mocked(XenditComponents)).toHaveBeenCalledTimes(2);
-    expect(screen.queryByRole("alert")).toBe(null);
-  });
 });

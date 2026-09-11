@@ -8,7 +8,6 @@ const tickets = [
   { id: "regular", name: "Regular", price: 50000, available: true, maxPerOrder: 4 },
   { id: "vip", name: "VIP", price: 100000, available: true, maxPerOrder: 4 },
   { id: "limited", name: "Limited", price: 75000, available: true, maxPerOrder: 2 },
-  { id: "scarce", name: "Scarce", price: 50000, available: true, remaining: 1 },
 ];
 
 describe("useTicketSelection", () => {
@@ -36,16 +35,5 @@ describe("useTicketSelection", () => {
 
     expect(result.current.quantities.limited).toBe(2);
     expect(result.current.totalItems).toBe(2);
-  });
-
-  it("never selects more than the category has remaining", () => {
-    const { result } = renderHook(() => useTicketSelection(tickets));
-
-    act(() => {
-      result.current.updateQuantity("scarce", 4);
-    });
-
-    expect(result.current.quantities.scarce).toBe(1);
-    expect(result.current.totalItems).toBe(1);
   });
 });

@@ -25,8 +25,6 @@ interface TicketCategoryDto {
   price: number | string;
   totalTicket: number;
   issuedTicket: number;
-  availableTicket?: number;
-  available_ticket?: number;
   isHidden?: boolean;
   is_hidden?: boolean;
   isPurchasable?: boolean;
@@ -233,10 +231,6 @@ export const eventApi: EventRepository = {
         price: Number(t.price),
         available: t.isPurchasable ?? t.is_purchasable ?? t.totalTicket > t.issuedTicket,
         purchaseStatus: t.purchaseStatus ?? t.purchase_status ?? (t.totalTicket > t.issuedTicket ? "AVAILABLE" : "SOLD_OUT"),
-        // availableTicket already nets out seats Redis is holding for buyers mid-checkout;
-        // quota minus issued is only the fallback when the backend did not compute it.
-        remaining: t.availableTicket ?? t.available_ticket
-          ?? Math.max(0, t.totalTicket - t.issuedTicket),
       })),
     };
   },
