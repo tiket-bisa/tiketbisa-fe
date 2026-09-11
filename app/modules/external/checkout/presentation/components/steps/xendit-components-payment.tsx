@@ -31,6 +31,9 @@ export function XenditComponentsRealPayment({
   const [submitting, setSubmitting] = useState(false);
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Bumped by the retry button. A fatal SDK error leaves the instance unusable and nothing else
+  // re-runs the effect, so without this the screen stays dead until the buyer abandons checkout.
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     const components = new XenditComponents({ componentsSdkKey });
@@ -117,7 +120,14 @@ export function XenditComponentsRealPayment({
       if (actionElement) components.destroyComponent(actionElement);
       componentsRef.current = null;
     };
-  }, [componentsSdkKey, onCheckStatus, onExpire, paymentMethodId]);
+  }, [componentsSdkKey, onCheckStatus, onExpire, paymentMethodId, reloadToken]);
+
+  const reload = () => {
+    setError(null);
+    setReady(false);
+    setSubmitting(false);
+    setReloadToken((token) => token + 1);
+  };
 
   const submit = () => {
     const components = componentsRef.current;
@@ -150,7 +160,14 @@ export function XenditComponentsRealPayment({
       <div ref={channelContainerRef} data-testid="xendit-channel-container" />
       <div ref={actionContainerRef} data-testid="xendit-action-container" className="min-h-0" />
 
-      {error && <p role="alert" className="text-sm font-bold text-destructive-text text-center">{error}</p>}
+      {error && (
+        <div className="space-y-3">
+          <p role="alert" className="text-sm font-bold text-destructive-text text-center">{error}</p>
+          <Button variant="secondary" onClick={reload} className="w-full rounded-2xl">
+            Muat Ulang Pembayaran
+          </Button>
+        </div>
+      )}
       {awaitingConfirmation && (
         <p className="text-sm font-medium text-text-secondary text-center">
           Menunggu konfirmasi pembayaran…
