@@ -19,7 +19,8 @@ export function useTicketSelection(tickets: EventTicket[] = []) {
       const totalSelected = Object.values(prev).reduce((sum, value) => sum + value, 0);
       const remainingSlots = MAX_TICKETS_PER_TRANSACTION - (totalSelected - currentQty);
       const perTicketMax = ticket.maxPerOrder ?? MAX_TICKETS_PER_TRANSACTION;
-      const maxAllowed = Math.max(0, Math.min(perTicketMax, remainingSlots));
+      const stock = ticket.remaining ?? Infinity;
+      const maxAllowed = Math.max(0, Math.min(perTicketMax, remainingSlots, stock));
       const safeQty = Math.max(0, Math.min(qty, maxAllowed));
 
       if (safeQty === 0) {
