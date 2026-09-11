@@ -91,6 +91,8 @@ export interface TransactionStatusResult {
   qrPayload?: string | null;
   paymentUrl?: string | null;
   gatewayExpiry?: string | null;
+  /** Re-issued per request by the backend; lets a broken Components mount recover without a new order. */
+  componentsSdkKey?: string | null;
 }
 
 /**
@@ -154,6 +156,7 @@ interface TransactionStatusFromApi {
   qrPayload?: string | null;
   paymentUrl?: string | null;
   paymentSessionMode?: PaymentSessionMode | null;
+  componentsSdkKey?: string | null;
   gatewayStatus?: string | null;
   gatewayExpiry?: string | null;
 }
@@ -565,6 +568,7 @@ export const orderApi = {
       const qrPayload = (data.qrPayload as string | null | undefined) ?? null;
       const paymentUrl = (data.paymentUrl as string | null | undefined) ?? null;
       const paymentSessionMode = (data.paymentSessionMode as PaymentSessionMode | null | undefined) ?? null;
+      const componentsSdkKey = (data.componentsSdkKey as string | null | undefined) ?? null;
       const gatewayStatus = (data.gatewayStatus as GatewayStatus | null | undefined) ?? null;
 
       return {
@@ -580,6 +584,7 @@ export const orderApi = {
         qrPayload,
         paymentUrl,
         paymentSessionMode,
+        componentsSdkKey,
         gatewayStatus,
         gatewayExpiry: gatewayExpiry ?? null,
       };
@@ -609,6 +614,7 @@ export const orderApi = {
         qrPayload: data.qrPayload ?? null,
         paymentUrl: data.paymentUrl ?? null,
         gatewayExpiry: data.gatewayExpiry ?? null,
+        componentsSdkKey: data.componentsSdkKey ?? null,
       };
     } catch {
       return null;
