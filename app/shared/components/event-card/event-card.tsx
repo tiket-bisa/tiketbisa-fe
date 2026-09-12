@@ -16,7 +16,7 @@ export function EventCard({ event, className = "" }: EventCardProps) {
   const isLongTitle = event.title.length > 27;
 
   return (
-    <Link to={`/event/${event.id}`} className="block group">
+    <Link to={`/event/${event.slug || event.id}`} className="block group">
       <Card
         hoverable
         padding="none"

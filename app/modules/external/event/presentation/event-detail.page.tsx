@@ -11,7 +11,9 @@ import { EventDetailContent } from "./components/event-detail-content";
 import type { Route } from "./+types/event-detail.page";
 
 export async function loader({ params }: Route.LoaderArgs) {
-  const event = await eventApi.getEventById(params.eventId);
+  const identifier = (params as Record<string, string | undefined>).slug || (params as Record<string, string | undefined>).eventId;
+  if (!identifier) throw new Response("Not Found", { status: 404 });
+  const event = await eventApi.getEventById(identifier);
   if (!event) throw new Response("Not Found", { status: 404 });
   return { event };
 }
