@@ -1,6 +1,11 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from "vitest";
-import { persistScanSelection, readScanSelection } from "./scan-selection-storage";
+import {
+  persistAutoCheckIn,
+  persistScanSelection,
+  readAutoCheckIn,
+  readScanSelection,
+} from "./scan-selection-storage";
 
 const selection = {
   eventId: "event-1",
@@ -35,5 +40,17 @@ describe("scan selection storage", () => {
     expect(readScanSelection("brand-1", sessionStorage)).toEqual({
       eventId: "event-1", eventName: "Konser", categories: [{ id: "cat-1", name: "Regular" }],
     });
+  });
+
+  it("restores the auto check-in preference per brand", () => {
+    persistAutoCheckIn(true, "brand-1", sessionStorage);
+    expect(readAutoCheckIn("brand-1", sessionStorage)).toBe(true);
+    expect(readAutoCheckIn("brand-2", sessionStorage)).toBe(false);
+  });
+
+  it("defaults auto check-in to off once turned back off", () => {
+    persistAutoCheckIn(true, "brand-1", sessionStorage);
+    persistAutoCheckIn(false, "brand-1", sessionStorage);
+    expect(readAutoCheckIn("brand-1", sessionStorage)).toBe(false);
   });
 });
