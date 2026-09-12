@@ -1,6 +1,7 @@
 import type { Brand } from "../domain/brand.entity";
 import type { BrandDto } from "./brand.dto";
 import { normalizeImageUrl } from "~/core/api";
+import { slugify } from "~/shared/utils/slug.utils";
 
 /**
  * Maps a raw BrandDto (from API) to the domain Brand entity.
@@ -39,7 +40,7 @@ export function mapBrandDtoToEntity(dto: BrandDto): Brand {
   return {
     id: dto.id,
     name: dto.name,
-    slug: dto.id, // Using ID as slug since backend doesn't have a slug field yet
+    slug: dto.slug || slugify(dto.name),
     logoUrl: logoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(dto.name)}&background=random`,
     bannerUrl: bannerUrl || `https://picsum.photos/seed/${dto.id}/1200/400`,
     description: dto.description || `Ini adalah halaman official dari ${dto.name}.`,

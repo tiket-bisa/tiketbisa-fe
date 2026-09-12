@@ -105,7 +105,7 @@ function FeaturedEventSlide({ event }: { event: Event }) {
 
   return (
     <Link
-      to={`/event/${event.id}`}
+      to={`/event/${event.slug || event.id}`}
       className="grid grid-cols-1 md:grid-cols-[2fr_1fr] rounded-2xl overflow-hidden bg-surface-primary text-text-primary shadow-2xl"
     >
       <div className="aspect-video md:aspect-auto md:h-full bg-surface-alt">

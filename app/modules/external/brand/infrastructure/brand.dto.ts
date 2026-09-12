@@ -5,6 +5,7 @@ export interface BrandDto {
   id: string;
   created: number; // timestamp
   name: string;
+  slug?: string;
   logoPath: string | null;
   logo_path?: string | null;
   bannerPath: string | null;
