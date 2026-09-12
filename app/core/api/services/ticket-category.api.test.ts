@@ -50,4 +50,36 @@ describe("ticket category visibility", () => {
     expect(internalGet).toHaveBeenCalledWith("/ticket-category/event/event-1");
     expect(response.data?.[0].is_hidden).toBe(true);
   });
+
+  it("sorts categories alphabetically by name in getByEvent and getInternalByEvent", async () => {
+    publicGet.mockResolvedValue({
+      success: true,
+      data: [
+        { id: "3", name: "VIP B", isHidden: false },
+        { id: "1", name: "Ekonomi - Gate D", isHidden: false },
+        { id: "2", name: "Utama A", isHidden: false },
+      ],
+    });
+
+    const publicRes = await ticketCategoryApi.getByEvent("event-1");
+    expect(publicRes.data?.map((cat) => cat.name)).toEqual([
+      "Ekonomi - Gate D",
+      "Utama A",
+      "VIP B",
+    ]);
+
+    internalGet.mockResolvedValue({
+      success: true,
+      data: [
+        { id: "3", name: "VIP B", is_hidden: true },
+        { id: "1", name: "Ekonomi - Gate D", is_hidden: false },
+      ],
+    });
+
+    const internalRes = await ticketCategoryApi.getInternalByEvent("event-1");
+    expect(internalRes.data?.map((cat) => cat.name)).toEqual([
+      "Ekonomi - Gate D",
+      "VIP B",
+    ]);
+  });
 });
