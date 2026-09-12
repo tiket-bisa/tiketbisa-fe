@@ -19,6 +19,7 @@ export interface CheckInResponse {
 
 export interface TransactionApiData {
     id: string;
+    eventId: string;
     customerName: string;
     customerEmail: string;
     customerPhone: string;
@@ -253,7 +254,7 @@ function mapBackendStatus(status: string | undefined): Transaction["status"] {
 export function mapTransactionApiToFe(api: TransactionApiData): Transaction {
     return {
         id: api.id,
-        event_id: "-", // Not returned in list API
+        event_id: api.eventId,
         event_name: "-", // Not returned in list API
         brand_slug: "-", // Not returned in list API
         buyer_name: api.customerName ?? "-",
@@ -288,7 +289,7 @@ export function mapTransactionDetailApiToFe(api: TransactionDetailResponse): Tra
 
     return {
         id: tx.id,
-        event_id: "-", // Not available directly
+        event_id: tx.eventId,
         event_name: eventName,
         brand_slug: "-", // Not available directly
         buyer_name: tx.customerName ?? "-",
