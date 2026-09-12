@@ -226,7 +226,7 @@ export const eventApi: EventRepository = {
             "Dilarang membawa makanan dan minuman dari luar.",
             "Penyelenggara berhak menolak pengunjung yang melanggar aturan.",
           ],
-      tickets: (ticketsResponse.data || []).filter(isPublicTicketCategory).map((t) => ({
+      tickets: (ticketsResponse?.data || []).filter(isPublicTicketCategory).map((t) => ({
         id: t.id,
         name: t.name,
         price: Number(t.price),
