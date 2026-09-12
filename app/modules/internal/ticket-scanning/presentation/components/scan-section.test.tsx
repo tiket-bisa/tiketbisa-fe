@@ -39,6 +39,8 @@ vi.mock("./category-picker", () => ({
 vi.mock("../scan-selection-storage", () => ({
   readScanSelection: () => ({ eventId: "event-1", categories: [{ id: "category-1", name: "Category" }] }),
   persistScanSelection: vi.fn(),
+  readAutoCheckIn: () => false,
+  persistAutoCheckIn: vi.fn(),
 }));
 
 describe("ScanSection camera lifecycle", () => {

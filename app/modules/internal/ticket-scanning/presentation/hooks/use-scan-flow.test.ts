@@ -205,4 +205,116 @@ describe("useScanFlow state machine", () => {
     expect(result.current.validateResult?.holderName).toBe("Siti");
     expect(result.current.validateResult?.codeHash).toBe("ticket-b");
   });
+
+  describe("auto check-in", () => {
+    it("checks in a VALID ticket without an explicit confirm", async () => {
+      mockValidate.mockResolvedValueOnce({
+        success: true,
+        data: { status: "VALID", holder_name: "Budi", ticket_category_name: "VIP" },
+        error: null,
+        reason: null,
+        status_code: 200,
+      });
+      mockCheckIn.mockResolvedValueOnce({
+        success: true,
+        data: { checkInTime: "2026-07-03T10:00:00Z" },
+        error: null,
+        reason: null,
+        status_code: 200,
+      });
+
+      const { result } = renderHook(() => useScanFlow("event-1", ["cat-1"], true));
+
+      await act(async () => { await result.current.handleScan("TKBauto123"); });
+
+      await waitFor(() => {
+        expect(result.current.checkInResult?.status).toBe("SUCCESS");
+      });
+      expect(mockCheckIn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code_hash: "TKBauto123",
+          expected_event_id: "event-1",
+          expected_category_ids: ["cat-1"],
+        }),
+      );
+      // The validate result still drives the card, so holder/category stay visible.
+      expect(result.current.validateResult?.holderName).toBe("Budi");
+      expect(result.current.validateResult?.ticketCategoryName).toBe("VIP");
+      expect(result.current.isBusy).toBe(false);
+    });
+
+    it("does not check in a ticket that is not VALID", async () => {
+      mockValidate.mockResolvedValueOnce({
+        success: true,
+        data: { status: "WRONG_CATEGORY", ticket_category_name: "Regular" },
+        error: null,
+        reason: null,
+        status_code: 200,
+      });
+
+      const { result } = renderHook(() => useScanFlow("event-1", ["cat-1"], true));
+
+      await act(async () => { await result.current.handleScan("TKBwrongcat"); });
+
+      expect(mockCheckIn).not.toHaveBeenCalled();
+      expect(result.current.validateResult?.status).toBe("WRONG_CATEGORY");
+      expect(result.current.checkInResult).toBeNull();
+    });
+
+    it("stays locked while the chained check-in is in flight", async () => {
+      mockValidate.mockResolvedValue({
+        success: true,
+        data: { status: "VALID" },
+        error: null,
+        reason: null,
+        status_code: 200,
+      });
+      let resolveCheckIn!: (value: Awaited<ReturnType<typeof checkinApi.checkIn>>) => void;
+      mockCheckIn.mockImplementationOnce(() => new Promise((done) => { resolveCheckIn = done; }));
+
+      const { result } = renderHook(() => useScanFlow("event-1", ["cat-1"], true));
+
+      let pending!: Promise<void>;
+      await act(async () => {
+        pending = result.current.handleScan("TKBfirst");
+        await Promise.resolve();
+      });
+
+      // A second frame decoded while check-in is still running must not start another validate.
+      await act(async () => { await result.current.handleScan("TKBsecond"); });
+      expect(mockValidate).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        resolveCheckIn({ success: true, data: {}, error: null, reason: null, status_code: 200 });
+        await pending;
+      });
+      expect(result.current.isBusy).toBe(false);
+    });
+
+    it("surfaces a FAILED auto check-in and keeps the validate result", async () => {
+      mockValidate.mockResolvedValueOnce({
+        success: true,
+        data: { status: "VALID" },
+        error: null,
+        reason: null,
+        status_code: 200,
+      });
+      mockCheckIn.mockResolvedValueOnce({
+        success: false,
+        data: null as unknown as CheckInResponse,
+        error: "Kategori tidak sesuai. Tiket ini termasuk kategori: Regular",
+        reason: "CONFLICT",
+        status_code: 409,
+      });
+
+      const { result } = renderHook(() => useScanFlow("event-1", ["cat-1"], true));
+
+      await act(async () => { await result.current.handleScan("TKBraced"); });
+
+      await waitFor(() => {
+        expect(result.current.checkInResult?.status).toBe("FAILED");
+      });
+      expect(result.current.validateResult?.status).toBe("VALID");
+    });
+  });
 });

@@ -4,7 +4,12 @@ import { useQrScanner } from "../hooks/use-qr-scanner";
 import { useScanFlow } from "../hooks/use-scan-flow";
 import type { ScanCheckInResult, ScanValidateResult } from "~/core/types";
 import { CategoryPicker, type SelectedCategory } from "./category-picker";
-import { persistScanSelection, readScanSelection } from "../scan-selection-storage";
+import {
+  persistAutoCheckIn,
+  persistScanSelection,
+  readAutoCheckIn,
+  readScanSelection,
+} from "../scan-selection-storage";
 
 const VALIDATE_STATUS_MAP: Record<
   ScanValidateResult["status"],
@@ -31,6 +36,7 @@ interface ScanSectionProps {
 
 export function ScanSection({ brandId }: ScanSectionProps) {
   const [category, setCategory] = useState<SelectedCategory | null>(null);
+  const [autoCheckIn, setAutoCheckIn] = useState(false);
   const [selectionRestored, setSelectionRestored] = useState(false);
   const autoStartAttemptedRef = useRef(false);
   const categoryIds = useMemo(() => category?.categories.map((c) => c.id), [category]);
@@ -43,7 +49,7 @@ export function ScanSection({ brandId }: ScanSectionProps) {
     handleScan,
     confirmCheckIn,
     clearResult,
-  } = useScanFlow(category?.eventId, categoryIds);
+  } = useScanFlow(category?.eventId, categoryIds, autoCheckIn);
 
   const {
     cameras,
@@ -71,6 +77,7 @@ export function ScanSection({ brandId }: ScanSectionProps) {
 
   useEffect(() => {
     setCategory(readScanSelection(brandId, window.sessionStorage));
+    setAutoCheckIn(readAutoCheckIn(brandId, window.sessionStorage));
     setSelectionRestored(true);
   }, [brandId]);
 
@@ -81,7 +88,8 @@ export function ScanSection({ brandId }: ScanSectionProps) {
       brandId,
       window.sessionStorage,
     );
-  }, [brandId, category, selectionRestored]);
+    persistAutoCheckIn(autoCheckIn, brandId, window.sessionStorage);
+  }, [autoCheckIn, brandId, category, selectionRestored]);
 
   useEffect(() => {
     if (
@@ -120,6 +128,29 @@ export function ScanSection({ brandId }: ScanSectionProps) {
         setCategory(selection);
       }} />
 
+      {category && (
+        <Card padding="md">
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              checked={autoCheckIn}
+              onChange={(e) => setAutoCheckIn(e.target.checked)}
+              disabled={isBusy}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-brand-primary"
+            />
+            <span>
+              <span className="block text-sm font-medium text-text-primary">
+                Langsung check-in setelah scan
+              </span>
+              <span className="block text-text-tertiary text-sm">
+                Tiket valid langsung di-check-in tanpa menekan tombol. Matikan kalau gate-nya 2 lapis
+                dan lapis ini hanya memverifikasi tiket.
+              </span>
+            </span>
+          </label>
+        </Card>
+      )}
+
       {!category && (
         <Card padding="md">
           <p className="text-text-tertiary text-sm text-center">
@@ -137,6 +168,7 @@ export function ScanSection({ brandId }: ScanSectionProps) {
               checkInResult={checkInResult}
               isCheckingIn={isCheckingIn}
               isBusy={isBusy}
+              autoCheckIn={autoCheckIn}
               onCheckIn={confirmCheckIn}
               clearResult={clearResult}
             />
@@ -273,6 +305,7 @@ function ScanResultCard({
   checkInResult,
   isCheckingIn,
   isBusy,
+  autoCheckIn,
   onCheckIn,
   clearResult,
 }: {
@@ -280,6 +313,7 @@ function ScanResultCard({
   checkInResult: ScanCheckInResult | null;
   isCheckingIn: boolean;
   isBusy: boolean;
+  autoCheckIn: boolean;
   onCheckIn: () => void;
   clearResult: () => void;
 }) {
@@ -345,9 +379,13 @@ function ScanResultCard({
 
           {validateResult.status === "VALID" && !checkInResult && (
             <div className="mt-4">
-              <Button variant="primary" onClick={onCheckIn} disabled={isBusy} fullWidth>
-                {isCheckingIn ? "Memproses Check In..." : "CHECK IN"}
-              </Button>
+              {autoCheckIn ? (
+                <p className="text-text-secondary text-sm text-center">Memproses check-in...</p>
+              ) : (
+                <Button variant="primary" onClick={onCheckIn} disabled={isBusy} fullWidth>
+                  {isCheckingIn ? "Memproses Check In..." : "CHECK IN"}
+                </Button>
+              )}
             </div>
           )}
         </div>
