@@ -195,13 +195,14 @@ export const eventApi: EventRepository = {
   },
 
   async getEventById(id: string): Promise<Event | null> {
-    const [eventResponse, ticketsResponse, imagesResponse] = await Promise.all([
-      apiFetch<ApiResponse<EventDto>>(`/event/${id}`),
-      apiFetch<ApiResponse<TicketCategoryDto[]>>(`/ticket-category/event/${id}`),
-      apiFetch<ApiResponse<EventImageListResponseData>>(`/event/${id}/images`).catch(() => null),
-    ]);
+    const eventResponse = await apiFetch<ApiResponse<EventDto>>(`/event/${id}`).catch(() => null);
+    if (!eventResponse?.data) return null;
 
-    if (!eventResponse.data) return null;
+    const eventId = eventResponse.data.id;
+    const [ticketsResponse, imagesResponse] = await Promise.all([
+      apiFetch<ApiResponse<TicketCategoryDto[]>>(`/ticket-category/event/${eventId}`).catch(() => null),
+      apiFetch<ApiResponse<EventImageListResponseData>>(`/event/${eventId}/images`).catch(() => null),
+    ]);
 
     const brandDetails = await getBrandDetailsById(eventResponse.data.brandId ?? eventResponse.data.brand_id);
     const baseEvent = mapEventDtoToEntity(eventResponse.data, 0, brandDetails);
