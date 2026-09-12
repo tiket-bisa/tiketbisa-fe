@@ -1,5 +1,5 @@
-import { useSearchParams, useNavigate } from "react-router";
-import { Pagination, Select } from "~/core/design-system/components";
+import { useSearchParams } from "react-router";
+import { Tabs, Button, Pagination, Select } from "~/core/design-system/components";
 import {
   EventCard,
   FilterBar,
@@ -17,6 +17,10 @@ export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const sp = url.searchParams;
 
+  const activeTab = sp.get("tab") || "aktif";
+  const isEndedTab = activeTab === "lalu";
+  const defaultSort = isEndedTab ? "date_desc" : "date_asc";
+
   const limit = Number(sp.get("limit") ?? EVENT_PAGE_SIZE);
   const page = Math.max(1, Number(sp.get("page") ?? 1));
   const offset = (page - 1) * limit;
@@ -26,14 +30,14 @@ export async function loader({ request }: Route.LoaderArgs) {
   const params: EventFilterParams = {
     limit,
     offset,
-    order_by: sp.get("sort") ?? undefined,
+    order_by: sp.get("sort") ?? defaultSort,
     brand_name: sp.get("brand") ?? undefined,
     city: sp.get("city") ?? undefined,
     category: sp.get("category") ?? undefined,
     time_range: sp.get("time") ?? undefined,
     price_range: sp.get("price") ?? undefined,
     search: sp.get("q") ?? undefined,
-    status: "ONGOING",
+    status: isEndedTab ? "ENDED" : "ONGOING",
     start_date: timeRange.startDate,
     end_date: timeRange.endDate,
     min_price: priceRange.minPrice,
@@ -48,6 +52,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     limit: response.data.limit,
     offset: response.data.offset,
     currentPage: page,
+    activeTab,
   };
 }
 
@@ -78,10 +83,15 @@ function resolvePriceRange(value: string | null): { minPrice?: number; maxPrice?
 
 // Page Component //
 export default function EventPage({ loaderData }: Route.ComponentProps) {
-  const { events, count, limit, currentPage } = loaderData;
+  const { events, count, limit, currentPage, activeTab } = loaderData;
   const [searchParams, setSearchParams] = useSearchParams();
 
   const totalPages = Math.ceil(count / limit);
+
+  const tabItems = [
+    { label: "Event Aktif", value: "aktif" },
+    { label: "Event Lalu", value: "lalu" },
+  ];
 
   /* Filter handlers */
   const sortValue = searchParams.get("sort") ?? "";
@@ -101,6 +111,20 @@ export default function EventPage({ loaderData }: Route.ComponentProps) {
         next.delete(key);
       }
       // Reset to page 1 when filters change
+      next.delete("page");
+      return next;
+    });
+  }
+
+  function handleTabChange(val: string) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (val === "lalu") {
+        next.set("tab", "lalu");
+      } else {
+        next.delete("tab");
+      }
+      next.delete("sort");
       next.delete("page");
       return next;
     });
@@ -131,7 +155,24 @@ export default function EventPage({ loaderData }: Route.ComponentProps) {
   return (
     <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Title */}
-      <SectionHeader title="Upcoming Events" className="mb-6" />
+      <SectionHeader
+        title={activeTab === "lalu" ? "Kilas Balik Event" : "Upcoming Events"}
+        subtitle={
+          activeTab === "lalu"
+            ? "Arsip event yang telah sukses diselenggarakan"
+            : "Temukan momen berharga dan tiket event menarik di sekitarmu"
+        }
+        className="mb-6"
+      />
+
+      {/* Status Tabs */}
+      <div className="mb-6">
+        <Tabs
+          items={tabItems}
+          value={activeTab}
+          onChange={handleTabChange}
+        />
+      </div>
 
       {/* Filters + Sort Row */}
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between mb-10">
@@ -210,8 +251,27 @@ export default function EventPage({ loaderData }: Route.ComponentProps) {
         </>
       ) : (
         <EmptyState
-          title="Tidak ada event ditemukan"
-          description="Coba ubah filter atau kata kunci pencarian kamu."
+          title={
+            activeTab === "aktif"
+              ? "Tidak ada event aktif ditemukan"
+              : "Tidak ada event lalu ditemukan"
+          }
+          description={
+            activeTab === "aktif"
+              ? "Saat ini belum ada event baru yang tersedia. Kamu bisa melihat kilas balik event yang pernah kami selenggarakan."
+              : "Coba ubah filter atau kata kunci pencarian kamu."
+          }
+          action={
+            activeTab === "aktif" ? (
+              <Button
+                variant="secondary"
+                onClick={() => handleTabChange("lalu")}
+                className="mt-2 text-sm font-semibold cursor-pointer"
+              >
+                Lihat Event Lalu
+              </Button>
+            ) : undefined
+          }
         />
       )}
     </section>
