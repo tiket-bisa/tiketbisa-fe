@@ -225,13 +225,17 @@ export const eventApi: EventRepository = {
             "Dilarang membawa makanan dan minuman dari luar.",
             "Penyelenggara berhak menolak pengunjung yang melanggar aturan.",
           ],
-      tickets: (ticketsResponse.data || []).filter(isPublicTicketCategory).map((t) => ({
-        id: t.id,
-        name: t.name,
-        price: Number(t.price),
-        available: t.isPurchasable ?? t.is_purchasable ?? t.totalTicket > t.issuedTicket,
-        purchaseStatus: t.purchaseStatus ?? t.purchase_status ?? (t.totalTicket > t.issuedTicket ? "AVAILABLE" : "SOLD_OUT"),
-      })),
+      tickets: (ticketsResponse.data || [])
+        .filter(isPublicTicketCategory)
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name, "id", { numeric: true, sensitivity: "base" }))
+        .map((t) => ({
+          id: t.id,
+          name: t.name,
+          price: Number(t.price),
+          available: t.isPurchasable ?? t.is_purchasable ?? t.totalTicket > t.issuedTicket,
+          purchaseStatus: t.purchaseStatus ?? t.purchase_status ?? (t.totalTicket > t.issuedTicket ? "AVAILABLE" : "SOLD_OUT"),
+        })),
     };
   },
 };

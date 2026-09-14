@@ -64,14 +64,24 @@ export const ticketCategoryApi = {
         return {
             ...response,
             data: response.data
-                ? response.data.map(normalizeTicketCategory).filter((category) => !category.is_hidden)
+                ? response.data
+                    .map(normalizeTicketCategory)
+                    .filter((category) => !category.is_hidden)
+                    .sort((a, b) => a.name.localeCompare(b.name, "id", { numeric: true, sensitivity: "base" }))
                 : response.data,
         };
     },
 
     getInternalByEvent: async (eventId: string) => {
         const response = await internalHttpClient.get<RawTicketCategory[]>(`/ticket-category/event/${eventId}`);
-        return { ...response, data: response.data ? response.data.map(normalizeTicketCategory) : response.data };
+        return {
+            ...response,
+            data: response.data
+                ? response.data
+                    .map(normalizeTicketCategory)
+                    .sort((a, b) => a.name.localeCompare(b.name, "id", { numeric: true, sensitivity: "base" }))
+                : response.data,
+        };
     },
 
     getById: async (id: string) => {
@@ -90,7 +100,9 @@ export const ticketCategoryApi = {
             ...response,
             data: response.data ? {
                 ...response.data,
-                ticket_categories: (response.data.ticket_categories ?? []).map(normalizeTicketCategory),
+                ticket_categories: (response.data.ticket_categories ?? [])
+                    .map(normalizeTicketCategory)
+                    .sort((a, b) => a.name.localeCompare(b.name, "id", { numeric: true, sensitivity: "base" })),
             } : response.data,
         }));
     },

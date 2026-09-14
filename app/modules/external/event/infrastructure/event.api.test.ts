@@ -160,4 +160,37 @@ describe("eventApi.getEvents", () => {
 
     expect(event?.tickets.map((ticket) => ticket.id)).toEqual(["public"]);
   });
+
+  it("sorts public ticket categories alphabetically by name in event detail", async () => {
+    mockApiFetch
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          id: "event-1",
+          brandId: "brand-123",
+          name: "Event Test",
+          startDate: "2026-07-30T10:00:00Z",
+          status: "ONGOING",
+          isPublished: true,
+        },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: [
+          { id: "3", name: "VIP B", price: 200_000, totalTicket: 10, issuedTicket: 0 },
+          { id: "1", name: "Ekonomi - Gate D", price: 50_000, totalTicket: 10, issuedTicket: 0 },
+          { id: "2", name: "Utama A", price: 100_000, totalTicket: 10, issuedTicket: 0 },
+        ],
+      })
+      .mockResolvedValueOnce({ success: true, data: { images: [] } })
+      .mockResolvedValueOnce({ success: true, data: { id: "brand-123", name: "Test 123" } });
+
+    const event = await eventApi.getEventById("event-1");
+
+    expect(event?.tickets.map((t) => t.name)).toEqual([
+      "Ekonomi - Gate D",
+      "Utama A",
+      "VIP B",
+    ]);
+  });
 });

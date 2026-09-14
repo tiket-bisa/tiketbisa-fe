@@ -85,13 +85,18 @@ export default function EventTicketDashboardPage() {
 
   const data = fetchedData;
 
+  const categories = useMemo(() => {
+    return [...(data?.categories ?? [])].sort((a, b) =>
+      a.name.localeCompare(b.name, "id", { numeric: true, sensitivity: "base" }),
+    );
+  }, [data?.categories]);
+
   const categoryOptions = useMemo(() => {
-    const categories = data?.categories ?? [];
     return [
       { value: "all", label: "Semua Kategori" },
       ...categories.map((category) => ({ value: category.id, label: category.name })),
     ];
-  }, [data?.categories]);
+  }, [categories]);
 
   const filteredIssuedTickets = data?.issuedTickets ?? [];
 
@@ -187,7 +192,7 @@ export default function EventTicketDashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {data.categories.map((category) => (
+              {categories.map((category) => (
                 <tr key={category.id} className="border-b border-border-subtle last:border-0">
                   <td className="px-3 py-3 font-medium text-text-primary">{category.name}</td>
                   <td className="px-3 py-3 text-text-secondary">{category.categoryCode || "-"}</td>
@@ -211,7 +216,7 @@ export default function EventTicketDashboardPage() {
             </tbody>
           </table>
         </div>
-        {data.categories.length === 0 && (
+        {categories.length === 0 && (
           <p className="py-6 text-center text-sm text-text-tertiary">Belum ada kategori tiket.</p>
         )}
       </Card>
