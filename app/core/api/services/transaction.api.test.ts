@@ -5,6 +5,7 @@ import { mapTransactionStatusFilterToApi } from "~/core/constants/transaction";
 function transaction(status: string): TransactionApiData {
   return {
     id: "tx-1",
+    eventId: "event-1",
     customerName: "Buyer",
     customerEmail: "buyer@example.com",
     customerPhone: "08123456789",
@@ -34,6 +35,10 @@ describe("mapTransactionApiToFe", () => {
     api.created = "2026-08-22T23:00:00Z";
     api.paymentDate = "2026-08-23T00:00:00Z";
     expect(mapTransactionApiToFe(api).created_at).toBe("2026-08-22T23:00:00Z");
+  });
+
+  it("maps the backend event ID", () => {
+    expect(mapTransactionApiToFe(transaction("PAID")).event_id).toBe("event-1");
   });
 });
 
