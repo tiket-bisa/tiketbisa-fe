@@ -15,8 +15,17 @@ import { toUserFacingError, toUserFacingResponseError } from "~/core/api";
  *     (VALID / INVALID / ALREADY_CHECKED_IN / WRONG_CATEGORY) without mutating anything.
  *  2. When status is VALID, the operator explicitly clicks "Check In" which calls
  *     `confirmCheckIn` (the existing mutating checkin endpoint).
+ *
+ * With `autoCheckIn` the second phase runs automatically as soon as validation returns VALID,
+ * for single-layer gates where the extra tap slows the queue down. Validation still runs first so
+ * the result card keeps showing the holder name and category that only /scan/validate returns; the
+ * check-in endpoint re-checks event, category and ticket status server-side either way.
  */
-export function useScanFlow(expectedEventId?: string, expectedCategoryIds?: string[]) {
+export function useScanFlow(
+  expectedEventId?: string,
+  expectedCategoryIds?: string[],
+  autoCheckIn = false,
+) {
   const { user } = useAuth();
   const [validateResult, setValidateResult] = useState<ScanValidateResult | null>(null);
   const [checkInResult, setCheckInResult] = useState<ScanCheckInResult | null>(null);
@@ -25,6 +34,10 @@ export function useScanFlow(expectedEventId?: string, expectedCategoryIds?: stri
   const isBusyRef = useRef(false);
   const generationRef = useRef(0);
   const completedCodeRef = useRef<string | null>(null);
+  // Read through a ref so toggling auto check-in does not change `handleScan`'s identity and
+  // force the camera scanner to re-register its callback mid-queue.
+  const autoCheckInRef = useRef(autoCheckIn);
+  autoCheckInRef.current = autoCheckIn;
   const scopeKey = JSON.stringify([expectedEventId, expectedCategoryIds]);
 
   useEffect(() => {
@@ -38,6 +51,52 @@ export function useScanFlow(expectedEventId?: string, expectedCategoryIds?: stri
     return () => { generationRef.current += 1; };
   }, [scopeKey]);
 
+  /**
+   * Mutating half of the flow. Assumes the caller already claimed `isBusyRef` and owns
+   * `generation`, so it can be chained straight off a validate call without releasing the
+   * lock in between (the scanner would otherwise fire again on the very next frame).
+   */
+  const runCheckIn = useCallback(
+    async (target: ScanValidateResult, generation: number) => {
+      setIsCheckingIn(true);
+      try {
+        const response = await checkinApi.checkIn({
+          code_hash: target.codeHash,
+          code_type: target.codeType,
+          verify_by: user?.email ?? "unknown",
+          expected_event_id: expectedEventId,
+          expected_category_ids: expectedCategoryIds,
+        });
+        if (generation !== generationRef.current) return;
+        completedCodeRef.current = target.codeHash;
+
+        if (response.success) {
+          const data = response.data as CheckInResponse;
+          setCheckInResult({
+            status: "SUCCESS",
+            checkInTime: data.checkInTime ?? data.check_in_time,
+            message: data.message,
+          });
+        } else {
+          setCheckInResult({
+            status: "FAILED",
+            message: toUserFacingResponseError(response, "Check-in gagal, silakan coba lagi."),
+          });
+        }
+      } catch (error) {
+        if (generation !== generationRef.current) return;
+        completedCodeRef.current = target.codeHash;
+        setCheckInResult({
+          status: "FAILED",
+          message: toUserFacingError(error, "Check-in gagal, silakan coba lagi."),
+        });
+      } finally {
+        if (generation === generationRef.current) setIsCheckingIn(false);
+      }
+    },
+    [user?.email, expectedEventId, expectedCategoryIds],
+  );
+
   const handleScan = useCallback(
     async (decodedText: string) => {
       if (isBusyRef.current) return;
@@ -50,6 +109,7 @@ export function useScanFlow(expectedEventId?: string, expectedCategoryIds?: stri
       setIsValidating(true);
 
       const codeType = detectCodeType(normalizedCode);
+      let validated: ScanValidateResult | null = null;
 
       try {
         const response = await checkinApi.validate(
@@ -61,7 +121,7 @@ export function useScanFlow(expectedEventId?: string, expectedCategoryIds?: stri
 
         if (response.success && response.data) {
           const data = response.data as ValidateResponse;
-          setValidateResult({
+          validated = {
             status: data.status,
             holderName: data.holder_name,
             ticketCategoryName: data.ticket_category_name,
@@ -71,17 +131,16 @@ export function useScanFlow(expectedEventId?: string, expectedCategoryIds?: stri
             message: data.message,
             codeHash: normalizedCode,
             codeType,
-          });
+          };
         } else {
-          setValidateResult(
-            buildValidateFailure(
-              normalizedCode,
-              codeType,
-              response.status_code,
-              toUserFacingResponseError(response, "Tiket tidak dapat divalidasi."),
-            ),
+          validated = buildValidateFailure(
+            normalizedCode,
+            codeType,
+            response.status_code,
+            toUserFacingResponseError(response, "Tiket tidak dapat divalidasi."),
           );
         }
+        setValidateResult(validated);
       } catch (error) {
         if (generation !== generationRef.current) return;
         setCheckInResult(null);
@@ -93,13 +152,18 @@ export function useScanFlow(expectedEventId?: string, expectedCategoryIds?: stri
           codeType,
         });
       } finally {
-        if (generation === generationRef.current) {
-          isBusyRef.current = false;
-          setIsValidating(false);
-        }
+        if (generation === generationRef.current) setIsValidating(false);
       }
+
+      if (generation !== generationRef.current) return;
+
+      if (autoCheckInRef.current && validated?.status === "VALID") {
+        await runCheckIn(validated, generation);
+      }
+
+      if (generation === generationRef.current) isBusyRef.current = false;
     },
-    [expectedEventId, expectedCategoryIds],
+    [expectedEventId, expectedCategoryIds, runCheckIn],
   );
 
   const confirmCheckIn = useCallback(async () => {
@@ -109,46 +173,12 @@ export function useScanFlow(expectedEventId?: string, expectedCategoryIds?: stri
 
     isBusyRef.current = true;
     const generation = generationRef.current;
-    setIsCheckingIn(true);
-
     try {
-      const response = await checkinApi.checkIn({
-        code_hash: validateResult.codeHash,
-        code_type: validateResult.codeType,
-        verify_by: user?.email ?? "unknown",
-        expected_event_id: expectedEventId,
-        expected_category_ids: expectedCategoryIds,
-      });
-      if (generation !== generationRef.current) return;
-      completedCodeRef.current = validateResult.codeHash;
-
-      if (response.success) {
-        const data = response.data as CheckInResponse;
-        setCheckInResult({
-          status: "SUCCESS",
-          checkInTime: data.checkInTime ?? data.check_in_time,
-          message: data.message,
-        });
-      } else {
-        setCheckInResult({
-          status: "FAILED",
-          message: toUserFacingResponseError(response, "Check-in gagal, silakan coba lagi."),
-        });
-      }
-    } catch (error) {
-      if (generation !== generationRef.current) return;
-      completedCodeRef.current = validateResult.codeHash;
-      setCheckInResult({
-        status: "FAILED",
-        message: toUserFacingError(error, "Check-in gagal, silakan coba lagi."),
-      });
+      await runCheckIn(validateResult, generation);
     } finally {
-      if (generation === generationRef.current) {
-        isBusyRef.current = false;
-        setIsCheckingIn(false);
-      }
+      if (generation === generationRef.current) isBusyRef.current = false;
     }
-  }, [validateResult, checkInResult, user?.email, expectedEventId, expectedCategoryIds]);
+  }, [validateResult, checkInResult, runCheckIn]);
 
   const clearResult = useCallback(() => {
     if (isBusyRef.current) return;
