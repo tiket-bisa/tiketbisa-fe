@@ -168,6 +168,42 @@ describe("orderApi", () => {
     ]);
   });
 
+  describe("recoverGatewayOrder", () => {
+    it("rebuilds the order when the server already holds an invoice the failed call created", async () => {
+      mockApiFetch.mockResolvedValueOnce({
+        success: true,
+        data: {
+          customerName: "Budi",
+          totalPrice: 110000,
+          componentsSdkKey: "sdk-key-1",
+          gatewayStatus: "PENDING",
+        },
+      });
+
+      const recovered = await orderApi.recoverGatewayOrder("lock-001", 99);
+
+      expect(recovered?.transactionId).toBe("lock-001");
+      expect(recovered?.componentsSdkKey).toBe("sdk-key-1");
+      expect(recovered?.totalPrice).toBe(110000);
+      expect(recovered?.tickets).toEqual([]);
+    });
+
+    it("returns null when there is no invoice to recover, so the caller retries instead", async () => {
+      mockApiFetch.mockResolvedValueOnce({
+        success: true,
+        data: { customerName: "Budi", totalPrice: 110000 },
+      });
+
+      expect(await orderApi.recoverGatewayOrder("lock-001")).toBe(null);
+    });
+
+    it("returns null when the snapshot itself cannot be read", async () => {
+      mockApiFetch.mockRejectedValueOnce(new Error("network"));
+
+      expect(await orderApi.recoverGatewayOrder("lock-001")).toBe(null);
+    });
+  });
+
   describe("isGatewayPaymentSuccessful", () => {
     it("is false for a freshly created invoice (PENDING, tickets awaiting approval)", () => {
       expect(

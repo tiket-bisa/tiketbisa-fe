@@ -126,6 +126,9 @@ export function XenditComponentsRealPayment({
     setError(null);
     setReady(false);
     setSubmitting(false);
+    // A crash after submit leaves this set, which would hide the submit button behind the
+    // "waiting for confirmation" state on a session that is being rebuilt from scratch.
+    setAwaitingConfirmation(false);
     setReloadToken((token) => token + 1);
   };
 

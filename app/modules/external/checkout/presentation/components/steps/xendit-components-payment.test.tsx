@@ -136,4 +136,25 @@ describe("XenditComponentsRealPayment", () => {
     expect(vi.mocked(XenditComponents)).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("alert")).toBe(null);
   });
+
+  it("clears the awaiting-confirmation state when retrying after a crash mid-submission", () => {
+    render(
+      <XenditComponentsRealPayment
+        componentsSdkKey="session-key"
+        paymentMethodId="qris"
+        deadline="12.45"
+        onCheckStatus={vi.fn()}
+        onBack={vi.fn()}
+        onExpire={vi.fn()}
+      />,
+    );
+
+    act(() => sdk.listeners.get("session-complete")?.());
+    expect(screen.getByText("Menunggu konfirmasi pembayaran…")).toBeTruthy();
+
+    act(() => sdk.listeners.get("fatal-error")?.());
+    fireEvent.click(screen.getByRole("button", { name: "Muat Ulang Pembayaran" }));
+
+    expect(screen.queryByText("Menunggu konfirmasi pembayaran…")).toBe(null);
+  });
 });

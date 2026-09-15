@@ -355,8 +355,19 @@ export function useCheckoutSteps(
           setSearchParams(nextParams);
         }
       } catch (error) {
-        // Release the guard so the retry button can actually re-fire; it is claimed before the
-        // await, so leaving it set makes a single transient failure permanent for this lock.
+        // The call may have failed only on our side: a request that timed out here but landed at
+        // Xendit leaves a real invoice, and retrying it just earns a 409. Ask the server what it
+        // has before treating this as a failure, so the buyer gets the QR/VA that already exists
+        // instead of an error screen.
+        const recovered = await orderApi.recoverGatewayOrder(activeLockId, paymentSummary.totalPrice);
+        if (recovered) {
+          setCompletedOrder(recovered);
+          setIsManualTransferPending(false);
+          console.warn("Recovered an existing gateway invoice after a failed create", error);
+          return;
+        }
+        // Nothing to recover. Release the guard so the retry button can actually re-fire; it is
+        // claimed before the await, so leaving it set makes a single transient failure permanent.
         gatewayInvoiceRequestedRef.current = null;
         console.error("Failed to auto-create gateway invoice", error);
       } finally {
@@ -569,6 +580,12 @@ export function useCheckoutSteps(
       nextParams.delete("manualPending");
       setSearchParams(nextParams);
     } catch (error) {
+      // Same 409 window as the auto-create path: the invoice may already exist server-side.
+      const recovered = await orderApi.recoverGatewayOrder(activeLockId, paymentSummary.totalPrice);
+      if (recovered) {
+        setCompletedOrder(recovered);
+        setIsManualTransferPending(false);
+      }
       // The payment already succeeded at the gateway; a transient error finalizing
       // locally shouldn't alarm the buyer. The regular poll/realtime loop or the
       // manual "Bayar Sekarang" button remains available as a fallback.
