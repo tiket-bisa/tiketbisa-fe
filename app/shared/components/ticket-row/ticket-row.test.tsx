@@ -87,6 +87,65 @@ describe("TicketRow", () => {
     expect(screen.getByText("Event Selesai")).toBeTruthy();
   });
 
+  it("disables the stepper once other categories have taken the whole transaction allowance", () => {
+    render(
+      <TicketRow
+        ticket={{
+          id: "category-1",
+          name: "Tribun Timur A",
+          price: 12000,
+          available: true,
+          remaining: 1360,
+        }}
+        quantity={0}
+        remainingSlots={0}
+        onQuantityChange={vi.fn()}
+      />,
+    );
+
+    // Plenty of stock, but the buyer already holds 4 elsewhere. Leaving + enabled here makes it
+    // look clickable while useTicketSelection silently refuses every press.
+    expect(screen.getByRole("button", { name: "Increase" }).hasAttribute("disabled")).toBe(true);
+  });
+
+  it("still offers the seats this category may take out of the allowance", () => {
+    render(
+      <TicketRow
+        ticket={{
+          id: "category-1",
+          name: "Tribun Timur A",
+          price: 12000,
+          available: true,
+          remaining: 1360,
+        }}
+        quantity={1}
+        remainingSlots={2}
+        onQuantityChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Increase" }).hasAttribute("disabled")).toBe(false);
+  });
+
+  it("caps on stock when stock is scarcer than the remaining allowance", () => {
+    render(
+      <TicketRow
+        ticket={{
+          id: "category-1",
+          name: "Tiket Test 1",
+          price: 2000,
+          available: true,
+          remaining: 1,
+        }}
+        quantity={1}
+        remainingSlots={4}
+        onQuantityChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Increase" }).hasAttribute("disabled")).toBe(true);
+  });
+
   it("animates only when the category name overflows its viewport", () => {
     render(
       <TicketRow

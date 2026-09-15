@@ -7,6 +7,11 @@ export interface TicketRowProps {
   ticket: TicketRowData;
   quantity: number;
   onQuantityChange: (ticketId: string, quantity: number) => void;
+  /**
+   * Seats this category may still take out of the per-transaction allowance, counting the ones it
+   * already holds. Omit when the row is rendered outside a multi-category selection.
+   */
+  remainingSlots?: number;
   formatPrice?: (price: number) => string;
   className?: string;
 }
@@ -23,6 +28,7 @@ export function TicketRow({
   ticket,
   quantity,
   onQuantityChange,
+  remainingSlots,
   formatPrice = defaultFormatPrice,
   className = "",
 }: TicketRowProps) {
@@ -38,9 +44,11 @@ export function TicketRow({
     : `Sisa ${ticket.remaining} tiket`;
   // The stepper must never offer a seat that does not exist; useTicketSelection applies the
   // same cap authoritatively, this only keeps the + button from looking enabled past the limit.
+  // All three terms the hook clamps on have to appear here, or the button stays enabled on a
+  // quantity the hook then silently refuses — the buyer clicks and nothing happens.
   const perOrderMax = ticket.maxPerOrder ?? MAX_TICKETS_PER_TRANSACTION;
   const max = ticket.available
-    ? Math.min(perOrderMax, ticket.remaining ?? Infinity)
+    ? Math.max(0, Math.min(perOrderMax, ticket.remaining ?? Infinity, remainingSlots ?? Infinity))
     : 0;
   
   return (
