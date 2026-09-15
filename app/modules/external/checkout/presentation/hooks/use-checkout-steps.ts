@@ -10,6 +10,7 @@ import { buildPaymentOrderSummary } from "../../domain/checkout.pricing";
 import { canProceedWithPayment } from "../../domain/checkout.validation";
 import { MAX_TICKETS_PER_TRANSACTION } from "~/shared/constants/transaction";
 
+import { resolveCheckoutDeadline } from "../../domain/checkout-deadline";
 import type { BuyerInfo, OrderSummary, PaymentMethod, OrderResponse, TicketHolder } from "../../domain/checkout.types";
 import type { EventSummary } from "~/core/types";
 
@@ -114,23 +115,26 @@ export function useCheckoutSteps(
     navigate(`/event/${params.eventId ?? event.id}`);
   }, [clearCheckoutStorage, event.id, navigate, params.eventId, releaseActiveCheckout, warningToast]);
 
-  const setDeadlineFromTtl = useCallback((ttl: CheckoutTtl) => {
-    if (ttl.status === "ACTIVE" && ttl.remainingSeconds > 0) {
-      const backendDeadline = ttl.expiresAt > 0
-        ? ttl.expiresAt
-        : Date.now() + ttl.remainingSeconds * 1000;
-      const storedDeadline = Number(sessionStorage.getItem(CHECKOUT_DEADLINE_STORAGE_KEY));
-      const deadline = Number.isFinite(storedDeadline) && storedDeadline > Date.now()
-        ? Math.min(storedDeadline, backendDeadline)
-        : backendDeadline;
-      sessionStorage.setItem(
-        CHECKOUT_DEADLINE_STORAGE_KEY,
-        String(deadline),
-      );
-      return true;
+  /**
+   * @param authoritative the backend deadline replaces whatever is stored, rather than only ever
+   * shortening it. True when the payment window has just been opened: that phase genuinely extends
+   * the reservation past the details deadline, and clamping to the stored value would leave the
+   * buyer watching the old countdown run out while their invoice is still live.
+   */
+  const setDeadlineFromTtl = useCallback((ttl: CheckoutTtl, authoritative = false) => {
+    const stored = sessionStorage.getItem(CHECKOUT_DEADLINE_STORAGE_KEY);
+    const deadline = resolveCheckoutDeadline({
+      ttl,
+      storedDeadline: stored === null ? null : Number(stored),
+      now: Date.now(),
+      authoritative,
+    });
+    if (deadline === null) {
+      sessionStorage.removeItem(CHECKOUT_DEADLINE_STORAGE_KEY);
+      return false;
     }
-    sessionStorage.removeItem(CHECKOUT_DEADLINE_STORAGE_KEY);
-    return false;
+    sessionStorage.setItem(CHECKOUT_DEADLINE_STORAGE_KEY, String(deadline));
+    return true;
   }, []);
 
   const getActiveLockId = useCallback(() => (
@@ -157,7 +161,7 @@ export function useCheckoutSteps(
 
   const ensureCheckoutSessionActive = useCallback(async () => {
     const activeLockId = getActiveLockId();
-    if (currentStep <= 1 || currentStep >= 5) {
+    if (currentStep >= 5) {
       return true;
     }
     if (!activeLockId) {
@@ -177,7 +181,19 @@ export function useCheckoutSteps(
     }
 
     if (ttl) {
-      setDeadlineFromTtl(ttl);
+      // Payment phase: beginPaymentWindow has re-locked to the gateway invoice lifetime, so this
+      // deadline is longer than the details one it replaces.
+      setDeadlineFromTtl(ttl, true);
+    } else {
+      // Details phase: the ticket lock itself is the deadline the buyer is counting down against.
+      setDeadlineFromTtl({
+        status: "ACTIVE",
+        remainingSeconds,
+        // No absolute expiry from the lock TTL endpoint; setDeadlineFromTtl derives one from
+        // remainingSeconds when expiresAt is not positive.
+        expiresAt: 0,
+        serverTime: Date.now(),
+      });
     }
     return true;
   }, [
@@ -245,7 +261,7 @@ export function useCheckoutSteps(
     let cancelled = false;
 
     const validateSession = async () => {
-      if (currentStep <= 1 || currentStep >= 5) {
+      if (currentStep >= 5) {
         return;
       }
       try {
@@ -266,7 +282,10 @@ export function useCheckoutSteps(
   }, [currentStep, ensureCheckoutSessionActive]);
 
   useEffect(() => {
-    if (currentStep !== 4) return;
+    // Every step that shows a countdown needs to resync it, not just the payment step: a tab left
+    // in the background keeps its timer ticking against a reservation the backend may have
+    // already released.
+    if (currentStep < 1 || currentStep > 4) return;
     const resync = () => {
       if (document.visibilityState === "visible") {
         void ensureCheckoutSessionActive();
