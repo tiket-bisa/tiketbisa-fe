@@ -57,7 +57,15 @@ export interface Transaction extends AuditableEntity {
   buyer_phone?: string;
   ticket_name: string;
   quantity: number;
+  /** Gross the buyer paid, fees included. The admin-facing number. */
   total_price: number;
+  /**
+   * Ticket subtotal before fees — what the partner earns. Null on transactions made before the
+   * breakdown was recorded; render those as "not recorded" rather than zero.
+   */
+  base_amount?: number | null;
+  service_fee?: number | null;
+  transaction_fee?: number | null;
   status: "waiting_payment" | "waiting_approval" | "paid" | "cancelled" | "refunded" | "expired";
   payment_method?: string;
 }

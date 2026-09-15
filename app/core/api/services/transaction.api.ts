@@ -32,6 +32,10 @@ export interface TransactionApiData {
     verifiedBy?: string | null;
     promoId?: string | null;
     discountAmount?: number | null;
+    /** Recorded as charged from V43 on. Null on transactions made before the split. */
+    baseAmount?: number | null;
+    serviceFee?: number | null;
+    transactionFee?: number | null;
 }
 
 export interface IssuedTicketDetail {
@@ -263,6 +267,11 @@ export function mapTransactionApiToFe(api: TransactionApiData): Transaction {
         ticket_name: "-", // Not returned in list API
         quantity: 0, // Not returned in list API
         total_price: api.totalPrice ?? 0,
+        // Null, not zero, when the transaction predates the breakdown: zero would read as a sale
+        // that earned the partner nothing.
+        base_amount: api.baseAmount ?? null,
+        service_fee: api.serviceFee ?? null,
+        transaction_fee: api.transactionFee ?? null,
         status: mapBackendStatus(api.status),
         payment_method: api.paymentMethod,
         created_at: api.created ?? api.paymentDate ?? new Date().toISOString(),
@@ -298,6 +307,9 @@ export function mapTransactionDetailApiToFe(api: TransactionDetailResponse): Tra
         ticket_name: ticketName,
         quantity: quantity,
         total_price: tx.totalPrice ?? 0,
+        base_amount: tx.baseAmount ?? null,
+        service_fee: tx.serviceFee ?? null,
+        transaction_fee: tx.transactionFee ?? null,
         status: mapBackendStatus(tx.status),
         payment_method: tx.paymentMethod,
         created_at: tx.created ?? tx.paymentDate ?? new Date().toISOString(),
