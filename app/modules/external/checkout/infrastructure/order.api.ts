@@ -91,6 +91,8 @@ export interface TransactionStatusResult {
   qrPayload?: string | null;
   paymentUrl?: string | null;
   gatewayExpiry?: string | null;
+  /** Re-issued per request by the backend; lets a broken Components mount recover without a new order. */
+  componentsSdkKey?: string | null;
 }
 
 /**
@@ -154,6 +156,7 @@ interface TransactionStatusFromApi {
   qrPayload?: string | null;
   paymentUrl?: string | null;
   paymentSessionMode?: PaymentSessionMode | null;
+  componentsSdkKey?: string | null;
   gatewayStatus?: string | null;
   gatewayExpiry?: string | null;
 }
@@ -464,6 +467,50 @@ export const orderApi = {
     }
   },
 
+  /**
+   * Rebuilds a renderable order from whatever the server already holds for this lock.
+   *
+   * `/complete` is not idempotent at the gateway: an attempt that timed out here but succeeded at
+   * Xendit leaves a real invoice behind, and the retry then answers `409 DUPLICATE_ERROR`. The
+   * response sanitizer strips the status code before it reaches us, so rather than matching on 409
+   * this asks the server what it has — which also covers every other way a failed call can leave a
+   * usable invoice behind.
+   *
+   * Returns null when there is genuinely nothing to show, so the caller can fall back to retrying.
+   * `tickets` is empty by design: at this point the buyer is still on the payment step, and
+   * `handlePaymentConfirmed` re-runs `executeOrder` with the full ticket list before the success
+   * screen renders.
+   */
+  async recoverGatewayOrder(
+    lockId: string,
+    fallbackTotalPrice?: number,
+  ): Promise<CompleteOrderResponse | null> {
+    const snapshot = await this.getTransactionSnapshot(lockId);
+    if (!snapshot) return null;
+
+    const hasInvoice = Boolean(
+      snapshot.componentsSdkKey || snapshot.qrPayload || snapshot.virtualAccount || snapshot.paymentUrl,
+    );
+    if (!hasInvoice) return null;
+
+    const snapshotTotal = Number(snapshot.totalPrice || calculateTotalFromTickets(snapshot.tickets));
+
+    return {
+      transactionId: lockId,
+      customerName: snapshot.customerName || "",
+      totalPrice: snapshotTotal > 0 ? snapshotTotal : Number(fallbackTotalPrice || 0),
+      paymentDate: snapshot.paymentDate || new Date().toISOString(),
+      tickets: [],
+      virtualAccount: snapshot.virtualAccount ?? null,
+      qrPayload: snapshot.qrPayload ?? null,
+      paymentUrl: snapshot.paymentUrl ?? null,
+      paymentSessionMode: snapshot.paymentSessionMode ?? null,
+      componentsSdkKey: snapshot.componentsSdkKey ?? null,
+      gatewayStatus: (snapshot.gatewayStatus as GatewayStatus | null | undefined) ?? null,
+      gatewayExpiry: snapshot.gatewayExpiry ?? null,
+    };
+  },
+
   async getTransactionSnapshot(lockId: string): Promise<TransactionStatusFromApi | null> {
     try {
       const response = await apiFetch<ApiResponse<TransactionStatusFromApi>>(`/transaction/${lockId}`);
@@ -565,6 +612,7 @@ export const orderApi = {
       const qrPayload = (data.qrPayload as string | null | undefined) ?? null;
       const paymentUrl = (data.paymentUrl as string | null | undefined) ?? null;
       const paymentSessionMode = (data.paymentSessionMode as PaymentSessionMode | null | undefined) ?? null;
+      const componentsSdkKey = (data.componentsSdkKey as string | null | undefined) ?? null;
       const gatewayStatus = (data.gatewayStatus as GatewayStatus | null | undefined) ?? null;
 
       return {
@@ -580,6 +628,7 @@ export const orderApi = {
         qrPayload,
         paymentUrl,
         paymentSessionMode,
+        componentsSdkKey,
         gatewayStatus,
         gatewayExpiry: gatewayExpiry ?? null,
       };
@@ -609,6 +658,7 @@ export const orderApi = {
         qrPayload: data.qrPayload ?? null,
         paymentUrl: data.paymentUrl ?? null,
         gatewayExpiry: data.gatewayExpiry ?? null,
+        componentsSdkKey: data.componentsSdkKey ?? null,
       };
     } catch {
       return null;
