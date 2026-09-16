@@ -103,8 +103,6 @@ describe("TicketRow", () => {
       />,
     );
 
-    // Plenty of stock, but the buyer already holds 4 elsewhere. Leaving + enabled here makes it
-    // look clickable while useTicketSelection silently refuses every press.
     expect(screen.getByRole("button", { name: "Increase" }).hasAttribute("disabled")).toBe(true);
   });
 

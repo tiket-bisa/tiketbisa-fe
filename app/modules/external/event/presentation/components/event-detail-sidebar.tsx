@@ -75,9 +75,6 @@ export function EventDetailSidebar({
                 key={ticket.id}
                 ticket={ticket}
                 quantity={quantities[ticket.id] || 0}
-                // What the per-transaction allowance leaves for this category: the cap, less
-                // everything the other categories already hold. Mirrors the clamp in
-                // useTicketSelection so the + button disables where the hook would refuse.
                 remainingSlots={
                   MAX_TICKETS_PER_TRANSACTION - totalItems + (quantities[ticket.id] || 0)
                 }
