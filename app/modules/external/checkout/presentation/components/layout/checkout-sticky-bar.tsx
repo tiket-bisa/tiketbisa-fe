@@ -37,8 +37,6 @@ export function CheckoutStickyBar({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[100] lg:hidden animate-in slide-in-from-bottom duration-500">
-      {/* Timer - shown from step 1 on, matching the desktop header: the reservation starts when
-          checkout opens, so the countdown has to as well (TIK-18). */}
       {currentStep >= 1 && currentStep <= 4 && (
         <div className="w-full bg-white border-t border-gray-100">
             <CountdownTimer

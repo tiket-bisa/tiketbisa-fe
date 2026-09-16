@@ -115,12 +115,6 @@ export function useCheckoutSteps(
     navigate(`/event/${params.eventId ?? event.id}`);
   }, [clearCheckoutStorage, event.id, navigate, params.eventId, releaseActiveCheckout, warningToast]);
 
-  /**
-   * @param authoritative the backend deadline replaces whatever is stored, rather than only ever
-   * shortening it. True when the payment window has just been opened: that phase genuinely extends
-   * the reservation past the details deadline, and clamping to the stored value would leave the
-   * buyer watching the old countdown run out while their invoice is still live.
-   */
   const setDeadlineFromTtl = useCallback((ttl: CheckoutTtl, authoritative = false) => {
     const stored = sessionStorage.getItem(CHECKOUT_DEADLINE_STORAGE_KEY);
     const deadline = resolveCheckoutDeadline({
@@ -181,16 +175,11 @@ export function useCheckoutSteps(
     }
 
     if (ttl) {
-      // Payment phase: beginPaymentWindow has re-locked to the gateway invoice lifetime, so this
-      // deadline is longer than the details one it replaces.
       setDeadlineFromTtl(ttl, true);
     } else {
-      // Details phase: the ticket lock itself is the deadline the buyer is counting down against.
       setDeadlineFromTtl({
         status: "ACTIVE",
         remainingSeconds,
-        // No absolute expiry from the lock TTL endpoint; setDeadlineFromTtl derives one from
-        // remainingSeconds when expiresAt is not positive.
         expiresAt: 0,
         serverTime: Date.now(),
       });
@@ -282,9 +271,6 @@ export function useCheckoutSteps(
   }, [currentStep, ensureCheckoutSessionActive]);
 
   useEffect(() => {
-    // Every step that shows a countdown needs to resync it, not just the payment step: a tab left
-    // in the background keeps its timer ticking against a reservation the backend may have
-    // already released.
     if (currentStep < 1 || currentStep > 4) return;
     const resync = () => {
       if (document.visibilityState === "visible") {

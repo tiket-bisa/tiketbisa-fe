@@ -267,11 +267,6 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
           <div className="space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-10">
               <EventInfoHeader event={event} />
-              {/* Shown from step 1 on. Seats are reserved the moment checkout opens, so a buyer
-                  filling in per-ticket data needs to see how long that reservation lasts — and
-                  the seats have to go back on sale when it lapses (TIK-18). The deadline comes
-                  from the backend: the details lock first, then the longer payment window once
-                  the gateway channel exists. */}
               {currentStep >= 1 && currentStep <= 4 && (
                 <div className="hidden md:block">
                    <CountdownTimer onExpire={handleExpire} />

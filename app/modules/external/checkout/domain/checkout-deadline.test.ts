@@ -22,7 +22,6 @@ describe("resolveCheckoutDeadline", () => {
   });
 
   it("never lets a deadline drift forward while a phase is still running", () => {
-    // A later poll reporting a fresh full window must not hand the buyer extra time.
     expect(
       resolveCheckoutDeadline({
         ttl: ttl(600),
@@ -34,8 +33,6 @@ describe("resolveCheckoutDeadline", () => {
   });
 
   it("takes the longer payment window when the reservation really was extended", () => {
-    // Entering the payment phase re-locks to the gateway invoice lifetime. Clamping to the
-    // details deadline here would run the countdown out on a live invoice.
     expect(
       resolveCheckoutDeadline({
         ttl: ttl(1200),
