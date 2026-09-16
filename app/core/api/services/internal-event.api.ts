@@ -88,9 +88,7 @@ export interface EventTicketCategorySummary {
   issuedTicket: number;
   checkedInTicket: number;
   remainingTicket: number;
-  /** Paid and completed. The revenue number. */
   soldTicket: number;
-  /** Claimed by a buyer, paid or not — what is actually off the shelf right now. */
   checkedOutTicket: number;
   price: number;
   isHidden: boolean;
@@ -280,7 +278,6 @@ export function normalizeEventTicketCategory(api: EventTicketCategoryApiData): E
     checkedInTicket: Number(api.checkedInTicket ?? api.checked_in_ticket ?? 0),
     remainingTicket: Number(api.remainingTicket ?? api.remaining_ticket ?? 0),
     soldTicket: Number(api.soldTicket ?? api.sold_ticket ?? api.issuedTicket ?? api.issued_ticket ?? 0),
-    // issued_ticket is the pre-split name for the same thing: every seat claimed, paid or not.
     checkedOutTicket: Number(
       api.checkedOutTicket ?? api.checked_out_ticket ?? api.issuedTicket ?? api.issued_ticket ?? 0,
     ),

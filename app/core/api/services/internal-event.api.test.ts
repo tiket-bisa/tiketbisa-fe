@@ -22,8 +22,6 @@ describe("event ticket dashboard query", () => {
 
 describe("ticket category counts", () => {
   it("keeps sold and checked-out apart", () => {
-    // Sold is the paid subset and drives revenue; checked out is every claimed seat, which is
-    // what the event screen monitors. Collapsing them is the confusion this ticket exists to fix.
     const summary = normalizeEventTicketCategory({
       id: "c1",
       soldTicket: 40,

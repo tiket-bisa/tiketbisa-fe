@@ -162,9 +162,6 @@ export default function EventTicketDashboardPage() {
         </div>
       </div>
 
-      {/* This screen monitors quantities, so the headline number is what is off the shelf —
-          every seat a buyer has claimed, paid or not. "Terjual" stays for the paid subset, and
-          is the number Beranda reports as revenue. */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
         <SummaryCard label="Kuota" value={totalTicket} />
         <SummaryCard label="Terpesan (termasuk bulk)" value={checkedOutTicket} />
