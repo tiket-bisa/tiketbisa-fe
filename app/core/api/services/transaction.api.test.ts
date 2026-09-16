@@ -75,16 +75,12 @@ describe("transaction fee breakdown", () => {
 
     expect(mapped.base_amount).toBe(100000);
     expect(mapped.total_price).toBe(108120);
-    // The parts have to reconcile, or the partner and admin views describe the same sale
-    // differently.
     expect(
       (mapped.base_amount ?? 0) + (mapped.service_fee ?? 0) + (mapped.transaction_fee ?? 0),
     ).toBe(mapped.total_price);
   });
 
   it("reports null, not zero, for transactions made before the breakdown was recorded", () => {
-    // Zero would render as a sale that earned the partner nothing. The UI shows an em dash for
-    // null instead, which is the honest answer.
     const mapped = mapTransactionApiToFe(transaction("PAID"));
 
     expect(mapped.base_amount).toBe(null);
@@ -93,4 +89,3 @@ describe("transaction fee breakdown", () => {
     expect(mapped.total_price).toBe(10000);
   });
 });
-

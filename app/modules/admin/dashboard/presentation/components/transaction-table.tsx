@@ -44,9 +44,6 @@ export function TransactionTable({ transactions, returnTo = "/internal-tb/admin"
                   <td className="px-4 py-3 text-text-secondary whitespace-nowrap">
                     {formatTransactionTimestamp(tx.created_at)}
                   </td>
-                  {/* Admin sees both sides of the same sale: what the partner earns and what the
-                      buyer was charged. The gap between them is the Biaya Layanan plus the
-                      gateway fee. */}
                   <td className="px-4 py-3 text-text-secondary text-right">
                     {tx.base_amount == null ? (
                       <span className="text-text-tertiary" title="Rincian belum dicatat untuk transaksi ini">—</span>

@@ -213,10 +213,6 @@ export default function DashboardPage() {
                       <td className="px-4 py-3 text-text-secondary whitespace-nowrap">
                         {formatTransactionTimestamp(tx.created_at)}
                       </td>
-                      {/* Partners are paid on the ticket price, not on what the buyer was
-                          charged: the total also carries the Biaya Layanan and the gateway fee,
-                          neither of which is theirs. Showing gross here disagreed with the Total
-                          Revenue card above, which has always been priced on tickets alone. */}
                       <td className="px-4 py-3 text-text-primary text-right font-medium">
                         {tx.base_amount == null ? (
                           <span className="text-text-tertiary" title="Rincian belum dicatat untuk transaksi ini">
