@@ -237,7 +237,6 @@ describe("useScanFlow state machine", () => {
           expected_category_ids: ["cat-1"],
         }),
       );
-      // The validate result still drives the card, so holder/category stay visible.
       expect(result.current.validateResult?.holderName).toBe("Budi");
       expect(result.current.validateResult?.ticketCategoryName).toBe("VIP");
       expect(result.current.isBusy).toBe(false);
@@ -280,7 +279,6 @@ describe("useScanFlow state machine", () => {
         await Promise.resolve();
       });
 
-      // A second frame decoded while check-in is still running must not start another validate.
       await act(async () => { await result.current.handleScan("TKBsecond"); });
       expect(mockValidate).toHaveBeenCalledTimes(1);
 

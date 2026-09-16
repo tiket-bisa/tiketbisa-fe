@@ -34,8 +34,6 @@ export function useScanFlow(
   const isBusyRef = useRef(false);
   const generationRef = useRef(0);
   const completedCodeRef = useRef<string | null>(null);
-  // Read through a ref so toggling auto check-in does not change `handleScan`'s identity and
-  // force the camera scanner to re-register its callback mid-queue.
   const autoCheckInRef = useRef(autoCheckIn);
   autoCheckInRef.current = autoCheckIn;
   const scopeKey = JSON.stringify([expectedEventId, expectedCategoryIds]);
@@ -51,11 +49,6 @@ export function useScanFlow(
     return () => { generationRef.current += 1; };
   }, [scopeKey]);
 
-  /**
-   * Mutating half of the flow. Assumes the caller already claimed `isBusyRef` and owns
-   * `generation`, so it can be chained straight off a validate call without releasing the
-   * lock in between (the scanner would otherwise fire again on the very next frame).
-   */
   const runCheckIn = useCallback(
     async (target: ScanValidateResult, generation: number) => {
       setIsCheckingIn(true);
