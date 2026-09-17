@@ -118,6 +118,7 @@ export default function EventTicketDashboardPage() {
 
   const totalTicket = data.categories.reduce((sum, category) => sum + category.totalTicket, 0);
   const soldTicket = data.categories.reduce((sum, category) => sum + category.soldTicket, 0);
+  const checkedOutTicket = data.categories.reduce((sum, category) => sum + category.checkedOutTicket, 0);
   const bulkTicket = data.categories.reduce((sum, category) => sum + (category.bulkType ? category.issuedTicket : 0), 0);
   const remainingTicket = data.categories.reduce((sum, category) => sum + category.remainingTicket, 0);
   const checkedInTicket = data.categories.reduce((sum, category) => sum + category.checkedInTicket, 0);
@@ -144,7 +145,7 @@ export default function EventTicketDashboardPage() {
           </Button>
           <h1 className="text-text-primary text-3xl font-extrabold">{data.event.name}</h1>
           <p className="text-text-tertiary text-sm font-medium">
-            Kelola Tiket &amp; Penjualan · Kuota, tiket terjual, sisa tiket, dan status check-in
+            Kelola Tiket &amp; Penjualan · Kuota, tiket terpesan, tiket terjual, sisa tiket, dan status check-in
           </p>
           {eventEnded && <Badge variant="destructive">Event Selesai · Penjualan ditutup</Badge>}
         </div>
@@ -161,9 +162,10 @@ export default function EventTicketDashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
         <SummaryCard label="Kuota" value={totalTicket} />
-        <SummaryCard label="Terjual (termasuk bulk)" value={soldTicket} />
+        <SummaryCard label="Terpesan (termasuk bulk)" value={checkedOutTicket} />
+        <SummaryCard label="Terjual & Lunas" value={soldTicket} />
         <SummaryCard label="Bulk Terbit" value={bulkTicket} />
         <SummaryCard label="Sisa" value={remainingTicket} />
         <SummaryCard label="Checked In" value={checkedInTicket} />
@@ -180,7 +182,8 @@ export default function EventTicketDashboardPage() {
                 <th className="px-3 py-2 font-medium">Harga</th>
                 <th className="px-3 py-2 font-medium">Visibilitas</th>
                 <th className="px-3 py-2 font-medium">Kuota</th>
-                <th className="px-3 py-2 font-medium">Terjual</th>
+                <th className="px-3 py-2 font-medium">Terpesan</th>
+                <th className="px-3 py-2 font-medium">Terjual &amp; Lunas</th>
                 <th className="px-3 py-2 font-medium">Sisa</th>
                 <th className="px-3 py-2 font-medium">Checked In</th>
                 <th className="px-3 py-2 font-medium">Aksi</th>
@@ -198,6 +201,7 @@ export default function EventTicketDashboardPage() {
                     </Badge>
                   </td>
                   <td className="px-3 py-3 text-text-secondary">{category.totalTicket.toLocaleString()}</td>
+                  <td className="px-3 py-3 text-text-secondary">{category.checkedOutTicket.toLocaleString()}</td>
                   <td className="px-3 py-3 text-text-secondary">{category.soldTicket.toLocaleString()}</td>
                   <td className="px-3 py-3 text-text-secondary">{category.remainingTicket.toLocaleString()}</td>
                   <td className="px-3 py-3 text-text-secondary">{category.checkedInTicket.toLocaleString()}</td>
