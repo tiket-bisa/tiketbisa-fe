@@ -62,3 +62,30 @@ describe("transaction status filters", () => {
     expect(buildTransactionListQuery({ search: "d637649eefa6" })).toBe("?search=d637649eefa6");
   });
 });
+
+describe("transaction fee breakdown", () => {
+  it("keeps the partner's ticket revenue apart from the gross the buyer paid", () => {
+    const mapped = mapTransactionApiToFe({
+      ...transaction("PAID"),
+      totalPrice: 108120,
+      baseAmount: 100000,
+      serviceFee: 5000,
+      transactionFee: 3120,
+    });
+
+    expect(mapped.base_amount).toBe(100000);
+    expect(mapped.total_price).toBe(108120);
+    expect(
+      (mapped.base_amount ?? 0) + (mapped.service_fee ?? 0) + (mapped.transaction_fee ?? 0),
+    ).toBe(mapped.total_price);
+  });
+
+  it("reports null, not zero, for transactions made before the breakdown was recorded", () => {
+    const mapped = mapTransactionApiToFe(transaction("PAID"));
+
+    expect(mapped.base_amount).toBe(null);
+    expect(mapped.service_fee).toBe(null);
+    expect(mapped.transaction_fee).toBe(null);
+    expect(mapped.total_price).toBe(10000);
+  });
+});
