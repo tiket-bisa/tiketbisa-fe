@@ -2,11 +2,11 @@ import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Button, Card, Select } from "~/core/design-system/components";
 import { ticketCategoryApi, mapTicketCategoryToFe } from "~/core/api/services/ticket-category.api";
+import { buildBulkCategoryOptions } from "./bulk-category-options";
 import { transactionApi, type IssuedTicketDetail } from "~/core/api/services/transaction.api";
 import { internalEventApi, normalizeInternalEvent } from "~/core/api/services/internal-event.api";
 import { toUserFacingError, useApiQuery } from "~/core/api";
 import { useAuth } from "~/core/auth";
-import { formatIDR } from "~/core/utils";
 import { normalizeIndonesianPhone } from "~/modules/external/checkout/domain/phone";
 import { isValidDotComEmail } from "~/core/utils/form-validation";
 
@@ -60,13 +60,7 @@ export default function GenerateBulkTicketPage() {
     [categoriesRaw],
   );
 
-  const categoryOptions = useMemo(
-    () => categories.map((category) => ({
-      value: category.id,
-      label: `${category.name} - ${formatIDR(category.price)} - sisa ${category.available}`,
-    })),
-    [categories],
-  );
+  const categoryOptions = useMemo(() => buildBulkCategoryOptions(categories), [categories]);
 
   const eventsPath = user?.role === "admin" ? "/internal-tb/admin/events" : "/internal-tb/partner/events";
   const returnPath = eventId ? `${eventsPath}/${eventId}/tickets` : eventsPath;
@@ -111,6 +105,10 @@ export default function GenerateBulkTicketPage() {
     const selectedCategory = categories.find((category) => category.id === formData.categoryId);
     if (!selectedCategory) {
       setErrorMsg("Kategori harus merupakan kategori hidden yang tersedia untuk Tiket Bulk.");
+      return;
+    }
+    if (selectedCategory.available <= 0) {
+      setErrorMsg(`Kategori ${selectedCategory.name} sudah habis dan tidak bisa digenerate.`);
       return;
     }
     if (quantity > selectedCategory.available) {
