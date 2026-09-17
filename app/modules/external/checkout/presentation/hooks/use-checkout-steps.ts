@@ -10,6 +10,7 @@ import { buildPaymentOrderSummary } from "../../domain/checkout.pricing";
 import { canProceedWithPayment } from "../../domain/checkout.validation";
 import { MAX_TICKETS_PER_TRANSACTION } from "~/shared/constants/transaction";
 
+import { resolveCheckoutDeadline } from "../../domain/checkout-deadline";
 import type { BuyerInfo, OrderSummary, PaymentMethod, OrderResponse, TicketHolder } from "../../domain/checkout.types";
 import type { EventSummary } from "~/core/types";
 
@@ -114,23 +115,20 @@ export function useCheckoutSteps(
     navigate(`/event/${params.eventId ?? event.id}`);
   }, [clearCheckoutStorage, event.id, navigate, params.eventId, releaseActiveCheckout, warningToast]);
 
-  const setDeadlineFromTtl = useCallback((ttl: CheckoutTtl) => {
-    if (ttl.status === "ACTIVE" && ttl.remainingSeconds > 0) {
-      const backendDeadline = ttl.expiresAt > 0
-        ? ttl.expiresAt
-        : Date.now() + ttl.remainingSeconds * 1000;
-      const storedDeadline = Number(sessionStorage.getItem(CHECKOUT_DEADLINE_STORAGE_KEY));
-      const deadline = Number.isFinite(storedDeadline) && storedDeadline > Date.now()
-        ? Math.min(storedDeadline, backendDeadline)
-        : backendDeadline;
-      sessionStorage.setItem(
-        CHECKOUT_DEADLINE_STORAGE_KEY,
-        String(deadline),
-      );
-      return true;
+  const setDeadlineFromTtl = useCallback((ttl: CheckoutTtl, authoritative = false) => {
+    const stored = sessionStorage.getItem(CHECKOUT_DEADLINE_STORAGE_KEY);
+    const deadline = resolveCheckoutDeadline({
+      ttl,
+      storedDeadline: stored === null ? null : Number(stored),
+      now: Date.now(),
+      authoritative,
+    });
+    if (deadline === null) {
+      sessionStorage.removeItem(CHECKOUT_DEADLINE_STORAGE_KEY);
+      return false;
     }
-    sessionStorage.removeItem(CHECKOUT_DEADLINE_STORAGE_KEY);
-    return false;
+    sessionStorage.setItem(CHECKOUT_DEADLINE_STORAGE_KEY, String(deadline));
+    return true;
   }, []);
 
   const getActiveLockId = useCallback(() => (
@@ -157,7 +155,7 @@ export function useCheckoutSteps(
 
   const ensureCheckoutSessionActive = useCallback(async () => {
     const activeLockId = getActiveLockId();
-    if (currentStep <= 1 || currentStep >= 5) {
+    if (currentStep >= 5) {
       return true;
     }
     if (!activeLockId) {
@@ -177,7 +175,14 @@ export function useCheckoutSteps(
     }
 
     if (ttl) {
-      setDeadlineFromTtl(ttl);
+      setDeadlineFromTtl(ttl, true);
+    } else {
+      setDeadlineFromTtl({
+        status: "ACTIVE",
+        remainingSeconds,
+        expiresAt: 0,
+        serverTime: Date.now(),
+      });
     }
     return true;
   }, [
@@ -245,7 +250,7 @@ export function useCheckoutSteps(
     let cancelled = false;
 
     const validateSession = async () => {
-      if (currentStep <= 1 || currentStep >= 5) {
+      if (currentStep >= 5) {
         return;
       }
       try {
@@ -266,7 +271,7 @@ export function useCheckoutSteps(
   }, [currentStep, ensureCheckoutSessionActive]);
 
   useEffect(() => {
-    if (currentStep !== 4) return;
+    if (currentStep < 1 || currentStep > 4) return;
     const resync = () => {
       if (document.visibilityState === "visible") {
         void ensureCheckoutSessionActive();
