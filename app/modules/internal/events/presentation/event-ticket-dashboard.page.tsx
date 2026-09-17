@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
-import { Badge, Button, Card, Input, Select } from "~/core/design-system/components";
+import { Badge, Button, Card, Input, Select, useToast } from "~/core/design-system/components";
 import { useApiQuery } from "~/core/api";
 import {
   internalEventApi,
@@ -13,6 +13,10 @@ import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 import { TicketDeliveryActions } from "~/modules/internal/ticket-delivery/presentation/ticket-delivery-actions";
 import { useDebouncedValue } from "~/modules/internal/common/presentation/use-debounced-value";
 import { ticketCategoryApi } from "~/core/api/services/ticket-category.api";
+import {
+  preGeneratedCodeApi,
+  buildPreGeneratedCodeCsv,
+} from "~/core/api/services/pre-generated-code.api";
 
 const statusOptions = [
   { value: "all", label: "Semua Status" },
@@ -43,6 +47,9 @@ export default function EventTicketDashboardPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [issuedTicketOffset, setIssuedTicketOffset] = useState(0);
   const [adjustingCategory, setAdjustingCategory] = useState<EventTicketCategorySummary | null>(null);
+  const [preGenerating, setPreGenerating] = useState(false);
+  const [downloadingCodes, setDownloadingCodes] = useState(false);
+  const { success: successToast, error: errorToast, info: infoToast } = useToast();
   const debouncedSearch = useDebouncedValue(search);
 
   const { data: fetchedData, loading, error, refetch } = useApiQuery(
@@ -125,6 +132,59 @@ export default function EventTicketDashboardPage() {
   const displayedEnd = Math.min(data.offset + data.issuedTickets.length, data.totalCount);
   const canGoPrevious = data.offset > 0;
   const canGoNext = data.offset + data.issuedTickets.length < data.totalCount;
+
+  const handlePreGenerate = async () => {
+    if (!eventId) return;
+    setPreGenerating(true);
+    try {
+      const result = await preGeneratedCodeApi.generateForEvent(eventId);
+      if (!result.success || !result.data) {
+        throw new Error(result.error || "Gagal membuat kode pre-generate.");
+      }
+      // Zero is a normal outcome, not a failure: every category already holds a full set. Saying
+      // so plainly avoids a second press on the assumption nothing happened.
+      if (result.data.totalGenerated === 0) {
+        infoToast("Semua kategori sudah punya kode untuk sisa tiketnya.");
+      } else {
+        successToast(`${result.data.totalGenerated} kode berhasil dibuat.`);
+      }
+      refetch();
+    } catch (err) {
+      errorToast(err instanceof Error ? err.message : "Gagal membuat kode pre-generate.");
+    } finally {
+      setPreGenerating(false);
+    }
+  };
+
+  const handleDownloadCodes = async () => {
+    if (!eventId) return;
+    setDownloadingCodes(true);
+    try {
+      const result = await preGeneratedCodeApi.listForEvent(eventId);
+      if (!result.success || !result.data) {
+        throw new Error(result.error || "Gagal mengunduh kode.");
+      }
+      if (result.data.totalCount === 0) {
+        infoToast("Belum ada kode pre-generate untuk event ini.");
+        return;
+      }
+      const categoryNameById = Object.fromEntries(
+        data.categories.map((category) => [category.id, category.name]),
+      );
+      const csv = buildPreGeneratedCodeCsv(result.data.codes, categoryNameById);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `kode-pre-generate-${data.event.name.replace(/\s+/g, "_")}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      errorToast(err instanceof Error ? err.message : "Gagal mengunduh kode.");
+    } finally {
+      setDownloadingCodes(false);
+    }
+  };
   const eventEnded = data.event.status === "ENDED"
     || (data.event.endDate ? new Date(data.event.endDate).getTime() <= Date.now() : false);
   const goToPreviousPage = () => {
@@ -157,6 +217,27 @@ export default function EventTicketDashboardPage() {
           </Button>
           <Button type="button" variant="secondary" disabled={eventEnded} onClick={() => navigate(`${basePath}/events/${eventId}/bulk/new`)}>
             Tiket Bulk
+          </Button>
+          {/* One button for the whole event: the offline gate scanner needs every valid code
+              loaded before the gate opens, and codes that only exist once a ticket is sold cannot
+              be handed over in time. */}
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={eventEnded || preGenerating}
+            isLoading={preGenerating}
+            onClick={handlePreGenerate}
+          >
+            Pre-generate Kode
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={downloadingCodes}
+            isLoading={downloadingCodes}
+            onClick={handleDownloadCodes}
+          >
+            Unduh Kode (CSV)
           </Button>
         </div>
       </div>
