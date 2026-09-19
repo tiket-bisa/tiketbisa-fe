@@ -18,4 +18,9 @@ describe("event ticket dashboard query", () => {
     expect(params.get("categoryId")).toBe("category-1");
     expect(params.get("status")).toBe("ISSUED");
   });
+
+  it.each(["WAITING_PAYMENT", "WAITING_APPROVAL"])("sends the %s status filter", (status) => {
+    const query = buildTicketDashboardQuery({ status });
+    expect(new URLSearchParams(query.slice(1)).get("status")).toBe(status);
+  });
 });
