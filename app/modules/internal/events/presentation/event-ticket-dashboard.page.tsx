@@ -13,9 +13,12 @@ import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 import { TicketDeliveryActions } from "~/modules/internal/ticket-delivery/presentation/ticket-delivery-actions";
 import { useDebouncedValue } from "~/modules/internal/common/presentation/use-debounced-value";
 import { ticketCategoryApi } from "~/core/api/services/ticket-category.api";
+import { getEventTicketDisplayStatus, getEventTransactionStatusLabel } from "./event-ticket-status";
 
 const statusOptions = [
   { value: "all", label: "Semua Status" },
+  { value: "WAITING_PAYMENT", label: "Menunggu Pembayaran" },
+  { value: "WAITING_APPROVAL", label: "Menunggu Approval" },
   { value: "ISSUED", label: "Issued" },
   { value: "CHECKED_IN", label: "Checked In" },
   { value: "CANCELED", label: "Canceled" },
@@ -25,6 +28,8 @@ const statusOptions = [
 const ISSUED_TICKET_PAGE_SIZE = 50;
 
 const statusMap: Record<string, { label: string; variant: "default" | "success" | "warning" | "destructive" | "brand" }> = {
+  WAITING_PAYMENT: { label: "Menunggu Pembayaran", variant: "warning" },
+  WAITING_APPROVAL: { label: "Menunggu Approval", variant: "warning" },
   ISSUED: { label: "Issued", variant: "brand" },
   CHECKED_IN: { label: "Checked In", variant: "success" },
   CANCELED: { label: "Canceled", variant: "destructive" },
@@ -411,7 +416,8 @@ function IssuedTicketRow({
   ticket: IssuedTicketSummary;
   transactionTicketCount: number;
 }) {
-  const status = statusMap[ticket.status] ?? { label: ticket.status || "-", variant: "default" as const };
+  const displayStatus = getEventTicketDisplayStatus(ticket);
+  const status = statusMap[displayStatus] ?? { label: displayStatus || "-", variant: "default" as const };
   return (
     <tr className="border-b border-border-subtle last:border-0">
       <td className="px-3 py-3">
@@ -431,7 +437,7 @@ function IssuedTicketRow({
       </td>
       <td className="px-3 py-3">
         <div className="text-text-secondary">{ticket.paymentMethod || "-"}</div>
-        <div className="text-xs text-text-tertiary">{ticket.transactionStatus || "-"}</div>
+        <div className="text-xs text-text-tertiary">{getEventTransactionStatusLabel(ticket.transactionStatus)}</div>
       </td>
       <td className="px-3 py-3">
         <Badge variant={status.variant}>{status.label}</Badge>
