@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildTransactionListQuery, mapTransactionApiToFe, type TransactionApiData } from "./transaction.api";
 import { mapTransactionStatusFilterToApi } from "~/core/constants/transaction";
+import { parseTransactionType, toTransactionType } from "~/core/constants/transaction-type";
 
 function transaction(status: string): TransactionApiData {
   return {
@@ -43,6 +44,10 @@ describe("mapTransactionApiToFe", () => {
 });
 
 describe("transaction status filters", () => {
+  it("defaults invalid transaction types to all and omits the query parameter", () => {
+    expect(parseTransactionType("UNKNOWN")).toBe("all");
+    expect(toTransactionType("all")).toBeUndefined();
+  });
   it("keeps payment and approval queues separate", () => {
     expect(mapTransactionStatusFilterToApi("waiting_payment")).toBe("WAITING_PAYMENT");
     expect(mapTransactionStatusFilterToApi("waiting_approval")).toBe("WAITING_APPROVAL");
@@ -60,6 +65,11 @@ describe("transaction status filters", () => {
 
   it("sends the dashboard search as a general transaction search", () => {
     expect(buildTransactionListQuery({ search: "d637649eefa6" })).toBe("?search=d637649eefa6");
+  });
+
+  it("combines transaction type with event scope and pagination", () => {
+    expect(buildTransactionListQuery({ eventId: "event-1", transactionType: "COMMUNITY", limit: 5, offset: 5 }))
+      .toBe("?limit=5&offset=5&eventId=event-1&transactionType=COMMUNITY");
   });
 });
 
