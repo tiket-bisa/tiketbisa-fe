@@ -9,6 +9,11 @@ import {
   type IssuedTicketSummary,
 } from "~/core/api/services/internal-event.api";
 import { formatIDR } from "~/core/utils";
+import { formatTransactionTimestamp } from "~/core/utils";
+import { useAuth } from "~/core/auth";
+import { transactionApi } from "~/core/api/services/transaction.api";
+import { TransactionPaginationControls } from "~/modules/internal/common/presentation/transaction-pagination-controls";
+import { toTransactionType, transactionTypeOptions, type TransactionTypeFilter } from "~/core/constants/transaction-type";
 import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 import { TicketDeliveryActions } from "~/modules/internal/ticket-delivery/presentation/ticket-delivery-actions";
 import { useDebouncedValue } from "~/modules/internal/common/presentation/use-debounced-value";
@@ -41,11 +46,15 @@ export default function EventTicketDashboardPage() {
   const { eventId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const isAdmin = location.pathname.includes("/internal-tb/admin/");
   const basePath = isAdmin ? "/internal-tb/admin" : "/internal-tb/partner";
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [transactionType, setTransactionType] = useState<TransactionTypeFilter>("all");
+  const [transactionPage, setTransactionPage] = useState(1);
+  const [transactionPageSize, setTransactionPageSize] = useState(5);
   const [issuedTicketOffset, setIssuedTicketOffset] = useState(0);
   const [adjustingCategory, setAdjustingCategory] = useState<EventTicketCategorySummary | null>(null);
   const debouncedSearch = useDebouncedValue(search);
@@ -59,18 +68,42 @@ export default function EventTicketDashboardPage() {
         search: debouncedSearch.trim() || undefined,
         categoryId: categoryFilter === "all" ? undefined : categoryFilter,
         status: statusFilter === "all" ? undefined : statusFilter,
+        transactionType: toTransactionType(transactionType),
       });
       if (!result.success || !result.data) {
         throw new Error(result.error || "Gagal memuat data tiket event.");
       }
       return result.data as EventTicketDashboard;
     },
-    [eventId, issuedTicketOffset, debouncedSearch, categoryFilter, statusFilter],
+    [eventId, issuedTicketOffset, debouncedSearch, categoryFilter, statusFilter, transactionType],
+  );
+
+  const { data: transactionData, loading: transactionsLoading, error: transactionsError, refetch: refetchTransactions } = useApiQuery(
+    async () => {
+      if (!eventId || (!isAdmin && !user?.brand_id)) return { transactions: [], totalCount: 0, totalPages: 1 };
+      const result = await transactionApi.getList({
+        eventId,
+        brandId: isAdmin ? undefined : user?.brand_id,
+        transactionType: toTransactionType(transactionType),
+        search: debouncedSearch.trim() || undefined,
+        limit: transactionPageSize,
+        offset: (transactionPage - 1) * transactionPageSize,
+        orderBy: "created:DESC",
+      });
+      if (!result.success || !result.data) throw new Error(result.error || "Gagal memuat transaksi event.");
+      return {
+        transactions: result.data.transactions ?? [],
+        totalCount: result.data.totalCount ?? result.data.total_count ?? 0,
+        totalPages: result.data.totalPages ?? result.data.total_pages ?? 1,
+      };
+    },
+    [eventId, isAdmin, user?.brand_id, transactionType, debouncedSearch, transactionPage, transactionPageSize],
   );
 
   const handleRealtimeMessage = useCallback((message: RealtimeMessage) => {
     if (message.type === "event_ticket_dashboard.updated" && message.payload) {
       void refetch();
+      void refetchTransactions();
       return;
     }
     if (
@@ -79,14 +112,23 @@ export default function EventTicketDashboardPage() {
       || message.type === "ticket_category.updated"
     ) {
       void refetch();
+      void refetchTransactions();
     }
-  }, [refetch]);
+  }, [refetch, refetchTransactions]);
 
   useRealtimeSubscription(eventId ? [`event:${eventId}`] : [], handleRealtimeMessage);
 
   useEffect(() => {
     setIssuedTicketOffset(0);
-  }, [eventId, debouncedSearch, categoryFilter, statusFilter]);
+  }, [eventId, debouncedSearch, categoryFilter, statusFilter, transactionType]);
+
+  useEffect(() => { setTransactionPage(1); }, [eventId, debouncedSearch, transactionType]);
+
+  useEffect(() => {
+    if (!transactionsLoading && transactionData && transactionPage > transactionData.totalPages) {
+      setTransactionPage(Math.max(transactionData.totalPages, 1));
+    }
+  }, [transactionsLoading, transactionData, transactionPage]);
 
   const data = fetchedData;
 
@@ -121,11 +163,10 @@ export default function EventTicketDashboardPage() {
     );
   }
 
-  const totalTicket = data.categories.reduce((sum, category) => sum + category.totalTicket, 0);
-  const soldTicket = data.categories.reduce((sum, category) => sum + category.soldTicket, 0);
-  const bulkTicket = data.categories.reduce((sum, category) => sum + (category.bulkType ? category.issuedTicket : 0), 0);
-  const remainingTicket = data.categories.reduce((sum, category) => sum + category.remainingTicket, 0);
-  const checkedInTicket = data.categories.reduce((sum, category) => sum + category.checkedInTicket, 0);
+  const totalTicket = data.inventory.totalTicket;
+  const soldTicket = data.soldTickets;
+  const remainingTicket = data.inventory.remainingTicket;
+  const checkedInTicket = data.inventory.checkedInTicket;
   const displayedStart = data.totalCount === 0 ? 0 : data.offset + 1;
   const displayedEnd = Math.min(data.offset + data.issuedTickets.length, data.totalCount);
   const canGoPrevious = data.offset > 0;
@@ -166,13 +207,26 @@ export default function EventTicketDashboardPage() {
         </div>
       </div>
 
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="w-full sm:w-56">
+          <Select label="Transaction Type" options={transactionTypeOptions} value={transactionType}
+            onChange={(event) => { setTransactionType(event.target.value as TransactionTypeFilter); setCategoryFilter("all"); }} />
+        </div>
+        <div className="w-full sm:max-w-md">
+          <Input label="Cari tiket atau transaksi" value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Cari buyer, kode tiket, atau order ID" />
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <SummaryCard label="Kuota" value={totalTicket} />
-        <SummaryCard label="Terjual (termasuk bulk)" value={soldTicket} />
-        <SummaryCard label="Bulk Terbit" value={bulkTicket} />
+        <SummaryCard label="Revenue" value={formatIDR(data.revenue)} />
+        <SummaryCard label="Terjual" value={soldTicket} />
         <SummaryCard label="Sisa" value={remainingTicket} />
         <SummaryCard label="Checked In" value={checkedInTicket} />
       </div>
+      <p className="text-xs text-text-tertiary">Kuota, Sisa, dan Checked In mencakup seluruh event.</p>
 
       <Card padding="md">
         <h2 className="mb-4 text-lg font-semibold text-text-primary">Kategori Tiket</h2>
@@ -221,6 +275,39 @@ export default function EventTicketDashboardPage() {
         )}
       </Card>
 
+      <Card padding="md">
+        <h2 className="mb-4 text-lg font-semibold text-text-primary">Transaksi Event</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] text-sm">
+            <thead><tr className="border-b border-border-subtle text-left text-text-tertiary">
+              <th className="px-3 py-2">ID</th><th className="px-3 py-2">Pembeli</th>
+              <th className="px-3 py-2">Waktu</th><th className="px-3 py-2 text-right">Total</th>
+              <th className="px-3 py-2">Status</th><th className="px-3 py-2">Aksi</th>
+            </tr></thead>
+            <tbody>
+              {(!transactionsLoading ? transactionData?.transactions ?? [] : []).map((transaction) => (
+                <tr key={transaction.id} className="border-b border-border-subtle">
+                  <td className="px-3 py-3 font-mono text-xs">{transaction.id}</td>
+                  <td className="px-3 py-3">{transaction.customerName}</td>
+                  <td className="px-3 py-3">{formatTransactionTimestamp(transaction.created)}</td>
+                  <td className="px-3 py-3 text-right">{formatIDR(transaction.totalPrice)}</td>
+                  <td className="px-3 py-3">{getEventTransactionStatusLabel(transaction.status)}</td>
+                  <td className="px-3 py-3"><Button type="button" variant="ghost" size="sm"
+                    onClick={() => navigate(`${basePath}/transactions/${transaction.id}`)}>Detail</Button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {transactionsLoading && <p className="py-4 text-sm text-text-tertiary">Memuat transaksi...</p>}
+        {transactionsError && <p className="py-4 text-sm text-destructive-text">{transactionsError}</p>}
+        {!transactionsLoading && !transactionsError && !transactionData?.transactions.length && <p className="py-4 text-sm text-text-tertiary">Tidak ada transaksi sesuai filter.</p>}
+        <TransactionPaginationControls currentPage={transactionPage} pageSize={transactionPageSize}
+          totalCount={transactionData?.totalCount ?? 0} itemCount={transactionData?.transactions.length ?? 0}
+          totalPages={transactionData?.totalPages ?? 1} onPageChange={setTransactionPage}
+          onPageSizeChange={(size) => { setTransactionPageSize(size); setTransactionPage(1); }} />
+      </Card>
+
       {adjustingCategory && (
         <AdjustCategoryModal
           category={adjustingCategory}
@@ -234,14 +321,6 @@ export default function EventTicketDashboardPage() {
 
       <Card padding="md">
         <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end">
-          <div className="flex-1">
-            <Input
-              label="Cari tiket"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Cari buyer, kode tiket, atau order ID"
-            />
-          </div>
           <div className="w-full lg:w-56">
             <Select
               label="Kategori"
@@ -391,7 +470,7 @@ function AdjustCategoryModal({
   );
 }
 
-function SummaryCard({ label, value }: { label: string; value: number }) {
+function SummaryCard({ label, value }: { label: string; value: string | number }) {
   return (
     <Card padding="md">
       <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">{label}</p>
