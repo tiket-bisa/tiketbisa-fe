@@ -10,6 +10,7 @@ import { analyticsApi } from "~/modules/internal/analytics/analytics.api";
 import { TransactionPaginationControls } from "~/modules/internal/common/presentation/transaction-pagination-controls";
 import { useDebouncedValue } from "~/modules/internal/common/presentation/use-debounced-value";
 import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
+import { parseTransactionType, toTransactionType, transactionTypeOptions, type TransactionTypeFilter } from "~/core/constants/transaction-type";
 
 const DEFAULT_PAGE_SIZE = 5;
 const PAGE_SIZE_OPTIONS = new Set([5, 10, 25, 50]);
@@ -36,12 +37,14 @@ function buildDashboardParams({
   search,
   statusFilter,
   sortOrder,
+  transactionType,
 }: {
   currentPage: number;
   pageSize: number;
   search: string;
   statusFilter: string;
   sortOrder: TransactionSort;
+  transactionType: TransactionTypeFilter;
 }) {
   const params = new URLSearchParams();
   if (currentPage > 1) params.set("page", String(currentPage));
@@ -49,6 +52,7 @@ function buildDashboardParams({
   if (search.trim()) params.set("search", search.trim());
   if (statusFilter !== "all") params.set("status", statusFilter);
   if (sortOrder !== "newest") params.set("sort", sortOrder);
+  if (transactionType !== "all") params.set("transactionType", transactionType);
   return params;
 }
 
@@ -58,6 +62,7 @@ export default function AdminDashboardPage() {
   const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
   const [statusFilter, setStatusFilter] = useState(() => searchParams.get("status") ?? "all");
   const [sortOrder, setSortOrder] = useState<TransactionSort>(() => searchParams.get("sort") === "oldest" ? "oldest" : "newest");
+  const [transactionType, setTransactionType] = useState<TransactionTypeFilter>(() => parseTransactionType(searchParams.get("transactionType")));
   const [currentPage, setCurrentPage] = useState(() => parsePositiveInt(searchParams.get("page"), 1));
   const [pageSize, setPageSize] = useState(() => parsePageSize(searchParams.get("pageSize")));
   const debouncedSearch = useDebouncedValue(search);
@@ -65,9 +70,9 @@ export default function AdminDashboardPage() {
   // Fetch real dashboard stats
   const { data: stats, refetch: refetchStats } = useApiQuery(
     async () => {
-      return await analyticsApi.getDashboardStats();
+      return await analyticsApi.getDashboardStats(undefined, toTransactionType(transactionType));
     },
-    [],
+    [transactionType],
   );
 
   // Fetch real transaction list
@@ -78,6 +83,7 @@ export default function AdminDashboardPage() {
         offset: (currentPage - 1) * pageSize,
         search: debouncedSearch || undefined,
         status: mapTransactionStatusFilterToApi(statusFilter as "all" | TransactionStatus),
+        transactionType: toTransactionType(transactionType),
         orderBy: sortOrder === "oldest" ? "created:ASC" : "created:DESC",
       });
       if (res.success && res.data) {
@@ -89,13 +95,13 @@ export default function AdminDashboardPage() {
       }
       return { transactions: [], totalCount: 0, totalPages: 1 };
     },
-    [currentPage, pageSize, debouncedSearch, statusFilter, sortOrder],
+    [currentPage, pageSize, debouncedSearch, statusFilter, sortOrder, transactionType],
   );
 
   const transactions = transactionRes?.transactions ?? [];
   const totalCount = transactionRes?.totalCount ?? 0;
   const totalPages = transactionRes?.totalPages ?? 1;
-  const dashboardParams = buildDashboardParams({ currentPage, pageSize, search: debouncedSearch, statusFilter, sortOrder });
+  const dashboardParams = buildDashboardParams({ currentPage, pageSize, search: debouncedSearch, statusFilter, sortOrder, transactionType });
   const returnTo = `/internal-tb/admin${dashboardParams.toString() ? `?${dashboardParams.toString()}` : ""}`;
 
   const handleRealtimeMessage = useCallback((message: RealtimeMessage) => {
@@ -111,8 +117,8 @@ export default function AdminDashboardPage() {
   useRealtimeSubscription(["admin"], handleRealtimeMessage);
 
   useEffect(() => {
-    setSearchParams(buildDashboardParams({ currentPage, pageSize, search: debouncedSearch, statusFilter, sortOrder }), { replace: true });
-  }, [currentPage, pageSize, debouncedSearch, statusFilter, sortOrder, setSearchParams]);
+    setSearchParams(buildDashboardParams({ currentPage, pageSize, search: debouncedSearch, statusFilter, sortOrder, transactionType }), { replace: true });
+  }, [currentPage, pageSize, debouncedSearch, statusFilter, sortOrder, transactionType, setSearchParams]);
 
   useEffect(() => {
     if (!loadingTransactions && currentPage > totalPages) {
@@ -123,6 +129,11 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-8">
       <h1 className="text-text-primary text-2xl font-bold">Dashboard Admin</h1>
+
+      <div className="w-full sm:w-56">
+        <Select label="Transaction Type" options={transactionTypeOptions} value={transactionType}
+          onChange={(event) => { setTransactionType(event.target.value as TransactionTypeFilter); setCurrentPage(1); }} />
+      </div>
 
       {/* Platform Overview */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -142,11 +153,6 @@ export default function AdminDashboardPage() {
           <p className="text-text-tertiary text-xs uppercase tracking-wide">Tiket Terjual</p>
           <p className="text-text-primary text-2xl font-bold mt-1">{stats?.totalTicketsSold ?? "..."}</p>
           <p className="text-xs text-text-tertiary">Termasuk tiket bulk</p>
-        </Card>
-        <Card padding="md">
-          <p className="text-text-tertiary text-xs uppercase tracking-wide">Tiket Bulk Terbit</p>
-          <p className="text-text-primary text-2xl font-bold mt-1">{stats?.totalBulkTicketsIssued ?? "..."}</p>
-          <p className="text-xs text-text-tertiary">Bagian dari total tiket terjual</p>
         </Card>
       </div>
 
