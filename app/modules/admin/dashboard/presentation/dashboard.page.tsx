@@ -152,7 +152,7 @@ export default function AdminDashboardPage() {
         <Card padding="md">
           <p className="text-text-tertiary text-xs uppercase tracking-wide">Tiket Terjual</p>
           <p className="text-text-primary text-2xl font-bold mt-1">{stats?.totalTicketsSold ?? "..."}</p>
-          <p className="text-xs text-text-tertiary">Termasuk tiket bulk</p>
+          {transactionType === "all" && <p className="text-xs text-text-tertiary">Termasuk tiket bulk</p>}
         </Card>
       </div>
 
