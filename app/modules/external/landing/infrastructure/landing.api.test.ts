@@ -28,6 +28,7 @@ describe("landingApi", () => {
   it("queries upcoming events with real date and price filters", async () => {
     vi.mocked(eventApi.getEvents)
       .mockResolvedValueOnce(eventResponse([{ id: "featured" }]) as any)
+      .mockResolvedValueOnce(eventResponse([]) as any)
       .mockResolvedValueOnce(eventResponse([]) as any);
 
     await landingApi.getLandingData({
@@ -50,27 +51,46 @@ describe("landingApi", () => {
     vi.mocked(eventApi.getEvents)
       .mockResolvedValueOnce(eventResponse([]) as any)
       .mockResolvedValueOnce(eventResponse([]) as any)
+      .mockResolvedValueOnce(eventResponse([]) as any)
       .mockResolvedValueOnce(eventResponse([{ id: "next-event" }]) as any);
 
     const result = await landingApi.getLandingData({} as any);
 
     expect(result.featuredEvents).toEqual([{ id: "next-event" }]);
-    expect(eventApi.getEvents).toHaveBeenNthCalledWith(3, expect.objectContaining({
+    expect(eventApi.getEvents).toHaveBeenNthCalledWith(4, expect.objectContaining({
       limit: 1,
       status: "ONGOING",
       order_by: "date_asc",
     }));
-    expect(vi.mocked(eventApi.getEvents).mock.calls[2][0].start_date).toBeUndefined();
+    expect(vi.mocked(eventApi.getEvents).mock.calls[3][0].start_date).toBeUndefined();
   });
 
   it("keeps an already-started ongoing event eligible for landing queries", async () => {
     vi.mocked(eventApi.getEvents)
       .mockResolvedValueOnce(eventResponse([{ id: "live-featured" }]) as any)
-      .mockResolvedValueOnce(eventResponse([{ id: "live-event" }]) as any);
+      .mockResolvedValueOnce(eventResponse([{ id: "live-event" }]) as any)
+      .mockResolvedValueOnce(eventResponse([]) as any);
 
     await landingApi.getLandingData({} as any);
 
     expect(vi.mocked(eventApi.getEvents).mock.calls[0][0].start_date).toBeUndefined();
     expect(vi.mocked(eventApi.getEvents).mock.calls[1][0].start_date).toBeUndefined();
+  });
+
+  it("queries past events with status ENDED and date_desc order", async () => {
+    vi.mocked(eventApi.getEvents)
+      .mockResolvedValueOnce(eventResponse([{ id: "featured-1" }]) as any)
+      .mockResolvedValueOnce(eventResponse([{ id: "upcoming-1" }]) as any)
+      .mockResolvedValueOnce(eventResponse([{ id: "past-1", name: "Konser Lawas" }]) as any);
+
+    const result = await landingApi.getLandingData({} as any);
+
+    expect(eventApi.getEvents).toHaveBeenNthCalledWith(3, expect.objectContaining({
+      limit: 4,
+      offset: 0,
+      order_by: "date_desc",
+      status: "ENDED",
+    }));
+    expect(result.pastEvents).toEqual([{ id: "past-1", name: "Konser Lawas" }]);
   });
 });

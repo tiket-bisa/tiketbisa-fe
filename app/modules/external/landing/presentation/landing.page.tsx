@@ -4,6 +4,7 @@ import { useLandingFilters } from "./hooks/use-landing-filters";
 import { PartnerSection } from "./components/partner-section";
 import { FeaturedEvents } from "./components/featured-events";
 import { UpcomingEvents } from "./components/upcoming-events";
+import { PastEvents } from "./components/past-events";
 import type { Route } from "./+types/landing.page";
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -22,7 +23,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export default function LandingPage({ loaderData }: Route.ComponentProps) {
-  const { banners, partners, featuredEvents, upcomingEvents } = loaderData;
+  const { banners, partners, featuredEvents, upcomingEvents, pastEvents } = loaderData;
   
   const {
     partnerCategory,
@@ -51,7 +52,7 @@ export default function LandingPage({ loaderData }: Route.ComponentProps) {
       <FeaturedEvents events={featuredEvents} />
 
       {/* 4. Upcoming Section */}
-      <section className="w-full py-20">
+      <section className="w-full py-16">
         <UpcomingEvents
           events={upcomingEvents}
           filterValues={eventFilters}
@@ -59,6 +60,13 @@ export default function LandingPage({ loaderData }: Route.ComponentProps) {
           onReset={resetEventFilters}
         />
       </section>
+
+      {/* 5. Past Events Section (Portfolio Archive) */}
+      {pastEvents && pastEvents.length > 0 && (
+        <section className="w-full pb-16">
+          <PastEvents events={pastEvents} />
+        </section>
+      )}
     </div>
   );
 }
