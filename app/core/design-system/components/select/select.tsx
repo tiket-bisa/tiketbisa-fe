@@ -3,6 +3,8 @@ import { type SelectHTMLAttributes, forwardRef } from "react";
 export interface SelectOption {
   label: string;
   value: string;
+  /** Rendered but unselectable — for a choice the user should see exists yet cannot take. */
+  disabled?: boolean;
 }
 
 export interface SelectProps extends Omit<
@@ -53,7 +55,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
               </option>
             )}
             {options.map((opt) => (
-              <option key={opt.value} value={opt.value}>
+              <option key={opt.value} value={opt.value} disabled={opt.disabled}>
                 {opt.label}
               </option>
             ))}

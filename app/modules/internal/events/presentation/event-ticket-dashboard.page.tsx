@@ -132,13 +132,18 @@ export default function EventTicketDashboardPage() {
 
   const data = fetchedData;
 
+  const categories = useMemo(() => {
+    return [...(data?.categories ?? [])].sort((a, b) =>
+      a.name.localeCompare(b.name, "id", { numeric: true, sensitivity: "base" }),
+    );
+  }, [data?.categories]);
+
   const categoryOptions = useMemo(() => {
-    const categories = data?.categories ?? [];
     return [
       { value: "all", label: "Semua Kategori" },
       ...categories.map((category) => ({ value: category.id, label: category.name })),
     ];
-  }, [data?.categories]);
+  }, [categories]);
 
   const filteredIssuedTickets = data?.issuedTickets ?? [];
 
@@ -167,6 +172,8 @@ export default function EventTicketDashboardPage() {
   const soldTicket = data.soldTickets;
   const remainingTicket = data.inventory.remainingTicket;
   const checkedInTicket = data.inventory.checkedInTicket;
+  const checkedOutTicket = data.categories.reduce((sum, category) => sum + category.checkedOutTicket, 0);
+  const bulkTicket = data.categories.reduce((sum, category) => sum + (category.bulkType ? category.issuedTicket : 0), 0);
   const displayedStart = data.totalCount === 0 ? 0 : data.offset + 1;
   const displayedEnd = Math.min(data.offset + data.issuedTickets.length, data.totalCount);
   const canGoPrevious = data.offset > 0;
@@ -190,7 +197,7 @@ export default function EventTicketDashboardPage() {
           </Button>
           <h1 className="text-text-primary text-3xl font-extrabold">{data.event.name}</h1>
           <p className="text-text-tertiary text-sm font-medium">
-            Kelola Tiket &amp; Penjualan · Kuota, tiket terjual, sisa tiket, dan status check-in
+            Kelola Tiket &amp; Penjualan · Kuota, tiket terpesan, tiket terjual, sisa tiket, dan status check-in
           </p>
           {eventEnded && <Badge variant="destructive">Event Selesai · Penjualan ditutup</Badge>}
         </div>
@@ -219,10 +226,12 @@ export default function EventTicketDashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-7">
         <SummaryCard label="Kuota" value={totalTicket} />
+        <SummaryCard label="Terpesan (termasuk bulk)" value={checkedOutTicket} />
         <SummaryCard label="Revenue" value={formatIDR(data.revenue)} />
-        <SummaryCard label="Terjual" value={soldTicket} />
+        <SummaryCard label="Terjual & Lunas" value={soldTicket} />
+        <SummaryCard label="Bulk Terbit" value={bulkTicket} />
         <SummaryCard label="Sisa" value={remainingTicket} />
         <SummaryCard label="Checked In" value={checkedInTicket} />
       </div>
@@ -239,14 +248,15 @@ export default function EventTicketDashboardPage() {
                 <th className="px-3 py-2 font-medium">Harga</th>
                 <th className="px-3 py-2 font-medium">Visibilitas</th>
                 <th className="px-3 py-2 font-medium">Kuota</th>
-                <th className="px-3 py-2 font-medium">Terjual</th>
+                <th className="px-3 py-2 font-medium">Terpesan</th>
+                <th className="px-3 py-2 font-medium">Terjual &amp; Lunas</th>
                 <th className="px-3 py-2 font-medium">Sisa</th>
                 <th className="px-3 py-2 font-medium">Checked In</th>
                 <th className="px-3 py-2 font-medium">Aksi</th>
               </tr>
             </thead>
             <tbody>
-              {data.categories.map((category) => (
+              {categories.map((category) => (
                 <tr key={category.id} className="border-b border-border-subtle last:border-0">
                   <td className="px-3 py-3 font-medium text-text-primary">{category.name}</td>
                   <td className="px-3 py-3 text-text-secondary">{category.categoryCode || "-"}</td>
@@ -257,6 +267,7 @@ export default function EventTicketDashboardPage() {
                     </Badge>
                   </td>
                   <td className="px-3 py-3 text-text-secondary">{category.totalTicket.toLocaleString()}</td>
+                  <td className="px-3 py-3 text-text-secondary">{category.checkedOutTicket.toLocaleString()}</td>
                   <td className="px-3 py-3 text-text-secondary">{category.soldTicket.toLocaleString()}</td>
                   <td className="px-3 py-3 text-text-secondary">{category.remainingTicket.toLocaleString()}</td>
                   <td className="px-3 py-3 text-text-secondary">{category.checkedInTicket.toLocaleString()}</td>
@@ -270,7 +281,7 @@ export default function EventTicketDashboardPage() {
             </tbody>
           </table>
         </div>
-        {data.categories.length === 0 && (
+        {categories.length === 0 && (
           <p className="py-6 text-center text-sm text-text-tertiary">Belum ada kategori tiket.</p>
         )}
       </Card>

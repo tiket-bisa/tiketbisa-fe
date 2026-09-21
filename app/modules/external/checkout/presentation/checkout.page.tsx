@@ -267,10 +267,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
           <div className="space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-10">
               <EventInfoHeader event={event} />
-              {/* Timer is deliberately absent on step 1 (data + payment method) — it only
-                  starts once the buyer has committed to a payment method and reached the
-                  payment step, so filling in personal data never feels rushed. */}
-              {currentStep === 4 && (
+              {currentStep >= 1 && currentStep <= 4 && (
                 <div className="hidden md:block">
                    <CountdownTimer onExpire={handleExpire} />
                 </div>

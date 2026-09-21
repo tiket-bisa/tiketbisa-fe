@@ -58,7 +58,7 @@ export const landingApi: LandingRepository = {
   async getLandingData(params: LandingParams): Promise<LandingData> {
     const timeRange = resolveTimeRange(params.eventFilters?.time);
     const priceRange = resolvePriceRange(params.eventFilters?.price);
-    const [brandRes, featuredRes, upcomingRes] = await Promise.all([
+    const [brandRes, featuredRes, upcomingRes, pastRes] = await Promise.all([
       brandApi.getBrands({ 
         limit: 5, 
         offset: 0,
@@ -82,6 +82,12 @@ export const landingApi: LandingRepository = {
         min_price: priceRange.minPrice,
         max_price: priceRange.maxPrice,
       }),
+      eventApi.getEvents({
+        limit: 4,
+        offset: 0,
+        order_by: "date_desc",
+        status: "ENDED",
+      }),
     ]);
 
     let featuredEvents = featuredRes.data.event_list as Event[];
@@ -100,6 +106,7 @@ export const landingApi: LandingRepository = {
       partners: brandRes.data.brand_list as Brand[],
       featuredEvents,
       upcomingEvents: upcomingRes.data.event_list as Event[],
+      pastEvents: pastRes.data.event_list as Event[],
       totalUpcoming: upcomingRes.data.count,
     };
   },

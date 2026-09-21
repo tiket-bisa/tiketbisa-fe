@@ -12,8 +12,10 @@ export interface EventTicket {
 export interface Event {
   id: string;
   name: string;
+  slug?: string;
   brandId?: string;
   brand: string;
+  brandSlug?: string;
   brandLogoUrl?: string;
   brandAdminFee?: number;
   description: string;
