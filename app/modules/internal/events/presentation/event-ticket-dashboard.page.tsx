@@ -13,7 +13,7 @@ import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 import { TicketDeliveryActions } from "~/modules/internal/ticket-delivery/presentation/ticket-delivery-actions";
 import { useDebouncedValue } from "~/modules/internal/common/presentation/use-debounced-value";
 import { ticketCategoryApi } from "~/core/api/services/ticket-category.api";
-import { getEventTicketDisplayStatus, getEventTransactionStatusLabel } from "./event-ticket-status";
+import { getEventTransactionStatusLabel } from "./event-ticket-status";
 
 const statusOptions = [
   { value: "all", label: "Semua Status" },
@@ -407,8 +407,7 @@ function IssuedTicketRow({
   ticket: IssuedTicketSummary;
   transactionTicketCount: number;
 }) {
-  const displayStatus = getEventTicketDisplayStatus(ticket);
-  const status = statusMap[displayStatus] ?? { label: displayStatus || "-", variant: "default" as const };
+  const status = statusMap[ticket.status] ?? { label: ticket.status || "-", variant: "default" as const };
   return (
     <tr className="border-b border-border-subtle last:border-0">
       <td className="px-3 py-3">
