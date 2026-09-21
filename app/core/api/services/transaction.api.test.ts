@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildTransactionListQuery, mapTransactionApiToFe, type TransactionApiData } from "./transaction.api";
 import { mapTransactionStatusFilterToApi } from "~/core/constants/transaction";
+import { parseTransactionType, toTransactionType } from "~/core/constants/transaction-type";
 
 function transaction(status: string): TransactionApiData {
   return {
@@ -43,6 +44,10 @@ describe("mapTransactionApiToFe", () => {
 });
 
 describe("transaction status filters", () => {
+  it("defaults invalid transaction types to all and omits the query parameter", () => {
+    expect(parseTransactionType("UNKNOWN")).toBe("all");
+    expect(toTransactionType("all")).toBeUndefined();
+  });
   it("keeps payment and approval queues separate", () => {
     expect(mapTransactionStatusFilterToApi("waiting_payment")).toBe("WAITING_PAYMENT");
     expect(mapTransactionStatusFilterToApi("waiting_approval")).toBe("WAITING_APPROVAL");
@@ -60,5 +65,37 @@ describe("transaction status filters", () => {
 
   it("sends the dashboard search as a general transaction search", () => {
     expect(buildTransactionListQuery({ search: "d637649eefa6" })).toBe("?search=d637649eefa6");
+  });
+
+  it("combines transaction type with event scope and pagination", () => {
+    expect(buildTransactionListQuery({ eventId: "event-1", transactionType: "COMMUNITY", limit: 5, offset: 5 }))
+      .toBe("?limit=5&offset=5&eventId=event-1&transactionType=COMMUNITY");
+  });
+});
+
+describe("transaction fee breakdown", () => {
+  it("keeps the partner's ticket revenue apart from the gross the buyer paid", () => {
+    const mapped = mapTransactionApiToFe({
+      ...transaction("PAID"),
+      totalPrice: 108120,
+      baseAmount: 100000,
+      serviceFee: 5000,
+      transactionFee: 3120,
+    });
+
+    expect(mapped.base_amount).toBe(100000);
+    expect(mapped.total_price).toBe(108120);
+    expect(
+      (mapped.base_amount ?? 0) + (mapped.service_fee ?? 0) + (mapped.transaction_fee ?? 0),
+    ).toBe(mapped.total_price);
+  });
+
+  it("reports null, not zero, for transactions made before the breakdown was recorded", () => {
+    const mapped = mapTransactionApiToFe(transaction("PAID"));
+
+    expect(mapped.base_amount).toBe(null);
+    expect(mapped.service_fee).toBe(null);
+    expect(mapped.transaction_fee).toBe(null);
+    expect(mapped.total_price).toBe(10000);
   });
 });

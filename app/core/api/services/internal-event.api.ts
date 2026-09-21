@@ -1,5 +1,6 @@
 import { internalHttpClient } from "../http-client";
 import type { EventSummary } from "~/core/types";
+import type { TransactionType } from "~/core/constants/transaction-type";
 
 export interface InternalEventApiData {
   id: string;
@@ -48,6 +49,7 @@ export interface EventTicketDashboardParams {
   search?: string;
   categoryId?: string;
   status?: string;
+  transactionType?: TransactionType;
 }
 
 export interface EventBannerUploadResponse {
@@ -89,6 +91,8 @@ export interface EventTicketCategorySummary {
   checkedInTicket: number;
   remainingTicket: number;
   soldTicket: number;
+  checkedOutTicket: number;
+  reservedTicket: number;
   price: number;
   isHidden: boolean;
   bulkType: "COMMUNITY" | "COMPLIMENTARY" | null;
@@ -132,6 +136,12 @@ interface EventTicketCategoryApiData extends Record<string, unknown> {
   remaining_ticket?: number;
   soldTicket?: number;
   sold_ticket?: number;
+  checkedOutTicket?: number;
+  checked_out_ticket?: number;
+  reservedTicket?: number;
+  reserved_ticket?: number;
+  lockedTicket?: number;
+  locked_ticket?: number;
   price?: number;
   isHidden?: boolean;
   is_hidden?: boolean;
@@ -178,6 +188,10 @@ interface EventTicketDashboardApiData {
   categories?: EventTicketCategoryApiData[];
   issuedTickets?: IssuedTicketApiData[];
   issued_tickets?: IssuedTicketApiData[];
+  revenue?: number;
+  soldTickets?: number;
+  sold_tickets?: number;
+  inventory?: { totalTicket?: number; remainingTicket?: number; checkedInTicket?: number };
   totalCount?: number;
   total_count?: number;
   limit?: number;
@@ -196,6 +210,9 @@ export interface EventTicketDashboard {
   event: InternalEventApiData;
   categories: EventTicketCategorySummary[];
   issuedTickets: IssuedTicketSummary[];
+  revenue: number;
+  soldTickets: number;
+  inventory: { totalTicket: number; remainingTicket: number; checkedInTicket: number };
   totalCount: number;
   limit: number;
   offset: number;
@@ -228,6 +245,7 @@ export function buildTicketDashboardQuery(params?: EventTicketDashboardParams): 
   if (params.search) qs.set("search", params.search);
   if (params.categoryId) qs.set("categoryId", params.categoryId);
   if (params.status) qs.set("status", params.status);
+  if (params.transactionType) qs.set("transactionType", params.transactionType);
   const str = qs.toString();
   return str ? `?${str}` : "";
 }
@@ -263,7 +281,16 @@ function normalizeEventImage(api: EventImageApiData): EventImageData {
   };
 }
 
-function normalizeEventTicketCategory(api: EventTicketCategoryApiData): EventTicketCategorySummary {
+export function normalizeEventTicketCategory(api: EventTicketCategoryApiData): EventTicketCategorySummary {
+  const issuedTicket = Number(api.issuedTicket ?? api.issued_ticket ?? 0);
+  const soldTicket = Number(api.soldTicket ?? api.sold_ticket ?? issuedTicket);
+  const checkedOutTicket = Number(api.checkedOutTicket ?? api.checked_out_ticket ?? issuedTicket);
+  const liveReservations = Number(api.lockedTicket ?? api.locked_ticket ?? 0);
+  const reservedTicket = Number(
+    api.reservedTicket
+      ?? api.reserved_ticket
+      ?? Math.max(0, checkedOutTicket - soldTicket) + liveReservations,
+  );
   return {
     id: String(api.id ?? ""),
     eventId: String(api.eventId ?? api.event_id ?? ""),
@@ -271,10 +298,12 @@ function normalizeEventTicketCategory(api: EventTicketCategoryApiData): EventTic
     description: (api.description ?? null) as string | null,
     categoryCode: (api.categoryCode ?? api.category_code ?? null) as string | null,
     totalTicket: Number(api.totalTicket ?? api.total_ticket ?? 0),
-    issuedTicket: Number(api.issuedTicket ?? api.issued_ticket ?? 0),
+    issuedTicket,
     checkedInTicket: Number(api.checkedInTicket ?? api.checked_in_ticket ?? 0),
     remainingTicket: Number(api.remainingTicket ?? api.remaining_ticket ?? 0),
-    soldTicket: Number(api.soldTicket ?? api.sold_ticket ?? api.issuedTicket ?? api.issued_ticket ?? 0),
+    soldTicket,
+    checkedOutTicket,
+    reservedTicket,
     price: Number(api.price ?? 0),
     isHidden: api.isHidden ?? api.is_hidden ?? false,
     bulkType: api.bulkType ?? api.bulk_type ?? null,
@@ -382,6 +411,13 @@ export const internalEventApi = {
             event: normalizeEvent(response.data.event as InternalEventApiData & Record<string, unknown>),
             categories: (response.data.categories ?? []).map(normalizeEventTicketCategory),
             issuedTickets: (response.data.issuedTickets ?? response.data.issued_tickets ?? []).map(normalizeIssuedTicket),
+            revenue: Number(response.data.revenue ?? 0),
+            soldTickets: Number(response.data.soldTickets ?? response.data.sold_tickets ?? 0),
+            inventory: {
+              totalTicket: Number(response.data.inventory?.totalTicket ?? 0),
+              remainingTicket: Number(response.data.inventory?.remainingTicket ?? 0),
+              checkedInTicket: Number(response.data.inventory?.checkedInTicket ?? 0),
+            },
             totalCount: Number(response.data.totalCount ?? response.data.total_count ?? 0),
             limit: Number(response.data.limit ?? params?.limit ?? 50),
             offset: Number(response.data.offset ?? params?.offset ?? 0),

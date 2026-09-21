@@ -2,6 +2,7 @@ import type { EventTicket } from "~/modules/external/event/domain/event.entity";
 
 export interface EventCardData {
   id: string;
+  slug?: string;
   title: string;
   imageUrl: string;
   date: string;

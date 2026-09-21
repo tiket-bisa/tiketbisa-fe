@@ -197,13 +197,14 @@ export const eventApi: EventRepository = {
   },
 
   async getEventById(id: string): Promise<Event | null> {
-    const [eventResponse, ticketsResponse, imagesResponse] = await Promise.all([
-      apiFetch<ApiResponse<EventDto>>(`/event/${id}`),
-      apiFetch<ApiResponse<TicketCategoryDto[]>>(`/ticket-category/event/${id}`),
-      apiFetch<ApiResponse<EventImageListResponseData>>(`/event/${id}/images`).catch(() => null),
-    ]);
+    const eventResponse = await apiFetch<ApiResponse<EventDto>>(`/event/${id}`).catch(() => null);
+    if (!eventResponse?.data) return null;
 
-    if (!eventResponse.data) return null;
+    const eventId = eventResponse.data.id;
+    const [ticketsResponse, imagesResponse] = await Promise.all([
+      apiFetch<ApiResponse<TicketCategoryDto[]>>(`/ticket-category/event/${eventId}`).catch(() => null),
+      apiFetch<ApiResponse<EventImageListResponseData>>(`/event/${eventId}/images`).catch(() => null),
+    ]);
 
     const brandDetails = await getBrandDetailsById(eventResponse.data.brandId ?? eventResponse.data.brand_id);
     const baseEvent = mapEventDtoToEntity(eventResponse.data, 0, brandDetails);
@@ -227,17 +228,19 @@ export const eventApi: EventRepository = {
             "Dilarang membawa makanan dan minuman dari luar.",
             "Penyelenggara berhak menolak pengunjung yang melanggar aturan.",
           ],
-      tickets: (ticketsResponse.data || []).filter(isPublicTicketCategory).map((t) => ({
-        id: t.id,
-        name: t.name,
-        price: Number(t.price),
-        available: t.isPurchasable ?? t.is_purchasable ?? t.totalTicket > t.issuedTicket,
-        purchaseStatus: t.purchaseStatus ?? t.purchase_status ?? (t.totalTicket > t.issuedTicket ? "AVAILABLE" : "SOLD_OUT"),
-        // availableTicket already nets out seats Redis is holding for buyers mid-checkout;
-        // quota minus issued is only the fallback when the backend did not compute it.
-        remaining: t.availableTicket ?? t.available_ticket
-          ?? Math.max(0, t.totalTicket - t.issuedTicket),
-      })),
+      tickets: (ticketsResponse?.data || [])
+        .filter(isPublicTicketCategory)
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name, "id", { numeric: true, sensitivity: "base" }))
+        .map((t) => ({
+          id: t.id,
+          name: t.name,
+          price: Number(t.price),
+          available: t.isPurchasable ?? t.is_purchasable ?? t.totalTicket > t.issuedTicket,
+          purchaseStatus: t.purchaseStatus ?? t.purchase_status ?? (t.totalTicket > t.issuedTicket ? "AVAILABLE" : "SOLD_OUT"),
+          remaining: t.availableTicket ?? t.available_ticket
+            ?? Math.max(0, t.totalTicket - t.issuedTicket),
+        })),
     };
   },
 };

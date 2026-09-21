@@ -6,6 +6,7 @@ export interface EventDto {
   brandId: string;
   brand_id?: string;
   name: string;
+  slug?: string;
   bannerPath: string | null;
   banner_path?: string | null;
   startDate: string; // ISO string from backend

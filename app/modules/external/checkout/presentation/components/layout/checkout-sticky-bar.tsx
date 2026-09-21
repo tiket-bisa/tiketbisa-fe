@@ -37,9 +37,7 @@ export function CheckoutStickyBar({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[100] lg:hidden animate-in slide-in-from-bottom duration-500">
-      {/* Timer - only once the buyer has reached the payment step (no visible countdown
-          while filling in data + picking a payment method). */}
-      {currentStep === 4 && (
+      {currentStep >= 1 && currentStep <= 4 && (
         <div className="w-full bg-white border-t border-gray-100">
             <CountdownTimer
               onExpire={onExpire}
