@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import { Avatar } from "~/core/design-system/components";
 import type { Event } from "../../domain/event.entity";
 import { EventImageCarousel } from "./event-image-carousel";
+import { slugify } from "~/shared/utils/slug.utils";
 
 interface EventDetailContentProps {
   event: Event;
@@ -50,7 +51,7 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
             <h3 className="text-base font-bold text-brand-primary">{event.brand}</h3>
             <p className="text-text-tertiary text-xs mb-1">Verified Partner Tiketbisa</p>
             <Link
-              to={`/brand/${event.brandId || event.brand.toLowerCase()}`}
+              to={`/brand/${event.brandSlug || slugify(event.brand) || event.brandId}`}
               className="text-brand-primary hover:underline text-sm font-medium inline-flex items-center gap-1"
             >
               Lihat Profil Brand{" "}

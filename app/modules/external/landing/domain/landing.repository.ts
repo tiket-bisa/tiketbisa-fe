@@ -7,6 +7,7 @@ export interface LandingData {
   partners: Brand[];
   featuredEvents: Event[];
   upcomingEvents: Event[];
+  pastEvents: Event[];
   totalUpcoming: number;
 }
 

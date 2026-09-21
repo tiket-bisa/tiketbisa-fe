@@ -10,6 +10,7 @@ import { buildPaymentOrderSummary } from "../../domain/checkout.pricing";
 import { canProceedWithPayment } from "../../domain/checkout.validation";
 import { MAX_TICKETS_PER_TRANSACTION } from "~/shared/constants/transaction";
 
+import { resolveCheckoutDeadline } from "../../domain/checkout-deadline";
 import type { BuyerInfo, OrderSummary, PaymentMethod, OrderResponse, TicketHolder } from "../../domain/checkout.types";
 import type { EventSummary } from "~/core/types";
 
@@ -114,23 +115,20 @@ export function useCheckoutSteps(
     navigate(`/event/${params.eventId ?? event.id}`);
   }, [clearCheckoutStorage, event.id, navigate, params.eventId, releaseActiveCheckout, warningToast]);
 
-  const setDeadlineFromTtl = useCallback((ttl: CheckoutTtl) => {
-    if (ttl.status === "ACTIVE" && ttl.remainingSeconds > 0) {
-      const backendDeadline = ttl.expiresAt > 0
-        ? ttl.expiresAt
-        : Date.now() + ttl.remainingSeconds * 1000;
-      const storedDeadline = Number(sessionStorage.getItem(CHECKOUT_DEADLINE_STORAGE_KEY));
-      const deadline = Number.isFinite(storedDeadline) && storedDeadline > Date.now()
-        ? Math.min(storedDeadline, backendDeadline)
-        : backendDeadline;
-      sessionStorage.setItem(
-        CHECKOUT_DEADLINE_STORAGE_KEY,
-        String(deadline),
-      );
-      return true;
+  const setDeadlineFromTtl = useCallback((ttl: CheckoutTtl, authoritative = false) => {
+    const stored = sessionStorage.getItem(CHECKOUT_DEADLINE_STORAGE_KEY);
+    const deadline = resolveCheckoutDeadline({
+      ttl,
+      storedDeadline: stored === null ? null : Number(stored),
+      now: Date.now(),
+      authoritative,
+    });
+    if (deadline === null) {
+      sessionStorage.removeItem(CHECKOUT_DEADLINE_STORAGE_KEY);
+      return false;
     }
-    sessionStorage.removeItem(CHECKOUT_DEADLINE_STORAGE_KEY);
-    return false;
+    sessionStorage.setItem(CHECKOUT_DEADLINE_STORAGE_KEY, String(deadline));
+    return true;
   }, []);
 
   const getActiveLockId = useCallback(() => (
@@ -157,7 +155,7 @@ export function useCheckoutSteps(
 
   const ensureCheckoutSessionActive = useCallback(async () => {
     const activeLockId = getActiveLockId();
-    if (currentStep <= 1 || currentStep >= 5) {
+    if (currentStep >= 5) {
       return true;
     }
     if (!activeLockId) {
@@ -177,7 +175,14 @@ export function useCheckoutSteps(
     }
 
     if (ttl) {
-      setDeadlineFromTtl(ttl);
+      setDeadlineFromTtl(ttl, true);
+    } else {
+      setDeadlineFromTtl({
+        status: "ACTIVE",
+        remainingSeconds,
+        expiresAt: 0,
+        serverTime: Date.now(),
+      });
     }
     return true;
   }, [
@@ -245,7 +250,7 @@ export function useCheckoutSteps(
     let cancelled = false;
 
     const validateSession = async () => {
-      if (currentStep <= 1 || currentStep >= 5) {
+      if (currentStep >= 5) {
         return;
       }
       try {
@@ -266,7 +271,7 @@ export function useCheckoutSteps(
   }, [currentStep, ensureCheckoutSessionActive]);
 
   useEffect(() => {
-    if (currentStep !== 4) return;
+    if (currentStep < 1 || currentStep > 4) return;
     const resync = () => {
       if (document.visibilityState === "visible") {
         void ensureCheckoutSessionActive();
@@ -326,6 +331,8 @@ export function useCheckoutSteps(
   useEffect(() => {
     if (currentStep !== 4 || isManualTransferPayment) return;
     if (existingOrder?.qrPayload || existingOrder?.virtualAccount || existingOrder?.paymentUrl) return;
+    // A Components-mode order is already renderable once it has an SDK key, even with no QR/VA yet.
+    if (existingOrder?.componentsSdkKey) return;
 
     const activeLockId = getActiveLockId();
     if (!activeLockId || gatewayInvoiceRequestedRef.current === activeLockId) return;
@@ -353,7 +360,20 @@ export function useCheckoutSteps(
           setSearchParams(nextParams);
         }
       } catch (error) {
-        // Leave the placeholder QR/VA state up; the "Bayar Sekarang" button remains as a retry.
+        // The call may have failed only on our side: a request that timed out here but landed at
+        // Xendit leaves a real invoice, and retrying it just earns a 409. Ask the server what it
+        // has before treating this as a failure, so the buyer gets the QR/VA that already exists
+        // instead of an error screen.
+        const recovered = await orderApi.recoverGatewayOrder(activeLockId, paymentSummary.totalPrice);
+        if (recovered) {
+          setCompletedOrder(recovered);
+          setIsManualTransferPending(false);
+          console.warn("Recovered an existing gateway invoice after a failed create", error);
+          return;
+        }
+        // Nothing to recover. Release the guard so the retry button can actually re-fire; it is
+        // claimed before the await, so leaving it set makes a single transient failure permanent.
+        gatewayInvoiceRequestedRef.current = null;
         console.error("Failed to auto-create gateway invoice", error);
       } finally {
         setIsActionLoading(false);
@@ -365,6 +385,7 @@ export function useCheckoutSteps(
     existingOrder?.qrPayload,
     existingOrder?.virtualAccount,
     existingOrder?.paymentUrl,
+    existingOrder?.componentsSdkKey,
     getActiveLockId,
     ensureCheckoutSessionActive,
     paymentSummary.totalPrice,
@@ -564,6 +585,12 @@ export function useCheckoutSteps(
       nextParams.delete("manualPending");
       setSearchParams(nextParams);
     } catch (error) {
+      // Same 409 window as the auto-create path: the invoice may already exist server-side.
+      const recovered = await orderApi.recoverGatewayOrder(activeLockId, paymentSummary.totalPrice);
+      if (recovered) {
+        setCompletedOrder(recovered);
+        setIsManualTransferPending(false);
+      }
       // The payment already succeeded at the gateway; a transient error finalizing
       // locally shouldn't alarm the buyer. The regular poll/realtime loop or the
       // manual "Bayar Sekarang" button remains available as a fallback.

@@ -28,7 +28,8 @@ export function TransactionTable({ transactions, returnTo = "/internal-tb/admin"
               <th className="text-left px-4 py-3 font-medium">ID</th>
               <th className="text-left px-4 py-3 font-medium">Pembeli</th>
               <th className="text-left px-4 py-3 font-medium">Waktu Pembelian</th>
-              <th className="text-right px-4 py-3 font-medium">Total</th>
+              <th className="text-right px-4 py-3 font-medium">Tiket</th>
+              <th className="text-right px-4 py-3 font-medium">Total Dibayar</th>
               <th className="text-center px-4 py-3 font-medium">Status</th>
               <th className="text-center px-4 py-3 font-medium">Aksi</th>
             </tr>
@@ -42,6 +43,13 @@ export function TransactionTable({ transactions, returnTo = "/internal-tb/admin"
                   <td className="px-4 py-3 text-text-primary">{tx.buyer_name}</td>
                   <td className="px-4 py-3 text-text-secondary whitespace-nowrap">
                     {formatTransactionTimestamp(tx.created_at)}
+                  </td>
+                  <td className="px-4 py-3 text-text-secondary text-right">
+                    {tx.base_amount == null ? (
+                      <span className="text-text-tertiary" title="Rincian belum dicatat untuk transaksi ini">—</span>
+                    ) : (
+                      formatIDR(tx.base_amount)
+                    )}
                   </td>
                   <td className="px-4 py-3 text-text-primary text-right font-medium">{formatIDR(tx.total_price)}</td>
                   <td className="px-4 py-3 text-center">
@@ -63,7 +71,7 @@ export function TransactionTable({ transactions, returnTo = "/internal-tb/admin"
             })}
             {transactions.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-text-tertiary">Tidak ada transaksi ditemukan</td>
+                <td colSpan={7} className="px-4 py-12 text-center text-text-tertiary">Tidak ada transaksi ditemukan</td>
               </tr>
             )}
           </tbody>

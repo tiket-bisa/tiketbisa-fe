@@ -89,6 +89,7 @@ export interface EventTicketCategorySummary {
   checkedInTicket: number;
   remainingTicket: number;
   soldTicket: number;
+  checkedOutTicket: number;
   price: number;
   isHidden: boolean;
   bulkType: "COMMUNITY" | "COMPLIMENTARY" | null;
@@ -132,6 +133,8 @@ interface EventTicketCategoryApiData extends Record<string, unknown> {
   remaining_ticket?: number;
   soldTicket?: number;
   sold_ticket?: number;
+  checkedOutTicket?: number;
+  checked_out_ticket?: number;
   price?: number;
   isHidden?: boolean;
   is_hidden?: boolean;
@@ -263,7 +266,7 @@ function normalizeEventImage(api: EventImageApiData): EventImageData {
   };
 }
 
-function normalizeEventTicketCategory(api: EventTicketCategoryApiData): EventTicketCategorySummary {
+export function normalizeEventTicketCategory(api: EventTicketCategoryApiData): EventTicketCategorySummary {
   return {
     id: String(api.id ?? ""),
     eventId: String(api.eventId ?? api.event_id ?? ""),
@@ -275,6 +278,9 @@ function normalizeEventTicketCategory(api: EventTicketCategoryApiData): EventTic
     checkedInTicket: Number(api.checkedInTicket ?? api.checked_in_ticket ?? 0),
     remainingTicket: Number(api.remainingTicket ?? api.remaining_ticket ?? 0),
     soldTicket: Number(api.soldTicket ?? api.sold_ticket ?? api.issuedTicket ?? api.issued_ticket ?? 0),
+    checkedOutTicket: Number(
+      api.checkedOutTicket ?? api.checked_out_ticket ?? api.issuedTicket ?? api.issued_ticket ?? 0,
+    ),
     price: Number(api.price ?? 0),
     isHidden: api.isHidden ?? api.is_hidden ?? false,
     bulkType: api.bulkType ?? api.bulk_type ?? null,
