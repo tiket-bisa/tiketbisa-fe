@@ -1,4 +1,5 @@
 import { internalHttpClient } from "~/core/api/http-client";
+import type { TransactionType } from "~/core/constants/transaction-type";
 
 export interface DashboardStats {
   totalRevenue: number;
@@ -51,8 +52,11 @@ export interface TicketScanningSummary {
 }
 
 export const analyticsApi = {
-  getDashboardStats: async (brandId?: string): Promise<DashboardStats> => {
-    const query = brandId ? `?brandId=${encodeURIComponent(brandId)}` : "";
+  getDashboardStats: async (brandId?: string, transactionType?: TransactionType): Promise<DashboardStats> => {
+    const params = new URLSearchParams();
+    if (brandId) params.set("brandId", brandId);
+    if (transactionType) params.set("transactionType", transactionType);
+    const query = params.size ? `?${params.toString()}` : "";
     const res = await internalHttpClient.get<DashboardStats>(`/analytics/dashboard/stats${query}`);
     if (!res.success || !res.data) throw new Error(res.error ?? "Failed to fetch dashboard stats");
     return res.data;

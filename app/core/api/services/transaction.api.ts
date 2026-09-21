@@ -1,5 +1,6 @@
 import { httpClient, internalHttpClient } from "../http-client";
 import { toAbsoluteApiUrl } from "../api-url";
+import type { TransactionType } from "~/core/constants/transaction-type";
 
 /* ── API functions ── */
 
@@ -107,6 +108,7 @@ export interface TransactionListParams {
     offset?: number;
     brandId?: string;
     eventId?: string;
+    transactionType?: TransactionType;
     status?: string;
     customerName?: string;
     search?: string;
@@ -144,6 +146,7 @@ export function buildTransactionListQuery(params?: TransactionListParams): strin
     if (params.offset != null) qs.set("offset", String(params.offset));
     if (params.brandId) qs.set("brandId", params.brandId);
     if (params.eventId) qs.set("eventId", params.eventId);
+    if (params.transactionType) qs.set("transactionType", params.transactionType);
     if (params.status) qs.set("status", params.status);
     if (params.customerName) qs.set("customerName", params.customerName);
     if (params.search) qs.set("search", params.search);

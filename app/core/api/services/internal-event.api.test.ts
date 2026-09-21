@@ -9,6 +9,7 @@ describe("event ticket dashboard query", () => {
       search: "PKVA",
       categoryId: "category-1",
       status: "ISSUED",
+      transactionType: "COMPLIMENTARY",
     });
     const params = new URLSearchParams(query.slice(1));
 
@@ -17,6 +18,17 @@ describe("event ticket dashboard query", () => {
     expect(params.get("search")).toBe("PKVA");
     expect(params.get("categoryId")).toBe("category-1");
     expect(params.get("status")).toBe("ISSUED");
+    expect(params.get("transactionType")).toBe("COMPLIMENTARY");
+  });
+
+  it.each(["WAITING_PAYMENT", "WAITING_APPROVAL"])("sends the %s status filter", (status) => {
+    const query = buildTicketDashboardQuery({ status });
+    expect(new URLSearchParams(query.slice(1)).get("status")).toBe(status);
+  });
+
+  it.each(["WAITING_PAYMENT", "WAITING_APPROVAL"])("sends the %s status filter", (status) => {
+    const query = buildTicketDashboardQuery({ status });
+    expect(new URLSearchParams(query.slice(1)).get("status")).toBe(status);
   });
 });
 

@@ -1,15 +1,16 @@
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router";
 import { Card, Badge, SearchInput, Select, Button } from "~/core/design-system/components";
 import { formatIDR, formatTransactionTimestamp } from "~/core/utils";
 import { useAuth } from "~/core/auth";
-import { analyticsApi, type DashboardStats } from "../../analytics/analytics.api";
+import { analyticsApi } from "../../analytics/analytics.api";
 import { transactionApi, mapTransactionApiToFe } from "~/core/api/services/transaction.api";
 import { useApiQuery } from "~/core/api";
 import { TransactionPaginationControls } from "~/modules/internal/common/presentation/transaction-pagination-controls";
 import { useDebouncedValue } from "~/modules/internal/common/presentation/use-debounced-value";
 import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 import { mapTransactionStatusFilterToApi, STATUS_MAP, statusFilterOptions, type TransactionStatus } from "~/core/constants/transaction";
+import { toTransactionType, transactionTypeOptions, type TransactionTypeFilter } from "~/core/constants/transaction-type";
 
 const DEFAULT_PAGE_SIZE = 5;
 type TransactionSort = "newest" | "oldest";
@@ -25,22 +26,19 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [transactionType, setTransactionType] = useState<TransactionTypeFilter>("all");
   const [sortOrder, setSortOrder] = useState<TransactionSort>("newest");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [isStatsLoading, setIsStatsLoading] = useState(true);
   const [pendingDetailId, setPendingDetailId] = useState<string | null>(null);
   const debouncedSearch = useDebouncedValue(search);
 
-  useEffect(() => {
-    if (!user?.brand_id) return;
-    setIsStatsLoading(true);
-    analyticsApi.getDashboardStats(user.brand_id)
-      .then(setStats)
-      .catch((err) => console.error("Failed to load dashboard stats:", err))
-      .finally(() => setIsStatsLoading(false));
-  }, [user?.brand_id]);
+  const { data: stats, loading: isStatsLoading, refetch: refetchStats } = useApiQuery(
+    async () => user?.brand_id
+      ? analyticsApi.getDashboardStats(user.brand_id, toTransactionType(transactionType))
+      : null,
+    [user?.brand_id, transactionType],
+  );
 
   // Fetch real transaction list
   const { data: transactionRes, loading: loadingTransactions, refetch: refetchTransactions } = useApiQuery(
@@ -54,6 +52,7 @@ export default function DashboardPage() {
         brandId: user.brand_id,
         search: debouncedSearch || undefined,
         status: mapTransactionStatusFilterToApi(statusFilter as "all" | TransactionStatus),
+        transactionType: toTransactionType(transactionType),
         orderBy: sortOrder === "oldest" ? "created:ASC" : "created:DESC",
       });
       if (res.success && res.data) {
@@ -65,7 +64,7 @@ export default function DashboardPage() {
       }
       return { transactions: [], totalCount: 0, totalPages: 1 };
     },
-    [currentPage, pageSize, debouncedSearch, statusFilter, sortOrder, user?.brand_slug, user?.brand_id],
+    [currentPage, pageSize, debouncedSearch, statusFilter, sortOrder, transactionType, user?.brand_slug, user?.brand_id],
   );
 
   const paged = transactionRes?.transactions ?? [];
@@ -78,13 +77,13 @@ export default function DashboardPage() {
 
   const handleRealtimeMessage = useCallback((message: RealtimeMessage) => {
     if (message.type === "dashboard_stats.updated" && message.payload) {
-      setStats(message.payload as DashboardStats);
-      setIsStatsLoading(false);
+      void refetchStats();
     }
     if (message.type === "transaction.updated") {
       void refetchTransactions();
+      void refetchStats();
     }
-  }, [refetchTransactions]);
+  }, [refetchTransactions, refetchStats]);
 
   useRealtimeSubscription(user?.brand_id ? [`brand:${user.brand_id}`] : [], handleRealtimeMessage);
 
@@ -97,8 +96,13 @@ export default function DashboardPage() {
         )}
       </div>
 
+      <div className="w-full sm:w-56">
+        <Select label="Transaction Type" options={transactionTypeOptions} value={transactionType}
+          onChange={(event) => { setTransactionType(event.target.value as TransactionTypeFilter); setCurrentPage(1); }} />
+      </div>
+
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card padding="md">
           <p className="text-text-tertiary text-xs uppercase tracking-wide">
             Total Revenue
@@ -109,16 +113,12 @@ export default function DashboardPage() {
         </Card>
         <Card padding="md">
           <p className="text-text-tertiary text-xs uppercase tracking-wide">
-            Tiket Terjual (termasuk bulk)
+            Tiket Terjual
           </p>
           <p className="text-text-primary text-2xl font-bold mt-1">
             {isStatsLoading ? "..." : (stats?.totalTicketsSold ?? 0)}
           </p>
-        </Card>
-        <Card padding="md">
-          <p className="text-text-tertiary text-xs uppercase tracking-wide">Tiket Bulk Terbit</p>
-          <p className="text-xs text-text-tertiary">Bagian dari total tiket terjual</p>
-          <p className="text-text-primary text-2xl font-bold mt-1">{isStatsLoading ? "..." : (stats?.totalBulkTicketsIssued ?? 0)}</p>
+          {transactionType === "all" && <p className="text-xs text-text-tertiary">Termasuk tiket bulk</p>}
         </Card>
         <Card padding="md">
           <p className="text-text-tertiary text-xs uppercase tracking-wide">
