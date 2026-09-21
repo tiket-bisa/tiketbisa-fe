@@ -5,6 +5,7 @@ import { mapTransactionStatusFilterToApi } from "~/core/constants/transaction";
 function transaction(status: string): TransactionApiData {
   return {
     id: "tx-1",
+    eventId: "event-1",
     customerName: "Buyer",
     customerEmail: "buyer@example.com",
     customerPhone: "08123456789",
@@ -35,6 +36,10 @@ describe("mapTransactionApiToFe", () => {
     api.paymentDate = "2026-08-23T00:00:00Z";
     expect(mapTransactionApiToFe(api).created_at).toBe("2026-08-22T23:00:00Z");
   });
+
+  it("maps the backend event ID", () => {
+    expect(mapTransactionApiToFe(transaction("PAID")).event_id).toBe("event-1");
+  });
 });
 
 describe("transaction status filters", () => {
@@ -55,5 +60,32 @@ describe("transaction status filters", () => {
 
   it("sends the dashboard search as a general transaction search", () => {
     expect(buildTransactionListQuery({ search: "d637649eefa6" })).toBe("?search=d637649eefa6");
+  });
+});
+
+describe("transaction fee breakdown", () => {
+  it("keeps the partner's ticket revenue apart from the gross the buyer paid", () => {
+    const mapped = mapTransactionApiToFe({
+      ...transaction("PAID"),
+      totalPrice: 108120,
+      baseAmount: 100000,
+      serviceFee: 5000,
+      transactionFee: 3120,
+    });
+
+    expect(mapped.base_amount).toBe(100000);
+    expect(mapped.total_price).toBe(108120);
+    expect(
+      (mapped.base_amount ?? 0) + (mapped.service_fee ?? 0) + (mapped.transaction_fee ?? 0),
+    ).toBe(mapped.total_price);
+  });
+
+  it("reports null, not zero, for transactions made before the breakdown was recorded", () => {
+    const mapped = mapTransactionApiToFe(transaction("PAID"));
+
+    expect(mapped.base_amount).toBe(null);
+    expect(mapped.service_fee).toBe(null);
+    expect(mapped.transaction_fee).toBe(null);
+    expect(mapped.total_price).toBe(10000);
   });
 });

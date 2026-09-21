@@ -191,7 +191,7 @@ export default function DashboardPage() {
                   <th className="text-left px-4 py-3 font-medium">ID</th>
                   <th className="text-left px-4 py-3 font-medium">Pembeli</th>
                   <th className="text-left px-4 py-3 font-medium">Waktu Pembelian</th>
-                  <th className="text-right px-4 py-3 font-medium">Total</th>
+                  <th className="text-right px-4 py-3 font-medium">Pendapatan Tiket</th>
                   <th className="text-center px-4 py-3 font-medium">Status</th>
                   <th className="text-center px-4 py-3 font-medium">Aksi</th>
                 </tr>
@@ -214,7 +214,13 @@ export default function DashboardPage() {
                         {formatTransactionTimestamp(tx.created_at)}
                       </td>
                       <td className="px-4 py-3 text-text-primary text-right font-medium">
-                        {formatIDR(tx.total_price)}
+                        {tx.base_amount == null ? (
+                          <span className="text-text-tertiary" title="Rincian belum dicatat untuk transaksi ini">
+                            —
+                          </span>
+                        ) : (
+                          formatIDR(tx.base_amount)
+                        )}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <Badge variant={status.variant}>{status.label}</Badge>

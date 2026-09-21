@@ -161,6 +161,10 @@ export default function GenerateBulkTicketPage() {
         setErrorMsg("Kategori yang dipilih tidak valid.");
         return;
       }
+      if (selectedCategory.available <= 0) {
+        setErrorMsg(`Kategori "${selectedCategory.name}" sudah habis dan tidak bisa digenerate.`);
+        return;
+      }
       const quantity = Number(categoryQuantities[catId]);
       if (!Number.isInteger(quantity) || quantity < 1) {
         setErrorMsg(`Jumlah tiket untuk kategori "${selectedCategory.name}" minimal 1.`);

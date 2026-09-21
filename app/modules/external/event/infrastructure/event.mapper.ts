@@ -1,6 +1,7 @@
 import type { Event } from "../domain/event.entity";
 import type { EventDto } from "./event.dto";
 import { normalizeImageUrl } from "~/core/api";
+import { slugify } from "~/shared/utils/slug.utils";
 
 /**
  * Maps a raw EventDto (from API) to the domain Event entity.
@@ -72,8 +73,10 @@ export function mapEventDtoToEntity(
   return {
     id: dto.id,
     name: dto.name,
+    slug: dto.slug || slugify(dto.name),
     brandId,
     brand: brand?.name || BRAND_NAME_MAP[brandId] || brandId || "Unknown Brand",
+    brandSlug: brand?.name ? slugify(brand.name) : undefined,
     brandLogoUrl: brand?.logoUrl || undefined,
     description: dto.description || "",
     imageUrl: bannerUrl || placeholderImages[index % placeholderImages.length],
@@ -82,7 +85,10 @@ export function mapEventDtoToEntity(
     minPrice: dto.minPrice ?? dto.min_price ?? undefined,
     isFeatured: dto.isFeatured ?? dto.is_featured ?? false,
     endDate: endDate || undefined,
-    lifecycleStatus: dto.status === "ENDED" ? "ENDED" : "ONGOING",
+    lifecycleStatus:
+      dto.status === "ENDED" || (Boolean(endDate) && new Date(endDate).getTime() <= Date.now())
+        ? "ENDED"
+        : "ONGOING",
     // Tickets are not yet supported by the backend in the list response
     tickets: [],
   };

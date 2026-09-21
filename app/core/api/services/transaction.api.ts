@@ -19,6 +19,7 @@ export interface CheckInResponse {
 
 export interface TransactionApiData {
     id: string;
+    eventId: string;
     customerName: string;
     customerEmail: string;
     customerPhone: string;
@@ -31,6 +32,9 @@ export interface TransactionApiData {
     verifiedBy?: string | null;
     promoId?: string | null;
     discountAmount?: number | null;
+    baseAmount?: number | null;
+    serviceFee?: number | null;
+    transactionFee?: number | null;
 }
 
 export interface IssuedTicketDetail {
@@ -253,7 +257,7 @@ function mapBackendStatus(status: string | undefined): Transaction["status"] {
 export function mapTransactionApiToFe(api: TransactionApiData): Transaction {
     return {
         id: api.id,
-        event_id: "-", // Not returned in list API
+        event_id: api.eventId,
         event_name: "-", // Not returned in list API
         brand_slug: "-", // Not returned in list API
         buyer_name: api.customerName ?? "-",
@@ -262,6 +266,9 @@ export function mapTransactionApiToFe(api: TransactionApiData): Transaction {
         ticket_name: "-", // Not returned in list API
         quantity: 0, // Not returned in list API
         total_price: api.totalPrice ?? 0,
+        base_amount: api.baseAmount ?? null,
+        service_fee: api.serviceFee ?? null,
+        transaction_fee: api.transactionFee ?? null,
         status: mapBackendStatus(api.status),
         payment_method: api.paymentMethod,
         created_at: api.created ?? api.paymentDate ?? new Date().toISOString(),
@@ -288,7 +295,7 @@ export function mapTransactionDetailApiToFe(api: TransactionDetailResponse): Tra
 
     return {
         id: tx.id,
-        event_id: "-", // Not available directly
+        event_id: tx.eventId,
         event_name: eventName,
         brand_slug: "-", // Not available directly
         buyer_name: tx.customerName ?? "-",
@@ -297,6 +304,9 @@ export function mapTransactionDetailApiToFe(api: TransactionDetailResponse): Tra
         ticket_name: ticketName,
         quantity: quantity,
         total_price: tx.totalPrice ?? 0,
+        base_amount: tx.baseAmount ?? null,
+        service_fee: tx.serviceFee ?? null,
+        transaction_fee: tx.transactionFee ?? null,
         status: mapBackendStatus(tx.status),
         payment_method: tx.paymentMethod,
         created_at: tx.created ?? tx.paymentDate ?? new Date().toISOString(),
