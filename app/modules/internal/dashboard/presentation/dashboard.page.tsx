@@ -118,6 +118,7 @@ export default function DashboardPage() {
           <p className="text-text-primary text-2xl font-bold mt-1">
             {isStatsLoading ? "..." : (stats?.totalTicketsSold ?? 0)}
           </p>
+          {transactionType === "all" && <p className="text-xs text-text-tertiary">Termasuk tiket bulk</p>}
         </Card>
         <Card padding="md">
           <p className="text-text-tertiary text-xs uppercase tracking-wide">
