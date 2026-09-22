@@ -1,49 +1,45 @@
 import { describe, expect, it } from "vitest";
 
-import { buildPreGeneratedCodeCsv, type PreGeneratedCode } from "./pre-generated-code.api";
+import { buildTicketCodeExportCsv, type TicketCodeExportRow } from "./pre-generated-code.api";
 
-const code = (overrides: Partial<PreGeneratedCode> = {}): PreGeneratedCode => ({
-  ticketCategoryId: "cat-1",
+const code = (overrides: Partial<TicketCodeExportRow> = {}): TicketCodeExportRow => ({
   codeHash: "TKB-AbCdEf1234",
-  codeType: "QR_CODE",
-  status: "AVAILABLE",
-  usedAt: null,
+  categoryName: "Tribun Barat A",
+  issuedAt: "2026-09-22T03:15:00Z",
   ...overrides,
 });
 
-describe("buildPreGeneratedCodeCsv", () => {
-  it("writes a header and one row per code", () => {
-    const csv = buildPreGeneratedCodeCsv([code()], { "cat-1": "Tribun Barat A" });
-    const lines = csv.split("\n");
+describe("buildTicketCodeExportCsv", () => {
+  it("writes the scanner export columns and one row per code", () => {
+    const csv = buildTicketCodeExportCsv([code()]);
+    const lines = csv.split("\r\n");
 
-    expect(lines[0]).toBe('"Kategori","Kode","Tipe","Status"');
-    expect(lines[1]).toBe('"Tribun Barat A","TKB-AbCdEf1234","QR_CODE","AVAILABLE"');
+    expect(lines[0]).toBe('"Kode Hash","Kategori","Issued At"');
+    expect(lines[1]).toBe('"TKB-AbCdEf1234","Tribun Barat A","2026-09-22T03:15:00Z"');
     expect(lines).toHaveLength(2);
   });
 
-  it("quotes a category name containing a comma instead of shifting every later column", () => {
-    // The file is loaded into someone else's system, where a silently misaligned row is a valid
-    // ticket that will not scan at the gate.
-    const csv = buildPreGeneratedCodeCsv([code()], { "cat-1": "Tribun Barat A, Gate 3" });
+  it("quotes commas and doubles embedded quotes", () => {
+    const csv = buildTicketCodeExportCsv([
+      code({ categoryName: 'Tribun "VIP", Gate 3' }),
+    ]);
 
-    expect(csv.split("\n")[1]).toBe('"Tribun Barat A, Gate 3","TKB-AbCdEf1234","QR_CODE","AVAILABLE"');
+    expect(csv.split("\r\n")[1]).toBe(
+      '"TKB-AbCdEf1234","Tribun ""VIP"", Gate 3","2026-09-22T03:15:00Z"',
+    );
   });
 
-  it("doubles an embedded quote so the field does not terminate early", () => {
-    const csv = buildPreGeneratedCodeCsv([code()], { "cat-1": 'Tribun "VIP"' });
+  it("leaves issued at blank for an available pre-generated code", () => {
+    const csv = buildTicketCodeExportCsv([code({ issuedAt: null })]);
 
-    expect(csv.split("\n")[1]).toContain('"Tribun ""VIP"""');
+    expect(csv.split("\r\n")[1]).toBe('"TKB-AbCdEf1234","Tribun Barat A",""');
   });
 
-  it("falls back to the category id when the name is unknown", () => {
-    const csv = buildPreGeneratedCodeCsv([code()]);
+  it("neutralizes spreadsheet formulas in exported text", () => {
+    const csv = buildTicketCodeExportCsv([
+      code({ codeHash: "=HYPERLINK(1)", categoryName: "+VIP" }),
+    ]);
 
-    expect(csv.split("\n")[1]).toContain('"cat-1"');
-  });
-
-  it("writes empty fields rather than the string null for a code missing its type or status", () => {
-    const csv = buildPreGeneratedCodeCsv([code({ codeType: null, status: null })], {});
-
-    expect(csv.split("\n")[1]).toBe('"cat-1","TKB-AbCdEf1234","",""');
+    expect(csv.split("\r\n")[1]).toContain('"\'=HYPERLINK(1)","\'+VIP"');
   });
 });

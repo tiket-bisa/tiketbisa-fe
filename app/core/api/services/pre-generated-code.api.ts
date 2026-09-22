@@ -29,6 +29,18 @@ export interface PreGeneratedCodeList {
   codes: PreGeneratedCode[];
 }
 
+export interface TicketCodeExportRow {
+  codeHash: string;
+  categoryName: string;
+  issuedAt: string | null;
+}
+
+export interface TicketCodeExportList {
+  eventId: string;
+  totalCount: number;
+  codes: TicketCodeExportRow[];
+}
+
 export const preGeneratedCodeApi = {
   /** Tops every category of the event up to a full set of codes for the seats it still has. */
   generateForEvent: (eventId: string, codeType: "QR_CODE" | "BARCODE" = "QR_CODE") =>
@@ -39,26 +51,21 @@ export const preGeneratedCodeApi = {
 
   listForEvent: (eventId: string) =>
     internalHttpClient.get<PreGeneratedCodeList>(`/pre-generated-code/event/${eventId}`),
+
+  exportForEvent: (eventId: string) =>
+    internalHttpClient.get<TicketCodeExportList>(`/pre-generated-code/event/${eventId}/export`),
 };
 
-/**
- * CSV for handing to the offline scanner operator.
- *
- * Every field is quoted and embedded quotes are doubled: a category name carrying a comma would
- * otherwise shift every later column, and the file is loaded into someone else's system where a
- * silently misaligned row means a valid ticket that will not scan.
- */
-export function buildPreGeneratedCodeCsv(
-  codes: PreGeneratedCode[],
-  categoryNameById: Record<string, string> = {},
-): string {
-  const escape = (value: string) => `"${value.replace(/"/g, '""')}"`;
-  const header = ["Kategori", "Kode", "Tipe", "Status"].map(escape).join(",");
+export function buildTicketCodeExportCsv(codes: TicketCodeExportRow[]): string {
+  const escape = (value: string) => {
+    const safeValue = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+    return `"${safeValue.replace(/"/g, '""')}"`;
+  };
+  const header = ["Kode Hash", "Kategori", "Issued At"].map(escape).join(",");
   const rows = codes.map((code) => [
-    escape(categoryNameById[code.ticketCategoryId] ?? code.ticketCategoryId),
     escape(code.codeHash),
-    escape(code.codeType ?? ""),
-    escape(code.status ?? ""),
+    escape(code.categoryName),
+    escape(code.issuedAt ?? ""),
   ].join(","));
-  return [header, ...rows].join("\n");
+  return [header, ...rows].join("\r\n");
 }

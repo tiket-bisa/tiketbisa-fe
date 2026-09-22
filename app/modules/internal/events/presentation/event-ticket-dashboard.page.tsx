@@ -20,7 +20,7 @@ import { useDebouncedValue } from "~/modules/internal/common/presentation/use-de
 import { ticketCategoryApi } from "~/core/api/services/ticket-category.api";
 import {
   preGeneratedCodeApi,
-  buildPreGeneratedCodeCsv,
+  buildTicketCodeExportCsv,
 } from "~/core/api/services/pre-generated-code.api";
 import { getEventTransactionStatusLabel } from "./event-ticket-status";
 
@@ -213,23 +213,24 @@ export default function EventTicketDashboardPage() {
     if (!eventId) return;
     setDownloadingCodes(true);
     try {
-      const result = await preGeneratedCodeApi.listForEvent(eventId);
+      const result = await preGeneratedCodeApi.exportForEvent(eventId);
       if (!result.success || !result.data) {
         throw new Error(result.error || "Gagal mengunduh kode.");
       }
       if (result.data.totalCount === 0) {
-        infoToast("Belum ada kode pre-generate untuk event ini.");
+        infoToast("Belum ada kode tiket untuk event ini.");
         return;
       }
-      const categoryNameById = Object.fromEntries(
-        data.categories.map((category) => [category.id, category.name]),
-      );
-      const csv = buildPreGeneratedCodeCsv(result.data.codes, categoryNameById);
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const csv = buildTicketCodeExportCsv(result.data.codes);
+      const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `kode-pre-generate-${data.event.name.replace(/\s+/g, "_")}.csv`;
+      const eventName = data.event.name
+        .replace(/[^a-z0-9]+/gi, "-")
+        .replace(/^-|-$/g, "")
+        .toLowerCase();
+      link.download = `kode-tiket-${eventName || eventId}.csv`;
       link.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -290,7 +291,7 @@ export default function EventTicketDashboardPage() {
             isLoading={downloadingCodes}
             onClick={handleDownloadCodes}
           >
-            Unduh Kode (CSV)
+            Unduh Semua Kode (CSV)
           </Button>
         </div>
       </div>
