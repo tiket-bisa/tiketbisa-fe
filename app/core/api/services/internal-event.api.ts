@@ -92,6 +92,7 @@ export interface EventTicketCategorySummary {
   remainingTicket: number;
   soldTicket: number;
   checkedOutTicket: number;
+  reservedTicket: number;
   price: number;
   isHidden: boolean;
   bulkType: "COMMUNITY" | "COMPLIMENTARY" | null;
@@ -137,6 +138,10 @@ interface EventTicketCategoryApiData extends Record<string, unknown> {
   sold_ticket?: number;
   checkedOutTicket?: number;
   checked_out_ticket?: number;
+  reservedTicket?: number;
+  reserved_ticket?: number;
+  lockedTicket?: number;
+  locked_ticket?: number;
   price?: number;
   isHidden?: boolean;
   is_hidden?: boolean;
@@ -277,6 +282,15 @@ function normalizeEventImage(api: EventImageApiData): EventImageData {
 }
 
 export function normalizeEventTicketCategory(api: EventTicketCategoryApiData): EventTicketCategorySummary {
+  const issuedTicket = Number(api.issuedTicket ?? api.issued_ticket ?? 0);
+  const soldTicket = Number(api.soldTicket ?? api.sold_ticket ?? issuedTicket);
+  const checkedOutTicket = Number(api.checkedOutTicket ?? api.checked_out_ticket ?? issuedTicket);
+  const liveReservations = Number(api.lockedTicket ?? api.locked_ticket ?? 0);
+  const reservedTicket = Number(
+    api.reservedTicket
+      ?? api.reserved_ticket
+      ?? Math.max(0, checkedOutTicket - soldTicket) + liveReservations,
+  );
   return {
     id: String(api.id ?? ""),
     eventId: String(api.eventId ?? api.event_id ?? ""),
@@ -284,13 +298,12 @@ export function normalizeEventTicketCategory(api: EventTicketCategoryApiData): E
     description: (api.description ?? null) as string | null,
     categoryCode: (api.categoryCode ?? api.category_code ?? null) as string | null,
     totalTicket: Number(api.totalTicket ?? api.total_ticket ?? 0),
-    issuedTicket: Number(api.issuedTicket ?? api.issued_ticket ?? 0),
+    issuedTicket,
     checkedInTicket: Number(api.checkedInTicket ?? api.checked_in_ticket ?? 0),
     remainingTicket: Number(api.remainingTicket ?? api.remaining_ticket ?? 0),
-    soldTicket: Number(api.soldTicket ?? api.sold_ticket ?? api.issuedTicket ?? api.issued_ticket ?? 0),
-    checkedOutTicket: Number(
-      api.checkedOutTicket ?? api.checked_out_ticket ?? api.issuedTicket ?? api.issued_ticket ?? 0,
-    ),
+    soldTicket,
+    checkedOutTicket,
+    reservedTicket,
     price: Number(api.price ?? 0),
     isHidden: api.isHidden ?? api.is_hidden ?? false,
     bulkType: api.bulkType ?? api.bulk_type ?? null,

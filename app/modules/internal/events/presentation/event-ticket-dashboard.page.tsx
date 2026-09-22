@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
-import { Badge, Button, Card, Input, Select } from "~/core/design-system/components";
+import { Badge, Button, Card, Input, Select, useToast } from "~/core/design-system/components";
 import { useApiQuery } from "~/core/api";
 import {
   internalEventApi,
@@ -18,6 +18,10 @@ import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 import { TicketDeliveryActions } from "~/modules/internal/ticket-delivery/presentation/ticket-delivery-actions";
 import { useDebouncedValue } from "~/modules/internal/common/presentation/use-debounced-value";
 import { ticketCategoryApi } from "~/core/api/services/ticket-category.api";
+import {
+  preGeneratedCodeApi,
+  buildPreGeneratedCodeCsv,
+} from "~/core/api/services/pre-generated-code.api";
 import { getEventTransactionStatusLabel } from "./event-ticket-status";
 
 const statusOptions = [
@@ -57,6 +61,9 @@ export default function EventTicketDashboardPage() {
   const [transactionPageSize, setTransactionPageSize] = useState(5);
   const [issuedTicketOffset, setIssuedTicketOffset] = useState(0);
   const [adjustingCategory, setAdjustingCategory] = useState<EventTicketCategorySummary | null>(null);
+  const [preGenerating, setPreGenerating] = useState(false);
+  const [downloadingCodes, setDownloadingCodes] = useState(false);
+  const { success: successToast, error: errorToast, info: infoToast } = useToast();
   const debouncedSearch = useDebouncedValue(search);
 
   const { data: fetchedData, loading, error, refetch } = useApiQuery(
@@ -172,12 +179,65 @@ export default function EventTicketDashboardPage() {
   const soldTicket = data.soldTickets;
   const remainingTicket = data.inventory.remainingTicket;
   const checkedInTicket = data.inventory.checkedInTicket;
-  const checkedOutTicket = data.categories.reduce((sum, category) => sum + category.checkedOutTicket, 0);
+  const reservedTicket = data.categories.reduce((sum, category) => sum + category.reservedTicket, 0);
   const bulkTicket = data.categories.reduce((sum, category) => sum + (category.bulkType ? category.issuedTicket : 0), 0);
   const displayedStart = data.totalCount === 0 ? 0 : data.offset + 1;
   const displayedEnd = Math.min(data.offset + data.issuedTickets.length, data.totalCount);
   const canGoPrevious = data.offset > 0;
   const canGoNext = data.offset + data.issuedTickets.length < data.totalCount;
+
+  const handlePreGenerate = async () => {
+    if (!eventId) return;
+    setPreGenerating(true);
+    try {
+      const result = await preGeneratedCodeApi.generateForEvent(eventId);
+      if (!result.success || !result.data) {
+        throw new Error(result.error || "Gagal membuat kode pre-generate.");
+      }
+      // Zero is a normal outcome, not a failure: every category already holds a full set. Saying
+      // so plainly avoids a second press on the assumption nothing happened.
+      if (result.data.totalGenerated === 0) {
+        infoToast("Semua kategori sudah punya kode untuk sisa tiketnya.");
+      } else {
+        successToast(`${result.data.totalGenerated} kode berhasil dibuat.`);
+      }
+      refetch();
+    } catch (err) {
+      errorToast(err instanceof Error ? err.message : "Gagal membuat kode pre-generate.");
+    } finally {
+      setPreGenerating(false);
+    }
+  };
+
+  const handleDownloadCodes = async () => {
+    if (!eventId) return;
+    setDownloadingCodes(true);
+    try {
+      const result = await preGeneratedCodeApi.listForEvent(eventId);
+      if (!result.success || !result.data) {
+        throw new Error(result.error || "Gagal mengunduh kode.");
+      }
+      if (result.data.totalCount === 0) {
+        infoToast("Belum ada kode pre-generate untuk event ini.");
+        return;
+      }
+      const categoryNameById = Object.fromEntries(
+        data.categories.map((category) => [category.id, category.name]),
+      );
+      const csv = buildPreGeneratedCodeCsv(result.data.codes, categoryNameById);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `kode-pre-generate-${data.event.name.replace(/\s+/g, "_")}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      errorToast(err instanceof Error ? err.message : "Gagal mengunduh kode.");
+    } finally {
+      setDownloadingCodes(false);
+    }
+  };
   const eventEnded = data.event.status === "ENDED"
     || (data.event.endDate ? new Date(data.event.endDate).getTime() <= Date.now() : false);
   const goToPreviousPage = () => {
@@ -197,7 +257,7 @@ export default function EventTicketDashboardPage() {
           </Button>
           <h1 className="text-text-primary text-3xl font-extrabold">{data.event.name}</h1>
           <p className="text-text-tertiary text-sm font-medium">
-            Kelola Tiket &amp; Penjualan · Kuota, tiket terpesan, tiket terjual, sisa tiket, dan status check-in
+            Kelola Tiket &amp; Penjualan · Kuota, tiket direservasi, tiket terjual, sisa tiket, dan status check-in
           </p>
           {eventEnded && <Badge variant="destructive">Event Selesai · Penjualan ditutup</Badge>}
         </div>
@@ -210,6 +270,27 @@ export default function EventTicketDashboardPage() {
           </Button>
           <Button type="button" variant="secondary" disabled={eventEnded} onClick={() => navigate(`${basePath}/events/${eventId}/bulk/new`)}>
             Tiket Bulk
+          </Button>
+          {/* One button for the whole event: the offline gate scanner needs every valid code
+              loaded before the gate opens, and codes that only exist once a ticket is sold cannot
+              be handed over in time. */}
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={eventEnded || preGenerating}
+            isLoading={preGenerating}
+            onClick={handlePreGenerate}
+          >
+            Pre-generate Kode
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={downloadingCodes}
+            isLoading={downloadingCodes}
+            onClick={handleDownloadCodes}
+          >
+            Unduh Kode (CSV)
           </Button>
         </div>
       </div>
@@ -228,7 +309,7 @@ export default function EventTicketDashboardPage() {
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-7">
         <SummaryCard label="Kuota" value={totalTicket} />
-        <SummaryCard label="Terpesan (termasuk bulk)" value={checkedOutTicket} />
+        <SummaryCard label="Direservasi" value={reservedTicket} />
         <SummaryCard label="Revenue" value={formatIDR(data.revenue)} />
         <SummaryCard label="Terjual & Lunas" value={soldTicket} />
         <SummaryCard label="Bulk Terbit" value={bulkTicket} />
@@ -248,7 +329,7 @@ export default function EventTicketDashboardPage() {
                 <th className="px-3 py-2 font-medium">Harga</th>
                 <th className="px-3 py-2 font-medium">Visibilitas</th>
                 <th className="px-3 py-2 font-medium">Kuota</th>
-                <th className="px-3 py-2 font-medium">Terpesan</th>
+                <th className="px-3 py-2 font-medium">Direservasi</th>
                 <th className="px-3 py-2 font-medium">Terjual &amp; Lunas</th>
                 <th className="px-3 py-2 font-medium">Sisa</th>
                 <th className="px-3 py-2 font-medium">Checked In</th>
@@ -267,7 +348,7 @@ export default function EventTicketDashboardPage() {
                     </Badge>
                   </td>
                   <td className="px-3 py-3 text-text-secondary">{category.totalTicket.toLocaleString()}</td>
-                  <td className="px-3 py-3 text-text-secondary">{category.checkedOutTicket.toLocaleString()}</td>
+                  <td className="px-3 py-3 text-text-secondary">{category.reservedTicket.toLocaleString()}</td>
                   <td className="px-3 py-3 text-text-secondary">{category.soldTicket.toLocaleString()}</td>
                   <td className="px-3 py-3 text-text-secondary">{category.remainingTicket.toLocaleString()}</td>
                   <td className="px-3 py-3 text-text-secondary">{category.checkedInTicket.toLocaleString()}</td>
@@ -430,11 +511,12 @@ function AdjustCategoryModal({
   const [salesClosed, setSalesClosed] = useState(category.salesClosed);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const allocatedTicket = category.soldTicket + category.reservedTicket;
 
   const save = async () => {
     const parsedTotal = Number(totalTicket);
-    if (!Number.isInteger(parsedTotal) || parsedTotal < category.issuedTicket) {
-      setError(`Total kuota minimal ${category.issuedTicket.toLocaleString()} karena tiket tersebut sudah diterbitkan.`);
+    if (!Number.isInteger(parsedTotal) || parsedTotal < allocatedTicket) {
+      setError(`Total kuota minimal ${allocatedTicket.toLocaleString()} karena tiket tersebut sudah terjual atau direservasi.`);
       return;
     }
     setSaving(true);
@@ -462,10 +544,10 @@ function AdjustCategoryModal({
         </div>
         {error && <div className="rounded-md bg-red-50 p-3 text-sm text-destructive-text">{error}</div>}
         <div className="grid grid-cols-2 gap-3 rounded-md bg-surface-hover p-3 text-sm">
-          <span>Sudah diterbitkan</span><strong className="text-right">{category.issuedTicket.toLocaleString()}</strong>
+          <span>Terjual atau direservasi</span><strong className="text-right">{allocatedTicket.toLocaleString()}</strong>
           <span>Sisa saat ini</span><strong className="text-right">{category.remainingTicket.toLocaleString()}</strong>
         </div>
-        <Input label="Total Kuota" type="number" min={category.issuedTicket} value={totalTicket} onChange={(event) => setTotalTicket(event.target.value)} />
+        <Input label="Total Kuota" type="number" min={allocatedTicket} value={totalTicket} onChange={(event) => setTotalTicket(event.target.value)} />
         {!category.bulkType && (
           <label className="flex items-start gap-3 rounded-md border border-border-subtle p-3 text-sm">
             <input type="checkbox" checked={salesClosed} onChange={(event) => setSalesClosed(event.target.checked)} className="mt-0.5 accent-brand-primary" />
