@@ -75,6 +75,9 @@ export function EventDetailSidebar({
                 key={ticket.id}
                 ticket={ticket}
                 quantity={quantities[ticket.id] || 0}
+                remainingSlots={
+                  MAX_TICKETS_PER_TRANSACTION - totalItems + (quantities[ticket.id] || 0)
+                }
                 onQuantityChange={onQuantityChange}
               />
             ))}
