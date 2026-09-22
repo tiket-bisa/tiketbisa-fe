@@ -51,3 +51,32 @@ export function persistScanSelection(
   }
   storage.setItem(key, JSON.stringify(selection));
 }
+
+const AUTO_CHECKIN_PREFIX = "tiketbisa_scan_auto_checkin";
+
+function autoCheckInKey(brandId?: string): string {
+  return `${AUTO_CHECKIN_PREFIX}:${brandId || "all"}`;
+}
+
+export function readAutoCheckIn(brandId?: string, storage?: Storage): boolean {
+  if (!storage) return false;
+  try {
+    return storage.getItem(autoCheckInKey(brandId)) === "true";
+  } catch {
+    return false;
+  }
+}
+
+export function persistAutoCheckIn(
+  enabled: boolean,
+  brandId?: string,
+  storage?: Storage,
+): void {
+  if (!storage) return;
+  const key = autoCheckInKey(brandId);
+  if (!enabled) {
+    storage.removeItem(key);
+    return;
+  }
+  storage.setItem(key, "true");
+}
