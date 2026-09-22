@@ -16,11 +16,14 @@ export function useTicketSelection(tickets: EventTicket[] = []) {
 
     setQuantities(prev => {
       const currentQty = prev[id] ?? 0;
-      const totalSelected = Object.values(prev).reduce((sum, value) => sum + value, 0);
-      const remainingSlots = MAX_TICKETS_PER_TRANSACTION - (totalSelected - currentQty);
+      const totalSelected = Object.entries(prev).reduce((sum, [ticketId, value]) =>
+        sum + value * (ticketMap.get(ticketId)?.bundleSize ?? 1), 0);
+      const bundleSize = ticket.bundleSize ?? 1;
+      const remainingSlots = MAX_TICKETS_PER_TRANSACTION - (totalSelected - currentQty * bundleSize);
       const perTicketMax = ticket.maxPerOrder ?? MAX_TICKETS_PER_TRANSACTION;
       const stock = ticket.remaining ?? Infinity;
-      const maxAllowed = Math.max(0, Math.min(perTicketMax, remainingSlots, stock));
+      const transactionMax = Math.floor(remainingSlots / bundleSize);
+      const maxAllowed = Math.max(0, Math.min(perTicketMax, transactionMax, stock));
       const safeQty = Math.max(0, Math.min(qty, maxAllowed));
 
       if (safeQty === 0) {
@@ -45,7 +48,7 @@ export function useTicketSelection(tickets: EventTicket[] = []) {
   );
 
   const totalItems = useMemo(() =>
-    selectedTickets.reduce((sum, item) => sum + item.quantity, 0),
+    selectedTickets.reduce((sum, item) => sum + item.quantity * (item.ticket.bundleSize ?? 1), 0),
     [selectedTickets]
   );
 

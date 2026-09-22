@@ -48,6 +48,17 @@ describe("checkout pricing", () => {
     expect(summary.totalPrice).toBe(222500);
   });
 
+  it("charges one bundle price and a service fee for every issued ticket", () => {
+    const summary = buildBaseOrderSummary(mockEvent, [
+      { ticketId: "bundle-1", ticketName: "VIP Family 3", price: 300000, quantity: 1, bundleSize: 3 },
+    ]);
+
+    expect(summary.subtotal).toBe(300000);
+    expect(summary.ticketCount).toBe(3);
+    expect(summary.serviceFee).toBe(22500);
+    expect(summary.totalPrice).toBe(322500);
+  });
+
   it("adds QRIS transaction fee at 3 percent of subtotal plus service fee", () => {
     const baseSummary = buildBaseOrderSummary(mockEvent, mockItems);
     const summary = buildPaymentOrderSummary(baseSummary, qrisMethod);

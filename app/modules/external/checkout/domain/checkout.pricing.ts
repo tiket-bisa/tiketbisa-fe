@@ -9,7 +9,7 @@ function calculateSubtotal(items: OrderItem[]): number {
 }
 
 function calculateTicketCount(items: OrderItem[]): number {
-  return items.reduce((sum, item) => sum + item.quantity, 0);
+  return items.reduce((sum, item) => sum + item.quantity * (item.bundleSize ?? 1), 0);
 }
 
 function formatRupiah(value: number): string {

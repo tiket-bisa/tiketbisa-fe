@@ -339,7 +339,12 @@ export default function EventTicketDashboardPage() {
             <tbody>
               {categories.map((category) => (
                 <tr key={category.id} className="border-b border-border-subtle last:border-0">
-                  <td className="px-3 py-3 font-medium text-text-primary">{category.name}</td>
+                  <td className="px-3 py-3 font-medium text-text-primary">
+                    <div>{category.name}</div>
+                    {category.bundleSize > 1 && (
+                      <div className="text-xs font-normal text-text-tertiary">Bundling · {category.bundleSize} tiket</div>
+                    )}
+                  </td>
                   <td className="px-3 py-3 text-text-secondary">{category.categoryCode || "-"}</td>
                   <td className="px-3 py-3 text-text-secondary">{formatIDR(category.price)}</td>
                   <td className="px-3 py-3">

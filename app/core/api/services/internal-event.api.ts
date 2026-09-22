@@ -97,6 +97,7 @@ export interface EventTicketCategorySummary {
   isHidden: boolean;
   bulkType: "COMMUNITY" | "COMPLIMENTARY" | null;
   salesClosed: boolean;
+  bundleSize: number;
 }
 
 export interface IssuedTicketSummary {
@@ -149,6 +150,8 @@ interface EventTicketCategoryApiData extends Record<string, unknown> {
   bulk_type?: "COMMUNITY" | "COMPLIMENTARY" | null;
   salesClosed?: boolean;
   sales_closed?: boolean;
+  bundleSize?: number;
+  bundle_size?: number;
 }
 
 interface IssuedTicketApiData extends Record<string, unknown> {
@@ -308,6 +311,7 @@ export function normalizeEventTicketCategory(api: EventTicketCategoryApiData): E
     isHidden: api.isHidden ?? api.is_hidden ?? false,
     bulkType: api.bulkType ?? api.bulk_type ?? null,
     salesClosed: api.salesClosed ?? api.sales_closed ?? false,
+    bundleSize: Number(api.bundleSize ?? api.bundle_size ?? 1),
   };
 }
 

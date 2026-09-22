@@ -22,6 +22,8 @@ export default function CreateTicketPage() {
     categoryCode: "",
     totalTicket: "",
     price: "",
+    isBundling: false,
+    bundleSize: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -47,6 +49,7 @@ export default function CreateTicketPage() {
     const totalTicket = Number(formData.totalTicket);
     const isBulk = formData.ticketKind === "BULK";
     const price = isBulk ? 0 : parseIDRInput(formData.price);
+    const bundleSize = formData.isBundling ? Number(formData.bundleSize) : 1;
     if (name.length < 2) {
       setErrorMsg("Nama tiket minimal 2 karakter.");
       return;
@@ -67,6 +70,14 @@ export default function CreateTicketPage() {
       setErrorMsg("Pilih tipe Tiket Bulk: Komunitas atau Komplimen.");
       return;
     }
+    if (formData.isBundling && (!Number.isInteger(bundleSize) || bundleSize < 2 || bundleSize > 4)) {
+      setErrorMsg("Jumlah bundling harus berupa bilangan bulat antara 2 dan 4.");
+      return;
+    }
+    if (totalTicket % bundleSize !== 0) {
+      setErrorMsg("Jumlah tiket harus habis dibagi jumlah bundling.");
+      return;
+    }
 
     setLoading(true);
     setErrorMsg(null);
@@ -81,6 +92,7 @@ export default function CreateTicketPage() {
         totalTicket,
         price,
         bulkType: isBulk ? formData.bulkType || null : null,
+        bundleSize,
       });
 
       if (res.success && res.data) {
@@ -140,7 +152,14 @@ export default function CreateTicketPage() {
                     name="ticketKind"
                     value={kind}
                     checked={formData.ticketKind === kind}
-                    onChange={() => setFormData((prev) => ({ ...prev, ticketKind: kind, bulkType: kind === "BULK" ? prev.bulkType : "", price: kind === "BULK" ? "0" : "" }))}
+                    onChange={() => setFormData((prev) => ({
+                      ...prev,
+                      ticketKind: kind,
+                      bulkType: kind === "BULK" ? prev.bulkType : "",
+                      price: kind === "BULK" ? "0" : "",
+                      isBundling: kind === "BULK" ? false : prev.isBundling,
+                      bundleSize: kind === "BULK" ? "" : prev.bundleSize,
+                    }))}
                     className="mr-2 accent-brand-primary"
                   />
                   {kind === "REGULAR" ? "Reguler" : "Bulk"}
@@ -165,6 +184,41 @@ export default function CreateTicketPage() {
                 <option value="COMMUNITY">Komunitas</option>
                 <option value="COMPLIMENTARY">Komplimen</option>
               </select>
+            </div>
+          )}
+
+          {formData.ticketKind === "REGULAR" && (
+            <div className="space-y-3">
+              <label className="flex items-center gap-3 cursor-pointer w-fit">
+                <input
+                  type="checkbox"
+                  name="isBundling"
+                  checked={formData.isBundling}
+                  onChange={handleChange}
+                  className="h-4 w-4 accent-brand-primary"
+                />
+                <span className="text-sm font-medium">Bundling</span>
+              </label>
+              {formData.isBundling && (
+                <div>
+                  <label className="block text-sm font-medium mb-1" htmlFor="bundleSize">
+                    Jumlah bundling <span className="text-destructive-text">*</span>
+                  </label>
+                  <input
+                    required
+                    id="bundleSize"
+                    name="bundleSize"
+                    type="number"
+                    min="2"
+                    max="4"
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    placeholder="Contoh: 3"
+                    value={formData.bundleSize}
+                    onChange={handleChange}
+                  />
+                  <p className="text-xs text-text-secondary mt-1">Satu pembelian menghasilkan sejumlah tiket ini.</p>
+                </div>
+              )}
             </div>
           )}
 
@@ -260,7 +314,7 @@ export default function CreateTicketPage() {
             <Button
               type="submit"
               variant="primary"
-              disabled={loading || !formData.name || !formData.categoryCode || (formData.ticketKind === "REGULAR" && !formData.price) || !formData.totalTicket || (formData.ticketKind === "BULK" && !formData.bulkType)}
+              disabled={loading || !formData.name || !formData.categoryCode || (formData.ticketKind === "REGULAR" && !formData.price) || !formData.totalTicket || (formData.ticketKind === "BULK" && !formData.bulkType) || (formData.isBundling && !formData.bundleSize)}
             >
               {loading ? "Menyimpan..." : "Simpan Tiket"}
             </Button>

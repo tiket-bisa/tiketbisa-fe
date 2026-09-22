@@ -67,6 +67,41 @@ describe("orderApi", () => {
     expect(result.userId).toBe("lock-001");
   });
 
+  it("sends every physical ticket holder for a single bundle purchase", async () => {
+    mockApiFetch.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "lock-002",
+        eventId: mockEventId,
+        tickets: [{ categoryId: "bundle-1", quantity: 1 }],
+        timestamp: Date.now(),
+        expiresAt: Date.now() + 900000,
+      },
+    } as any);
+    const bundleSummary: OrderSummary = {
+      ...mockSummary,
+      ticketCount: 3,
+      items: [{ ticketId: "bundle-1", ticketName: "VIP Family 3", quantity: 1, bundleSize: 3, price: 300000 }],
+    };
+    const holders = [
+      { name: "A", identityNumber: "1111111111111111" },
+      { name: "B", identityNumber: "2222222222222222" },
+      { name: "C", identityNumber: "3333333333333333" },
+    ];
+
+    await orderApi.acquireLock(mockEventId, bundleSummary, holders);
+
+    expect(mockApiFetch).toHaveBeenCalledWith(
+      "/transaction/lock",
+      expect.objectContaining({
+        body: JSON.stringify({
+          eventId: mockEventId,
+          tickets: [{ categoryId: "bundle-1", quantity: 1, price: 300000, holders }],
+        }),
+      }),
+    );
+  });
+
   it("releaseCheckout explicitly releases an abandoned reservation", async () => {
     mockApiFetch.mockResolvedValueOnce({
       success: true,

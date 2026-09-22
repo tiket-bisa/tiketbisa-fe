@@ -85,7 +85,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
   } = useCheckoutForm();
 
   const totalTicketQuantity = useMemo(
-    () => summary.items.reduce((sum, item) => sum + item.quantity, 0),
+    () => summary.items.reduce((sum, item) => sum + item.quantity * (item.bundleSize ?? 1), 0),
     [summary.items],
   );
 

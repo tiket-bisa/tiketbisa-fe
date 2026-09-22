@@ -221,4 +221,34 @@ describe("eventApi.getEvents", () => {
     expect(event?.tickets.find((ticket) => ticket.id === "held")?.remaining).toBe(3);
     expect(event?.tickets.find((ticket) => ticket.id === "plain")?.remaining).toBe(6);
   });
+
+  it("maps bundled categories to one package per order and package availability", async () => {
+    mockApiFetch
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          id: "event-1",
+          brandId: "brand-123",
+          name: "Event Test",
+          startDate: "2026-07-30T10:00:00Z",
+          status: "ONGOING",
+          isPublished: true,
+        },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: [
+          { id: "bundle", name: "VIP Family 3", price: 300_000, totalTicket: 300, issuedTicket: 6, availableTicket: 294, bundleSize: 3 },
+        ],
+      })
+      .mockResolvedValueOnce({ success: true, data: { images: [] } })
+      .mockResolvedValueOnce({ success: true, data: { id: "brand-123", name: "Test 123" } });
+
+    const event = await eventApi.getEventById("event-1");
+    const bundle = event?.tickets[0];
+
+    expect(bundle?.bundleSize).toBe(3);
+    expect(bundle?.remaining).toBe(98);
+    expect(bundle?.maxPerOrder).toBe(1);
+  });
 });

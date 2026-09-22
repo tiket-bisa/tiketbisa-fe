@@ -50,6 +50,29 @@ describe("TicketRow", () => {
     expect(onQuantityChange).toHaveBeenCalledWith("category-1", 1);
   });
 
+  it("shows bundle contents and disables the counter after one package", () => {
+    render(
+      <TicketRow
+        ticket={{
+          id: "bundle-1",
+          name: "VIP Family 3",
+          price: 300000,
+          available: true,
+          remaining: 10,
+          bundleSize: 3,
+          maxPerOrder: 1,
+        }}
+        quantity={1}
+        remainingSlots={4}
+        onQuantityChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Paket berisi 3 tiket")).toBeTruthy();
+    expect(screen.getByText("Sisa 10 paket")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Increase" }).hasAttribute("disabled")).toBe(true);
+  });
+
   it("shows a manually closed category as sold out", () => {
     render(
       <TicketRow

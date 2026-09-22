@@ -22,6 +22,8 @@ export interface TicketCategoryApiData {
     bulkType?: "COMMUNITY" | "COMPLIMENTARY" | null;
     sales_closed: boolean;
     salesClosed?: boolean;
+    bundle_size: number;
+    bundleSize?: number;
     is_purchasable: boolean;
     isPurchasable?: boolean;
     purchase_status: "AVAILABLE" | "SOLD_OUT" | "SALES_CLOSED" | "EVENT_ENDED";
@@ -44,6 +46,7 @@ export function normalizeTicketCategory(api: RawTicketCategory): TicketCategoryA
         is_hidden: api.is_hidden ?? api.isHidden ?? false,
         bulk_type: api.bulk_type ?? api.bulkType ?? null,
         sales_closed: api.sales_closed ?? api.salesClosed ?? false,
+        bundle_size: Number(api.bundle_size ?? api.bundleSize ?? 1),
         is_purchasable: api.is_purchasable ?? api.isPurchasable ?? false,
         purchase_status: api.purchase_status ?? api.purchaseStatus ?? "SOLD_OUT",
     };
@@ -107,7 +110,7 @@ export const ticketCategoryApi = {
         }));
     },
 
-    create: (data: { eventId: string; name: string; description?: string; categoryCode: string; totalTicket: number; price: number; bulkType: "COMMUNITY" | "COMPLIMENTARY" | null }) =>
+    create: (data: { eventId: string; name: string; description?: string; categoryCode: string; totalTicket: number; price: number; bulkType: "COMMUNITY" | "COMPLIMENTARY" | null; bundleSize: number }) =>
         internalHttpClient.post<TicketCategoryApiData>("/ticket-category", data),
 
     update: (id: string, data: { totalTicket?: number; salesClosed?: boolean }) =>

@@ -33,6 +33,8 @@ interface TicketCategoryDto {
   is_purchasable?: boolean;
   purchaseStatus?: "AVAILABLE" | "SOLD_OUT" | "SALES_CLOSED" | "EVENT_ENDED";
   purchase_status?: "AVAILABLE" | "SOLD_OUT" | "SALES_CLOSED" | "EVENT_ENDED";
+  bundleSize?: number;
+  bundle_size?: number;
 }
 
 function isPublicTicketCategory(ticket: { isHidden?: boolean; is_hidden?: boolean }): boolean {
@@ -232,15 +234,21 @@ export const eventApi: EventRepository = {
         .filter(isPublicTicketCategory)
         .slice()
         .sort((a, b) => a.name.localeCompare(b.name, "id", { numeric: true, sensitivity: "base" }))
-        .map((t) => ({
-          id: t.id,
-          name: t.name,
-          price: Number(t.price),
-          available: t.isPurchasable ?? t.is_purchasable ?? t.totalTicket > t.issuedTicket,
-          purchaseStatus: t.purchaseStatus ?? t.purchase_status ?? (t.totalTicket > t.issuedTicket ? "AVAILABLE" : "SOLD_OUT"),
-          remaining: t.availableTicket ?? t.available_ticket
-            ?? Math.max(0, t.totalTicket - t.issuedTicket),
-        })),
+        .map((t) => {
+          const bundleSize = Number(t.bundleSize ?? t.bundle_size ?? 1);
+          const physicalRemaining = t.availableTicket ?? t.available_ticket
+            ?? Math.max(0, t.totalTicket - t.issuedTicket);
+          return {
+            id: t.id,
+            name: t.name,
+            price: Number(t.price),
+            available: t.isPurchasable ?? t.is_purchasable ?? physicalRemaining >= bundleSize,
+            purchaseStatus: t.purchaseStatus ?? t.purchase_status ?? (physicalRemaining >= bundleSize ? "AVAILABLE" : "SOLD_OUT"),
+            remaining: Math.floor(physicalRemaining / bundleSize),
+            bundleSize,
+            maxPerOrder: bundleSize > 1 ? 1 : undefined,
+          };
+        }),
     };
   },
 };

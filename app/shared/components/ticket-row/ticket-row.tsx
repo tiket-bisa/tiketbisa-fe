@@ -37,12 +37,16 @@ export function TicketRow({
     
   const availableLabel = ticket.remaining === undefined
     ? "Tersedia"
-    : `Sisa ${ticket.remaining} tiket`;
+    : `Sisa ${ticket.remaining} ${ticket.bundleSize && ticket.bundleSize > 1 ? "paket" : "tiket"}`;
   // The stepper must never offer a seat that does not exist; useTicketSelection applies the
   // same cap authoritatively, this only keeps the + button from looking enabled past the limit.
   const perOrderMax = ticket.maxPerOrder ?? MAX_TICKETS_PER_TRANSACTION;
+  const bundleSize = ticket.bundleSize ?? 1;
+  const transactionMax = remainingSlots == null
+    ? Infinity
+    : Math.floor(remainingSlots / bundleSize);
   const max = ticket.available
-    ? Math.max(0, Math.min(perOrderMax, ticket.remaining ?? Infinity, remainingSlots ?? Infinity))
+    ? Math.max(0, Math.min(perOrderMax, ticket.remaining ?? Infinity, transactionMax))
     : 0;
   
   return (
@@ -60,6 +64,9 @@ export function TicketRow({
         <span className="text-sm font-semibold text-brand-primary">
           {formatPrice(ticket.price)}
         </span>
+        {bundleSize > 1 && (
+          <span className="text-xs font-medium text-text-secondary">Paket berisi {bundleSize} tiket</span>
+        )}
       </div>
 
       {/* Right: counter */}
