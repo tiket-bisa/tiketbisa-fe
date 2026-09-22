@@ -23,6 +23,7 @@ import {
   buildTicketCodeExportCsv,
 } from "~/core/api/services/pre-generated-code.api";
 import { getEventTransactionStatusLabel } from "./event-ticket-status";
+import { EventDashboardBackButton, TicketCodeExportButton } from "./event-ticket-dashboard-actions";
 
 const statusOptions = [
   { value: "all", label: "Semua Status" },
@@ -165,9 +166,7 @@ export default function EventTicketDashboardPage() {
   if (error || !data) {
     return (
       <div className="space-y-4">
-        <Button type="button" variant="ghost" onClick={() => navigate(`${basePath}/events`)}>
-          Kembali
-        </Button>
+        <EventDashboardBackButton onClick={() => navigate(`${basePath}/events`)} />
         <Card padding="md">
           <p className="text-destructive-text">{error || "Data tiket tidak ditemukan."}</p>
         </Card>
@@ -253,9 +252,7 @@ export default function EventTicketDashboardPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <Button type="button" variant="ghost" onClick={() => navigate(`${basePath}/events`)} className="mb-2">
-            Kembali
-          </Button>
+          <EventDashboardBackButton onClick={() => navigate(`${basePath}/events`)} />
           <h1 className="text-text-primary text-3xl font-extrabold">{data.event.name}</h1>
           <p className="text-text-tertiary text-sm font-medium">
             Kelola Tiket &amp; Penjualan · Kuota, tiket direservasi, tiket terjual, sisa tiket, dan status check-in
@@ -272,9 +269,6 @@ export default function EventTicketDashboardPage() {
           <Button type="button" variant="secondary" disabled={eventEnded} onClick={() => navigate(`${basePath}/events/${eventId}/bulk/new`)}>
             Tiket Bulk
           </Button>
-          {/* One button for the whole event: the offline gate scanner needs every valid code
-              loaded before the gate opens, and codes that only exist once a ticket is sold cannot
-              be handed over in time. */}
           <Button
             type="button"
             variant="secondary"
@@ -284,15 +278,7 @@ export default function EventTicketDashboardPage() {
           >
             Pre-generate Kode
           </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={downloadingCodes}
-            isLoading={downloadingCodes}
-            onClick={handleDownloadCodes}
-          >
-            Unduh Semua Kode (CSV)
-          </Button>
+          <TicketCodeExportButton downloading={downloadingCodes} onClick={handleDownloadCodes} />
         </div>
       </div>
 
