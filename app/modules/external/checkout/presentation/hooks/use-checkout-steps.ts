@@ -160,6 +160,9 @@ export function useCheckoutSteps(
       return true;
     }
     if (!activeLockId) {
+      if (currentStep === 1) {
+        return true;
+      }
       await expireCheckoutSession(true);
       return false;
     }

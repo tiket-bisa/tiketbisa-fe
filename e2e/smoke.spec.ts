@@ -74,7 +74,10 @@ test.describe.serial("local smoke flows", () => {
     const lockResponse = await initialLock;
     const lockEnvelope = await lockResponse.json();
     const lockId = lockEnvelope.data?.userId as string;
+    expect(lockResponse.ok()).toBeTruthy();
     expect(lockId).toBeTruthy();
+    expect(lockEnvelope.data?.expiresAt - lockEnvelope.data?.timestamp).toBe(300_000);
+    await expect(page.locator("#fullName")).toBeVisible();
 
     const releaseResponse = page.waitForResponse(
       (response) => response.url().endsWith(`/transaction/lock/${lockId}`)
