@@ -87,24 +87,25 @@ export function useCheckoutSteps(
     CHECKOUT_STORAGE_KEYS.forEach((key) => sessionStorage.removeItem(key));
   }, []);
 
-  const releaseActiveCheckout = useCallback((activeLockId?: string | null) => {
+  const releaseActiveCheckout = useCallback(async (activeLockId?: string | null) => {
     const checkoutId = activeLockId ?? lockId ?? searchParams.get("lockId");
     if (!checkoutId || searchParams.get("orderId")) return;
-    void orderApi.releaseCheckout(checkoutId, event.id).catch((error) => {
-      // TTL remains the safety net if the browser loses its connection during cancellation.
+    try {
+      await orderApi.releaseCheckout(checkoutId, event.id);
+    } catch (error) {
       console.error("Failed to release checkout reservation", error);
-    });
+    }
   }, [event.id, lockId, searchParams]);
 
-  const redirectForTicketLimit = useCallback(() => {
-    releaseActiveCheckout();
+  const redirectForTicketLimit = useCallback(async () => {
+    await releaseActiveCheckout();
     clearCheckoutStorage();
     warningToast(`Maksimum ${MAX_TICKETS_PER_TRANSACTION} tiket per transaksi.`);
     navigate(`/event/${params.eventId ?? event.id}`);
   }, [clearCheckoutStorage, event.id, navigate, params.eventId, releaseActiveCheckout, warningToast]);
 
-  const expireCheckoutSession = useCallback((showMessage = true) => {
-    releaseActiveCheckout();
+  const expireCheckoutSession = useCallback(async (showMessage = true) => {
+    await releaseActiveCheckout();
     clearCheckoutStorage();
     setLockId(null);
     setManualTransferProofFile(null);
@@ -159,7 +160,10 @@ export function useCheckoutSteps(
       return true;
     }
     if (!activeLockId) {
-      expireCheckoutSession(true);
+      if (currentStep === 1) {
+        return true;
+      }
+      await expireCheckoutSession(true);
       return false;
     }
 
@@ -170,7 +174,7 @@ export function useCheckoutSteps(
       ?? await getCheckoutLockRemainingSeconds(activeLockId);
 
     if (remainingSeconds <= 0 || (ttl && ttl.status !== "ACTIVE")) {
-      expireCheckoutSession(true);
+      await expireCheckoutSession(true);
       return false;
     }
 
@@ -203,7 +207,7 @@ export function useCheckoutSteps(
   const acquireInitialLock = useCallback(async () => {
     if (lockId || currentStep > 1) return;
     if (exceedsTicketLimit) {
-      redirectForTicketLimit();
+      await redirectForTicketLimit();
       return;
     }
 
@@ -242,7 +246,7 @@ export function useCheckoutSteps(
 
   useEffect(() => {
     if (currentStep >= 2 && currentStep <= 4 && exceedsTicketLimit) {
-      redirectForTicketLimit();
+      void redirectForTicketLimit();
     }
   }, [currentStep, exceedsTicketLimit, redirectForTicketLimit]);
 
@@ -409,7 +413,7 @@ export function useCheckoutSteps(
           break;
         }
         if (exceedsTicketLimit) {
-          redirectForTicketLimit();
+          await redirectForTicketLimit();
           break;
         }
         if (!canProceedToPayment || !selectedPaymentMethod) {
@@ -440,7 +444,7 @@ export function useCheckoutSteps(
 
           if (result) {
             if (!setDeadlineFromTtl(result.ttl)) {
-              expireCheckoutSession(true);
+              await expireCheckoutSession(true);
               break;
             }
             setSearchParams({
@@ -543,9 +547,9 @@ export function useCheckoutSteps(
     }
   }, [currentStep, event.id, buyerInfo, baseSummary, paymentSummary, validateForm, searchParams, setSearchParams, confirmOrder, navigate, selectedPaymentMethod, canProceedToPayment, holders, lockId, isManualTransferPayment, manualTransferProofFile, ensureCheckoutSessionActive, clearCheckoutStorage, params.eventId, exceedsTicketLimit, redirectForTicketLimit, setDeadlineFromTtl, expireCheckoutSession, selection.appliedPromo?.code, selection.bankCode, warningToast, errorToast]);
 
-  const handleBack = useCallback(() => {
+  const handleBack = useCallback(async () => {
     if (currentStep === 1) {
-      releaseActiveCheckout();
+      await releaseActiveCheckout();
       clearCheckoutStorage();
       navigate(`/event/${params.eventId}`);
     } else if (currentStep === 5) {
@@ -557,7 +561,7 @@ export function useCheckoutSteps(
   }, [clearCheckoutStorage, currentStep, navigate, params.eventId, releaseActiveCheckout]);
 
   const handleExpire = useCallback(() => {
-    expireCheckoutSession(false);
+    void expireCheckoutSession(false);
   }, [expireCheckoutSession]);
 
   /**
