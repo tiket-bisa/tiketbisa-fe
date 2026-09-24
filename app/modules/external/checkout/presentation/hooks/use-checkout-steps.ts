@@ -47,6 +47,7 @@ export function useCheckoutSteps(
   const [lockId, setLockId] = useState<string | null>(searchParams.get("lockId"));
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<CompleteOrderResponse | null>(null);
+  const [checkoutDeadline, setCheckoutDeadline] = useState<number | null>(null);
   const [manualTransferProofFile, setManualTransferProofFile] = useState<File | null>(null);
   const [isManualTransferPending, setIsManualTransferPending] = useState(searchParams.get("manualPending") === "1");
   /** Blocking error surfaced prominently (e.g. domicile/NIK rejection from the backend). */
@@ -85,6 +86,7 @@ export function useCheckoutSteps(
 
   const clearCheckoutStorage = useCallback(() => {
     CHECKOUT_STORAGE_KEYS.forEach((key) => sessionStorage.removeItem(key));
+    setCheckoutDeadline(null);
   }, []);
 
   const releaseActiveCheckout = useCallback(async (activeLockId?: string | null) => {
@@ -126,9 +128,11 @@ export function useCheckoutSteps(
     });
     if (deadline === null) {
       sessionStorage.removeItem(CHECKOUT_DEADLINE_STORAGE_KEY);
+      setCheckoutDeadline(null);
       return false;
     }
     sessionStorage.setItem(CHECKOUT_DEADLINE_STORAGE_KEY, String(deadline));
+    setCheckoutDeadline(deadline);
     return true;
   }, []);
 
@@ -627,6 +631,7 @@ export function useCheckoutSteps(
     removePromo,
     blockingError,
     clearBlockingError: useCallback(() => setBlockingError(null), []),
+    checkoutDeadline,
     lockId // Exposed for debugging or extended logic
   };
 }

@@ -17,4 +17,13 @@ describe("CountdownTimer", () => {
     render(<CountdownTimer />);
     expect(screen.getByText(/01:(?:2[89]|30)/)).toBeTruthy();
   });
+
+  it("switches from the buyer deadline to the authoritative payment deadline", () => {
+    const now = Date.now();
+    const { container, rerender } = render(<CountdownTimer deadlineTimestamp={now + 300_000} />);
+    expect(container.textContent).toMatch(/(?:05:00|04:59)/);
+
+    rerender(<CountdownTimer deadlineTimestamp={now + 900_000} />);
+    expect(container.textContent).toMatch(/(?:15:00|14:59)/);
+  });
 });

@@ -118,7 +118,8 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
     applyPromo,
     removePromo,
     blockingError,
-    clearBlockingError
+    clearBlockingError,
+    checkoutDeadline
   } = useCheckoutSteps(event, buyerInfo, summary, validateCheckoutForm, paymentMethods, order, paymentSelectionState, holders);
 
   // Confirmation modals: submitting step 1 starts the payment timer. Leaving the payment page
@@ -269,7 +270,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
               <EventInfoHeader event={event} />
               {currentStep >= 1 && currentStep <= 4 && (
                 <div className="hidden md:block">
-                   <CountdownTimer onExpire={handleExpire} />
+                   <CountdownTimer onExpire={handleExpire} deadlineTimestamp={checkoutDeadline} />
                 </div>
               )}
             </div>
@@ -396,6 +397,7 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
         onNext={() => (currentStep === 1 ? requestProceedToPayment() : handleNext())}
         onBack={() => (currentStep === 4 ? requestCancelOrder() : handleBack())}
         onExpire={handleExpire}
+        deadlineTimestamp={checkoutDeadline}
         isLoading={isActionLoading}
         canSubmit={
           currentStep === 1
