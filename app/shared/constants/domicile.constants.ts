@@ -60,6 +60,7 @@ export const SUPPORTED_NIK_CITIES = [
   "Batu",
   "Bekasi",
   "Bogor",
+  "Bojonegoro",
   "Bukittinggi",
   "Cilacap",
   "Cilegon",
