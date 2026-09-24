@@ -10,6 +10,7 @@ export const INDONESIAN_CITY_OPTIONS: SelectOption[] = [
   { value: "Batam", label: "Batam" },
   { value: "Bekasi", label: "Bekasi" },
   { value: "Bogor", label: "Bogor" },
+  { value: "Bojonegoro", label: "Bojonegoro" },
   { value: "Cilegon", label: "Cilegon" },
   { value: "Cimahi", label: "Cimahi" },
   { value: "Cirebon", label: "Cirebon" },
