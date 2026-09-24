@@ -9,6 +9,7 @@ export interface CheckoutStickyBarProps {
   onNext: () => void;
   onBack: () => void;
   onExpire?: () => void;
+  deadlineTimestamp?: number | null;
   isLoading?: boolean;
   canSubmit?: boolean;
   orderCategory?: string;
@@ -21,6 +22,7 @@ export function CheckoutStickyBar({
   onNext,
   onBack,
   onExpire,
+  deadlineTimestamp,
   isLoading,
   canSubmit = true,
   orderCategory,
@@ -41,6 +43,7 @@ export function CheckoutStickyBar({
         <div className="w-full bg-white border-t border-gray-100">
             <CountdownTimer
               onExpire={onExpire}
+              deadlineTimestamp={deadlineTimestamp}
               className="!py-3 !px-6 !rounded-none !shadow-none border-x-0 border-t-0 border-b border-gray-50"
             />
         </div>
