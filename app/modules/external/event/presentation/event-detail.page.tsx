@@ -1,3 +1,4 @@
+import { redirect } from "react-router";
 import { StickyPriceBar } from "~/shared/components";
 import { useToast } from "~/core/design-system/components";
 import { MAX_TICKETS_PER_TRANSACTION } from "~/shared/constants/transaction";
@@ -10,11 +11,15 @@ import { EventDetailContent } from "./components/event-detail-content";
 
 import type { Route } from "./+types/event-detail.page";
 
-export async function loader({ params }: Route.LoaderArgs) {
+export async function loader({ params, request }: Route.LoaderArgs) {
   const identifier = (params as Record<string, string | undefined>).slug || (params as Record<string, string | undefined>).eventId;
   if (!identifier) throw new Response("Not Found", { status: 404 });
   const event = await eventApi.getEventById(identifier);
   if (!event) throw new Response("Not Found", { status: 404 });
+  if (event.slug && identifier !== event.slug) {
+    const url = new URL(request.url);
+    return redirect(`/event/${event.slug}${url.search}`, 301);
+  }
   return { event };
 }
 

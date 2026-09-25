@@ -38,3 +38,29 @@ describe("EventCard brand logo", () => {
     expect(screen.getByLabelText("Adhyaksa FC logo fallback").textContent).toBe("A");
   });
 });
+
+describe("EventCard link routing", () => {
+  afterEach(cleanup);
+
+  it("links to /event/:slug when slug is present", () => {
+    render(
+      <MemoryRouter>
+        <EventCard event={{ ...event, slug: "persibo-vs-deltras" }} />
+      </MemoryRouter>,
+    );
+
+    const link = screen.getByRole("link");
+    expect(link.getAttribute("href")).toBe("/event/persibo-vs-deltras");
+  });
+
+  it("falls back to /event/:id when slug is absent", () => {
+    render(
+      <MemoryRouter>
+        <EventCard event={event} />
+      </MemoryRouter>,
+    );
+
+    const link = screen.getByRole("link");
+    expect(link.getAttribute("href")).toBe("/event/event-1");
+  });
+});
