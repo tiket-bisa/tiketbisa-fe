@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
-import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { act, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CountdownTimer } from "./countdown-timer";
 
 describe("CountdownTimer", () => {
   beforeEach(() => sessionStorage.clear());
+  afterEach(() => vi.useRealTimers());
 
   it("does not invent a local deadline when backend TTL has not been synced", () => {
     const { container } = render(<CountdownTimer />);
@@ -25,5 +26,25 @@ describe("CountdownTimer", () => {
 
     rerender(<CountdownTimer deadlineTimestamp={now + 900_000} />);
     expect(container.textContent).toMatch(/(?:15:00|14:59)/);
+  });
+
+  it("notifies expiry only once when the callback identity changes", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-27T00:00:00.000Z"));
+    const firstOnExpire = vi.fn();
+    const secondOnExpire = vi.fn();
+    const deadline = Date.now() + 1_000;
+    const { rerender } = render(
+      <CountdownTimer deadlineTimestamp={deadline} onExpire={firstOnExpire} />,
+    );
+
+    act(() => vi.advanceTimersByTime(1_000));
+    expect(firstOnExpire).toHaveBeenCalledTimes(1);
+
+    rerender(<CountdownTimer deadlineTimestamp={deadline} onExpire={secondOnExpire} />);
+    act(() => vi.advanceTimersByTime(2_000));
+
+    expect(firstOnExpire).toHaveBeenCalledTimes(1);
+    expect(secondOnExpire).not.toHaveBeenCalled();
   });
 });

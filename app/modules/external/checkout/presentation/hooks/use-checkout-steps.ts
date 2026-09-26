@@ -52,6 +52,8 @@ export function useCheckoutSteps(
   const [isManualTransferPending, setIsManualTransferPending] = useState(searchParams.get("manualPending") === "1");
   /** Blocking error surfaced prominently (e.g. domicile/NIK rejection from the backend). */
   const [blockingError, setBlockingError] = useState<string | null>(null);
+  const checkoutExitStartedRef = useRef(false);
+  const sessionValidationPromiseRef = useRef<Promise<boolean> | null>(null);
 
   const { confirmOrder, isLoading: isConfirming, error: confirmOrderError } = useOrderConfirmation();
   const { selection, setMethodId, setBankCode, setAgreedToTerms, setAgreedToPrivacy, applyPromo, removePromo } = paymentSelectionState;
@@ -107,7 +109,10 @@ export function useCheckoutSteps(
   }, [clearCheckoutStorage, event.id, event.slug, navigate, params.eventId, releaseActiveCheckout, warningToast]);
 
   const expireCheckoutSession = useCallback(async (showMessage = true) => {
-    await releaseActiveCheckout();
+    if (checkoutExitStartedRef.current) return;
+    checkoutExitStartedRef.current = true;
+
+    const releasePromise = releaseActiveCheckout();
     clearCheckoutStorage();
     setLockId(null);
     setManualTransferProofFile(null);
@@ -115,7 +120,8 @@ export function useCheckoutSteps(
     if (showMessage) {
       warningToast("Sesi checkout kamu sudah kedaluwarsa. Silakan pilih tiket ulang.");
     }
-    navigate(`/event/${event.slug || params.eventId || event.id}`);
+    navigate(`/event/${event.slug || params.eventId || event.id}`, { replace: true });
+    await releasePromise;
   }, [clearCheckoutStorage, event.id, event.slug, navigate, params.eventId, releaseActiveCheckout, warningToast]);
 
   const setDeadlineFromTtl = useCallback((ttl: CheckoutTtl, authoritative = false) => {
@@ -159,40 +165,58 @@ export function useCheckoutSteps(
   }, [event.id, baseSummary.items]);
 
   const ensureCheckoutSessionActive = useCallback(async () => {
-    const activeLockId = getActiveLockId();
-    if (currentStep >= 5) {
-      return true;
+    if (checkoutExitStartedRef.current) return false;
+    if (sessionValidationPromiseRef.current) {
+      return sessionValidationPromiseRef.current;
     }
-    if (!activeLockId) {
-      if (currentStep === 1) {
+
+    const validationPromise = (async () => {
+      const activeLockId = getActiveLockId();
+      if (currentStep >= 5) {
         return true;
       }
-      await expireCheckoutSession(true);
-      return false;
-    }
+      if (!activeLockId) {
+        if (currentStep === 1) {
+          return true;
+        }
+        await expireCheckoutSession(true);
+        return false;
+      }
 
-    const ttl = currentStep >= 4
-      ? await orderApi.getTempTransactionTtl(activeLockId)
-      : null;
-    const remainingSeconds = ttl?.remainingSeconds
-      ?? await getCheckoutLockRemainingSeconds(activeLockId);
+      const ttl = currentStep >= 4
+        ? await orderApi.getTempTransactionTtl(activeLockId)
+        : null;
+      const remainingSeconds = ttl?.remainingSeconds
+        ?? await getCheckoutLockRemainingSeconds(activeLockId);
 
-    if (remainingSeconds <= 0 || (ttl && ttl.status !== "ACTIVE")) {
-      await expireCheckoutSession(true);
-      return false;
-    }
+      if (checkoutExitStartedRef.current) return false;
 
-    if (ttl) {
-      setDeadlineFromTtl(ttl, true);
-    } else {
-      setDeadlineFromTtl({
-        status: "ACTIVE",
-        remainingSeconds,
-        expiresAt: 0,
-        serverTime: Date.now(),
-      });
+      if (remainingSeconds <= 0 || (ttl && ttl.status !== "ACTIVE")) {
+        await expireCheckoutSession(true);
+        return false;
+      }
+
+      if (ttl) {
+        setDeadlineFromTtl(ttl, true);
+      } else {
+        setDeadlineFromTtl({
+          status: "ACTIVE",
+          remainingSeconds,
+          expiresAt: 0,
+          serverTime: Date.now(),
+        });
+      }
+      return true;
+    })();
+
+    sessionValidationPromiseRef.current = validationPromise;
+    try {
+      return await validationPromise;
+    } finally {
+      if (sessionValidationPromiseRef.current === validationPromise) {
+        sessionValidationPromiseRef.current = null;
+      }
     }
-    return true;
   }, [
     currentStep,
     expireCheckoutSession,
@@ -209,7 +233,7 @@ export function useCheckoutSteps(
    * case 1), by which point they've committed to a payment method.
    */
   const acquireInitialLock = useCallback(async () => {
-    if (lockId || currentStep > 1) return;
+    if (checkoutExitStartedRef.current || lockId || currentStep > 1) return;
     if (exceedsTicketLimit) {
       await redirectForTicketLimit();
       return;

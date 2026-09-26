@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const STORAGE_KEY = "tiketbisa_checkout_deadline";
 
@@ -16,6 +16,12 @@ export interface CountdownTimerProps {
 
 export function CountdownTimer({ onExpire, className = "", deadlineTimestamp }: CountdownTimerProps) {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const onExpireRef = useRef(onExpire);
+  const notifiedDeadlineRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    onExpireRef.current = onExpire;
+  }, [onExpire]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -39,22 +45,29 @@ export function CountdownTimer({ onExpire, className = "", deadlineTimestamp }: 
         ? deadline
         : (sessionStorage.getItem(STORAGE_KEY) ?? deadline);
       const difference = parseInt(currentDeadline, 10) - Date.now();
-      return Math.max(0, Math.floor(difference / 1000));
+      return {
+        deadline: currentDeadline,
+        seconds: Math.max(0, Math.floor(difference / 1000)),
+      };
     };
 
-    setTimeLeft(calculateTimeLeft());
+    const initialTimeLeft = calculateTimeLeft();
+    setTimeLeft(initialTimeLeft.seconds);
 
     const timer = setInterval(() => {
       const nextTimeLeft = calculateTimeLeft();
-      setTimeLeft(nextTimeLeft);
-      if (nextTimeLeft <= 0) {
+      setTimeLeft(nextTimeLeft.seconds);
+      if (nextTimeLeft.seconds <= 0) {
         clearInterval(timer);
-        onExpire?.();
+        if (notifiedDeadlineRef.current !== nextTimeLeft.deadline) {
+          notifiedDeadlineRef.current = nextTimeLeft.deadline;
+          onExpireRef.current?.();
+        }
       }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [onExpire, deadlineTimestamp]);
+  }, [deadlineTimestamp]);
 
   if (timeLeft === null) return null;
 
