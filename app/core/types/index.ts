@@ -22,6 +22,7 @@ export interface Brand extends AuditableEntity {
 export interface EventSummary extends AuditableEntity {
   id: string;
   name: string;
+  slug?: string;
   brand: string;
   brand_slug?: string;
   description: string;

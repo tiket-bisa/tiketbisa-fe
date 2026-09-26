@@ -103,8 +103,8 @@ export function useCheckoutSteps(
     await releaseActiveCheckout();
     clearCheckoutStorage();
     warningToast(`Maksimum ${MAX_TICKETS_PER_TRANSACTION} tiket per transaksi.`);
-    navigate(`/event/${params.eventId ?? event.id}`);
-  }, [clearCheckoutStorage, event.id, navigate, params.eventId, releaseActiveCheckout, warningToast]);
+    navigate(`/event/${event.slug || params.eventId || event.id}`);
+  }, [clearCheckoutStorage, event.id, event.slug, navigate, params.eventId, releaseActiveCheckout, warningToast]);
 
   const expireCheckoutSession = useCallback(async (showMessage = true) => {
     await releaseActiveCheckout();
@@ -115,8 +115,8 @@ export function useCheckoutSteps(
     if (showMessage) {
       warningToast("Sesi checkout kamu sudah kedaluwarsa. Silakan pilih tiket ulang.");
     }
-    navigate(`/event/${params.eventId ?? event.id}`);
-  }, [clearCheckoutStorage, event.id, navigate, params.eventId, releaseActiveCheckout, warningToast]);
+    navigate(`/event/${event.slug || params.eventId || event.id}`);
+  }, [clearCheckoutStorage, event.id, event.slug, navigate, params.eventId, releaseActiveCheckout, warningToast]);
 
   const setDeadlineFromTtl = useCallback((ttl: CheckoutTtl, authoritative = false) => {
     const stored = sessionStorage.getItem(CHECKOUT_DEADLINE_STORAGE_KEY);
@@ -413,7 +413,7 @@ export function useCheckoutSteps(
 
         if (baseSummary.items.length === 0) {
           warningToast("Pilih tiket dulu sebelum lanjut ke pembayaran.");
-          navigate(`/event/${event.id}`);
+          navigate(`/event/${event.slug || event.id}`);
           break;
         }
         if (exceedsTicketLimit) {
@@ -525,7 +525,7 @@ export function useCheckoutSteps(
             }
           } else {
             errorToast("Sesi checkout tidak ditemukan. Silakan ulangi dari halaman event.");
-            navigate(`/event/${params.eventId}`);
+            navigate(`/event/${event.slug || params.eventId || event.id}`);
           }
         } catch (error: any) {
           const message = error?.message || "Gagal menyelesaikan transaksi.";
@@ -534,7 +534,7 @@ export function useCheckoutSteps(
           if (message.includes("404") || message.toLowerCase().includes("expired") || message.toLowerCase().includes("not found")) {
             errorToast("Sesi transaksi kamu sudah tidak valid atau kedaluwarsa. Silakan checkout ulang.");
             sessionStorage.removeItem(CHECKOUT_DEADLINE_STORAGE_KEY);
-            navigate(`/event/${params.eventId}`);
+            navigate(`/event/${event.slug || params.eventId || event.id}`);
           } else {
             // Hard validation failure (e.g. KTP domicile block): surface it inline instead of a
             // toast — the buyer stays on the payment step and can fix their data.
@@ -549,20 +549,20 @@ export function useCheckoutSteps(
         navigate("/event");
         break;
     }
-  }, [currentStep, event.id, buyerInfo, baseSummary, paymentSummary, validateForm, searchParams, setSearchParams, confirmOrder, navigate, selectedPaymentMethod, canProceedToPayment, holders, lockId, isManualTransferPayment, manualTransferProofFile, ensureCheckoutSessionActive, clearCheckoutStorage, params.eventId, exceedsTicketLimit, redirectForTicketLimit, setDeadlineFromTtl, expireCheckoutSession, selection.appliedPromo?.code, selection.bankCode, warningToast, errorToast]);
+  }, [currentStep, event.id, event.slug, buyerInfo, baseSummary, paymentSummary, validateForm, searchParams, setSearchParams, confirmOrder, navigate, selectedPaymentMethod, canProceedToPayment, holders, lockId, isManualTransferPayment, manualTransferProofFile, ensureCheckoutSessionActive, clearCheckoutStorage, params.eventId, exceedsTicketLimit, redirectForTicketLimit, setDeadlineFromTtl, expireCheckoutSession, selection.appliedPromo?.code, selection.bankCode, warningToast, errorToast]);
 
   const handleBack = useCallback(async () => {
     if (currentStep === 1) {
       await releaseActiveCheckout();
       clearCheckoutStorage();
-      navigate(`/event/${params.eventId}`);
+      navigate(`/event/${event.slug || params.eventId || event.id}`);
     } else if (currentStep === 5) {
       clearCheckoutStorage();
       navigate("/event");
     } else {
       navigate(-1);
     }
-  }, [clearCheckoutStorage, currentStep, navigate, params.eventId, releaseActiveCheckout]);
+  }, [clearCheckoutStorage, currentStep, event.id, event.slug, navigate, params.eventId, releaseActiveCheckout]);
 
   const handleExpire = useCallback(() => {
     void expireCheckoutSession(false);

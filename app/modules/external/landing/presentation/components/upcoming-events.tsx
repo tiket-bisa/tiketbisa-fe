@@ -52,6 +52,7 @@ export function UpcomingEvents({
             key={event.id}
             event={{
               id: event.id,
+              slug: event.slug,
               title: event.name,
               imageUrl: event.imageUrl,
               date: event.date,
