@@ -9,6 +9,7 @@ const tickets = [
   { id: "vip", name: "VIP", price: 100000, available: true, maxPerOrder: 4 },
   { id: "limited", name: "Limited", price: 75000, available: true, maxPerOrder: 2 },
   { id: "scarce", name: "Scarce", price: 50000, available: true, remaining: 1 },
+  { id: "bundle", name: "Family 3", price: 250000, available: true, remaining: 2, bundleSize: 3, maxPerOrder: 1 },
 ];
 
 describe("useTicketSelection", () => {
@@ -47,5 +48,17 @@ describe("useTicketSelection", () => {
 
     expect(result.current.quantities.scarce).toBe(1);
     expect(result.current.totalItems).toBe(1);
+  });
+
+  it("counts physical tickets and limits a bundle to one package", () => {
+    const { result } = renderHook(() => useTicketSelection(tickets));
+
+    act(() => {
+      result.current.updateQuantity("bundle", 2);
+    });
+
+    expect(result.current.quantities.bundle).toBe(1);
+    expect(result.current.totalItems).toBe(3);
+    expect(result.current.totalPrice).toBe(250000);
   });
 });

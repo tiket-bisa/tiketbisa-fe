@@ -34,7 +34,8 @@ export function TicketHolderInputs({
   let runningIndex = 0;
   const rows: { index: number; label: string; categoryName: string }[] = [];
   items.forEach((item) => {
-    for (let i = 0; i < item.quantity; i++) {
+    const issuedQuantity = item.quantity * (item.bundleSize ?? 1);
+    for (let i = 0; i < issuedQuantity; i++) {
       rows.push({
         index: runningIndex,
         label: isMultiCategory ? `${item.ticketName} ${i + 1}` : `Tiket ${runningIndex + 1}`,

@@ -267,16 +267,17 @@ export const orderApi = {
     let holderCursor = 0;
     const tickets: TicketRequest[] = summary.items.map((item: OrderItem) => {
       const quantity = item.quantity;
+      const issuedQuantity = quantity * (item.bundleSize ?? 1);
       const itemHolders = holders
-        ? holders.slice(holderCursor, holderCursor + quantity)
+        ? holders.slice(holderCursor, holderCursor + issuedQuantity)
         : undefined;
-      holderCursor += quantity;
+      holderCursor += issuedQuantity;
 
       return {
         categoryId: item.ticketId,
         quantity,
         price: item.price,
-        ...(itemHolders && itemHolders.length === quantity ? { holders: itemHolders } : {}),
+        ...(itemHolders && itemHolders.length === issuedQuantity ? { holders: itemHolders } : {}),
       };
     });
 

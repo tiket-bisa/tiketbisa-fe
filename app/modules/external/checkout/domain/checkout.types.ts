@@ -17,6 +17,7 @@ export interface OrderItem {
   ticketName: string;
   price: number;
   quantity: number;
+  bundleSize?: number;
 }
 
 /** Business rule: an order may contain at most this many tickets total, across all categories. */

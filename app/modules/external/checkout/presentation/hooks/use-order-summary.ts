@@ -66,6 +66,7 @@ export function useOrderSummary(
             ticketName: ticket.name,
             price: ticket.price,
             quantity: quantity,
+            bundleSize: ticket.bundleSize,
           });
         }
       }

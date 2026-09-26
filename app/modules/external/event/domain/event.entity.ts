@@ -7,6 +7,7 @@ export interface EventTicket {
   /** Seats a buyer can still take, already net of reservations held mid-checkout. */
   remaining?: number;
   maxPerOrder?: number;
+  bundleSize?: number;
 }
 
 export interface Event {
