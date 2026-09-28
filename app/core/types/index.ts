@@ -32,6 +32,7 @@ export interface EventSummary extends AuditableEntity {
   time?: string;
   status?: "draft" | "published" | "completed" | "cancelled";
   isFeatured?: boolean;
+  revenue?: number;
 }
 
 /** Ticket */

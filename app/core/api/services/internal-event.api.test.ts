@@ -69,3 +69,39 @@ describe("ticket category counts", () => {
     expect(summary.reservedTicket).toBe(0);
   });
 });
+
+describe("event revenue normalization", () => {
+  it("normalizes revenue from internal event api data and summary", async () => {
+    const { normalizeInternalEvent, mapInternalEventToSummary } = await import("./internal-event.api");
+
+    const raw = {
+      id: "event-1",
+      brandId: "brand-1",
+      name: "Event Test",
+      revenue: 1500000,
+    };
+
+    const normalized = normalizeInternalEvent(raw as never);
+    expect(normalized.revenue).toBe(1500000);
+
+    const summary = mapInternalEventToSummary(raw as never, "Brand Name", "brand-slug");
+    expect(summary.revenue).toBe(1500000);
+  });
+
+  it("defaults revenue to 0 when missing", async () => {
+    const { normalizeInternalEvent, mapInternalEventToSummary } = await import("./internal-event.api");
+
+    const raw = {
+      id: "event-2",
+      brandId: "brand-1",
+      name: "Event Test 2",
+    };
+
+    const normalized = normalizeInternalEvent(raw as never);
+    expect(normalized.revenue).toBe(0);
+
+    const summary = mapInternalEventToSummary(raw as never, "Brand Name", "brand-slug");
+    expect(summary.revenue).toBe(0);
+  });
+});
+
