@@ -37,7 +37,11 @@ export const paymentApi = {
         virtualAccountBanks: response.data.virtualAccountBanks ?? [],
         paymentSessionEnabled: response.data.paymentSessionEnabled ?? false,
         paymentSessionMode: response.data.paymentSessionMode ?? "PAYMENT_LINK",
-        paymentMethods: (response.data.paymentMethods ?? []).map((method) => ({ ...method, logo: method.logo ?? "", requiresBankSelection: false })),
+        paymentMethods: (response.data.paymentMethods ?? []).map((method) => ({
+          ...method,
+          logo: method.logo ?? "",
+          requiresBankSelection: method.requiresBankSelection ?? false,
+        })),
       };
     } catch {
       return EMPTY_CONFIGURATION;

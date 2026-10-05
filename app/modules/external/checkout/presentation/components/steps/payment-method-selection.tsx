@@ -4,7 +4,6 @@ import type { PaymentMethod, VirtualAccountBank } from "../../../domain/checkout
 export interface PaymentMethodSelectionProps {
   methods: PaymentMethod[];
   virtualAccountBanks: VirtualAccountBank[];
-  paymentSessionEnabled?: boolean;
   selectedMethodId: string | null;
   onSelect: (methodId: string) => void;
   selectedBankCode?: string | null;
@@ -12,8 +11,9 @@ export interface PaymentMethodSelectionProps {
   className?: string;
 }
 
-export function PaymentMethodSelection({ methods, virtualAccountBanks, paymentSessionEnabled = false,
+export function PaymentMethodSelection({ methods, virtualAccountBanks,
   selectedMethodId, onSelect, selectedBankCode, onSelectBank, className = "" }: PaymentMethodSelectionProps) {
+  const selectedMethod = methods.find((method) => method.id === selectedMethodId);
   return (
     <Card className={`p-6 md:p-8 rounded-3xl border-gray-100 ${className}`}>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -26,7 +26,7 @@ export function PaymentMethodSelection({ methods, virtualAccountBanks, paymentSe
           </button>
         ))}
       </div>
-      {!paymentSessionEnabled && selectedMethodId === "va" && (
+      {selectedMethod?.requiresBankSelection && (
         <div className="mt-6 space-y-3 border-t border-gray-100 pt-6">
           <p className="text-xs font-black uppercase tracking-widest text-text-tertiary">Pilih Bank</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

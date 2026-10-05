@@ -11,11 +11,10 @@ describe("PaymentMethodSelection", () => {
       <PaymentMethodSelection
         methods={[
           { id: "manual", name: "Manual Transfer", logo: "", category: "BANK_TRANSFER" },
-          { id: "va", name: "Virtual Account", logo: "", category: "BANK_TRANSFER" },
+          { id: "va", name: "Virtual Account", logo: "", category: "BANK_TRANSFER", requiresBankSelection: false },
           { id: "qris", name: "QRIS", logo: "", category: "QRIS" },
         ]}
         virtualAccountBanks={[]}
-        paymentSessionEnabled
         selectedMethodId="va"
         onSelect={onSelect}
       />,
@@ -29,5 +28,23 @@ describe("PaymentMethodSelection", () => {
 
     fireEvent.click(screen.getByText("QRIS"));
     expect(onSelect).toHaveBeenCalledWith("qris");
+  });
+
+  it("menampilkan pilihan bank ketika provider VA memerlukannya", () => {
+    const onSelectBank = vi.fn();
+    render(
+      <PaymentMethodSelection
+        methods={[{ id: "va", name: "Virtual Account", logo: "", category: "BANK_TRANSFER", requiresBankSelection: true }]}
+        virtualAccountBanks={[{ code: "BCA", name: "BCA" }, { code: "MANDIRI", name: "Mandiri" }]}
+        selectedMethodId="va"
+        selectedBankCode="BCA"
+        onSelect={vi.fn()}
+        onSelectBank={onSelectBank}
+      />,
+    );
+
+    expect(screen.getByText("Pilih Bank")).toBeTruthy();
+    fireEvent.click(screen.getByText("Mandiri"));
+    expect(onSelectBank).toHaveBeenCalledWith("MANDIRI");
   });
 });
