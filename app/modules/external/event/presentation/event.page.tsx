@@ -10,7 +10,15 @@ import { eventApi } from "../infrastructure/event.api";
 import type { EventFilterParams } from "../infrastructure/event-filter.params";
 import type { Event } from "../domain/event.entity";
 import { EVENT_FILTERS, SORT_OPTIONS, EVENT_PAGE_SIZE } from "./constants";
+import { generateSeoMeta } from "~/shared/utils/seo.utils";
 import type { Route } from "./+types/event.page";
+
+export const meta: Route.MetaFunction = () => {
+  return generateSeoMeta({
+    title: "Cari Event",
+    description: "Temukan momen berharga dan tiket event menarik di sekitarmu.",
+  });
+};
 
 // SSR Loader //
 export async function loader({ request }: Route.LoaderArgs) {
