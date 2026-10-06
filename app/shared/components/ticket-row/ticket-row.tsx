@@ -35,7 +35,7 @@ export function TicketRow({
     ? "Event Selesai"
     : "Habis Terjual";
     
-  const availableLabel = ticket.remaining === undefined
+  const availableLabel = ticket.remaining === undefined || ticket.remaining > 100
     ? "Tersedia"
     : `Sisa ${ticket.remaining} ${ticket.bundleSize && ticket.bundleSize > 1 ? "paket" : "tiket"}`;
   // The stepper must never offer a seat that does not exist; useTicketSelection applies the
