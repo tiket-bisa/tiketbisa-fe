@@ -11,6 +11,7 @@ import { useDebouncedValue } from "~/modules/internal/common/presentation/use-de
 import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 import { mapTransactionStatusFilterToApi, STATUS_MAP, statusFilterOptions, type TransactionStatus } from "~/core/constants/transaction";
 import { toTransactionType, transactionTypeOptions, type TransactionTypeFilter } from "~/core/constants/transaction-type";
+import { DashboardFilters } from "./components/dashboard-filters";
 
 const DEFAULT_PAGE_SIZE = 5;
 type TransactionSort = "newest" | "oldest";
@@ -31,13 +32,18 @@ export default function DashboardPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [pendingDetailId, setPendingDetailId] = useState<string | null>(null);
+  const [eventIdFilter, setEventIdFilter] = useState("all");
   const debouncedSearch = useDebouncedValue(search);
 
   const { data: stats, loading: isStatsLoading, refetch: refetchStats } = useApiQuery(
     async () => user?.brand_id
-      ? analyticsApi.getDashboardStats(user.brand_id, toTransactionType(transactionType))
+      ? analyticsApi.getDashboardStats(
+          user.brand_id, 
+          toTransactionType(transactionType),
+          eventIdFilter === "all" ? undefined : eventIdFilter
+        )
       : null,
-    [user?.brand_id, transactionType],
+    [user?.brand_id, transactionType, eventIdFilter],
   );
 
   // Fetch real transaction list
@@ -50,6 +56,7 @@ export default function DashboardPage() {
         limit: pageSize,
         offset: (currentPage - 1) * pageSize,
         brandId: user.brand_id,
+        eventId: eventIdFilter === "all" ? undefined : eventIdFilter,
         search: debouncedSearch || undefined,
         status: mapTransactionStatusFilterToApi(statusFilter as "all" | TransactionStatus),
         transactionType: toTransactionType(transactionType),
@@ -64,7 +71,7 @@ export default function DashboardPage() {
       }
       return { transactions: [], totalCount: 0, totalPages: 1 };
     },
-    [currentPage, pageSize, debouncedSearch, statusFilter, sortOrder, transactionType, user?.brand_slug, user?.brand_id],
+    [currentPage, pageSize, debouncedSearch, statusFilter, sortOrder, transactionType, eventIdFilter, user?.brand_slug, user?.brand_id],
   );
 
   const paged = transactionRes?.transactions ?? [];
@@ -137,45 +144,17 @@ export default function DashboardPage() {
         </h2>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <div className="flex-1">
-            <SearchInput
-              placeholder="Cari ID atau pembeli..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setCurrentPage(1);
-              }}
-              onClear={() => {
-                setSearch("");
-                setCurrentPage(1);
-              }}
-            />
-          </div>
-          <div className="w-full sm:w-48">
-            <Select
-              aria-label="Semua Status"
-              options={statusFilterOptions}
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              label=""
-            />
-          </div>
-          <div className="w-full sm:w-40">
-            <Select
-              options={transactionSortOptions}
-              value={sortOrder}
-              onChange={(e) => {
-                setSortOrder(e.target.value as TransactionSort);
-                setCurrentPage(1);
-              }}
-              label=""
-            />
-          </div>
-        </div>
+        <DashboardFilters
+          brandId={user?.brand_id}
+          search={search}
+          onSearchChange={(val) => { setSearch(val); setCurrentPage(1); }}
+          eventIdFilter={eventIdFilter}
+          onEventIdFilterChange={(val) => { setEventIdFilter(val); setCurrentPage(1); }}
+          statusFilter={statusFilter}
+          onStatusFilterChange={(val) => { setStatusFilter(val); setCurrentPage(1); }}
+          sortOrder={sortOrder}
+          onSortOrderChange={(val) => { setSortOrder(val); setCurrentPage(1); }}
+        />
 
         {/* Table */}
         {loadingTransactions ? (
