@@ -9,6 +9,8 @@ export interface EventDto {
   slug?: string;
   bannerPath: string | null;
   banner_path?: string | null;
+  layoutImagePath?: string | null;
+  layout_image_path?: string | null;
   startDate: string; // ISO string from backend
   start_date?: string;
   endDate: string; // ISO string from backend
