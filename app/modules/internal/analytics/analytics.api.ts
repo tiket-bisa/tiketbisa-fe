@@ -52,10 +52,11 @@ export interface TicketScanningSummary {
 }
 
 export const analyticsApi = {
-  getDashboardStats: async (brandId?: string, transactionType?: TransactionType): Promise<DashboardStats> => {
+  getDashboardStats: async (brandId?: string, transactionType?: TransactionType, eventId?: string): Promise<DashboardStats> => {
     const params = new URLSearchParams();
     if (brandId) params.set("brandId", brandId);
     if (transactionType) params.set("transactionType", transactionType);
+    if (eventId) params.set("eventId", eventId);
     const query = params.size ? `?${params.toString()}` : "";
     const res = await internalHttpClient.get<DashboardStats>(`/analytics/dashboard/stats${query}`);
     if (!res.success || !res.data) throw new Error(res.error ?? "Failed to fetch dashboard stats");
