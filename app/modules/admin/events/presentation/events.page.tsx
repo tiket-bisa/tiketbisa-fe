@@ -10,7 +10,7 @@ import {
   Button,
   Input,
 } from "~/core/design-system/components";
-import { toUserFacingError, useApiQuery } from "~/core/api";
+import { toUserFacingError, useApiQuery, normalizeImageUrl } from "~/core/api";
 import {
   internalEventApi,
   mapInternalEventToSummary,
@@ -64,6 +64,7 @@ export default function AdminEventsPage() {
     venue: "",
     city: "",
     bannerPath: "",
+    layoutImagePath: "",
     description: "",
     termAndCondition: "",
     status: "ONGOING",
@@ -155,6 +156,7 @@ export default function AdminEventsPage() {
       venue: "",
       city: "",
       bannerPath: "",
+      layoutImagePath: "",
       description: "",
       termAndCondition: "",
       status: "ONGOING",
@@ -190,6 +192,7 @@ export default function AdminEventsPage() {
       venue: event.venue ?? "",
       city: event.city ?? "",
       bannerPath: event.bannerPath ?? "",
+      layoutImagePath: (event as any).layoutImagePath ?? "",
       description: event.description ?? "",
       termAndCondition: event.termAndCondition ?? "",
       status: event.status ?? "ONGOING",
@@ -253,6 +256,7 @@ export default function AdminEventsPage() {
         brandId: formData.brandId,
         name: formData.name.trim(),
         bannerPath: formMode === "create" ? null : undefined,
+        layoutImagePath: formData.layoutImagePath || null,
         startDate,
         endDate,
         description: formData.description.trim() || null,
@@ -322,6 +326,26 @@ export default function AdminEventsPage() {
       throw new Error(result.error || "Gagal mengunggah banner event.");
     }
     return result.data.bannerUrl;
+  };
+
+  const handleLayoutUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const layoutBase64 = await fileToBase64(file);
+      const result = await internalEventApi.uploadLayout({
+        layoutBase64,
+        layoutMimeType: file.type || "application/octet-stream",
+        layoutFileName: file.name || "event-layout",
+      });
+      if (result.success && result.data?.layoutUrl) {
+        setFormData((prev) => ({ ...prev, layoutImagePath: result.data.layoutUrl }));
+      } else {
+        setFormError(result.error || "Gagal mengunggah layout.");
+      }
+    } catch (err) {
+      setFormError(toUserFacingError(err, "Gagal mengunggah layout."));
+    }
   };
 
   if (loading) {
@@ -429,6 +453,27 @@ export default function AdminEventsPage() {
               uploadFile={uploadEventBanner}
               disabled={isSubmitting}
             />
+
+            <div className="space-y-3 rounded-lg border border-border-subtle p-4">
+              <label className="text-sm font-medium text-text-primary">
+                Denah Acara / Layout
+              </label>
+              <p className="text-xs text-text-tertiary">
+                Unggah gambar layout atau peta area acara.
+              </p>
+              {formData.layoutImagePath && (
+                <div className="mb-2 max-w-[200px] overflow-hidden rounded-md border border-border-default">
+                  <img src={normalizeImageUrl(formData.layoutImagePath)} alt="Layout" className="w-full object-cover" />
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                disabled={isSubmitting}
+                onChange={(e) => void handleLayoutUpload(e)}
+                className="w-full text-sm text-text-primary file:mr-4 file:rounded-md file:border-0 file:bg-brand-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-brand-primary-hover disabled:cursor-not-allowed disabled:bg-button-disabled"
+              />
+            </div>
 
             {brands.find((brand) => brand.id === formData.brandId)?.category?.trim().toLowerCase() === "sepak_bola" && (
               <div className="space-y-3 rounded-lg border border-border-subtle p-4">
