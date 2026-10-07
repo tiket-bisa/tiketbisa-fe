@@ -7,6 +7,8 @@ export interface InternalEventApiData {
   brandId: string;
   name: string;
   bannerPath?: string | null;
+  layoutImagePath?: string | null;
+  layout_image_path?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   description?: string | null;
@@ -259,6 +261,7 @@ function normalizeEvent(api: InternalEventApiData & Record<string, unknown>): In
     brandId: String(api.brandId ?? api.brand_id ?? ""),
     name: String(api.name ?? ""),
     bannerPath: (api.bannerPath ?? api.banner_path ?? null) as string | null,
+    layoutImagePath: (api.layoutImagePath ?? api.layout_image_path ?? null) as string | null,
     startDate: (api.startDate ?? api.start_date ?? null) as string | null,
     endDate: (api.endDate ?? api.end_date ?? null) as string | null,
     description: (api.description ?? null) as string | null,
@@ -374,6 +377,13 @@ export const internalEventApi = {
     bannerFileName: string;
   }) =>
     internalHttpClient.post<EventBannerUploadResponse>("/event/banner/upload", data),
+
+  uploadLayout: (data: {
+    layoutBase64: string;
+    layoutMimeType: string;
+    layoutFileName: string;
+  }) =>
+    internalHttpClient.post<{ layoutUrl: string }>("/event/layout/upload", data),
 
   getImages: async (eventId: string) => {
     const response = await internalHttpClient.get<EventImageListResponse>(`/event/${eventId}/images`);
