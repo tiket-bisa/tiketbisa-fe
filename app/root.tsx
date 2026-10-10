@@ -11,6 +11,11 @@ import {
 import type { Route } from "./+types/root";
 import "./app.css";
 import { ToastProvider } from "~/core/design-system/components";
+import { generateSeoMeta } from "~/shared/utils/seo.utils";
+
+export const meta: Route.MetaFunction = () => {
+  return generateSeoMeta();
+};
 
 export const links: Route.LinksFunction = () => [
   { rel: "icon", href: "/favicon.ico", sizes: "any" },
