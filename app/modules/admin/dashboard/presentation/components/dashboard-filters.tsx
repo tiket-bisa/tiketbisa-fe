@@ -78,6 +78,7 @@ export function DashboardFilters({
             onEventIdFilterChange("all");
           }}
           label=""
+          aria-label="Filter Brand"
         />
       </div>
       <div className="w-full sm:w-48">
@@ -86,6 +87,7 @@ export function DashboardFilters({
           value={eventIdFilter}
           onChange={(e) => onEventIdFilterChange(e.target.value)}
           label=""
+          aria-label="Filter Event"
         />
       </div>
       <div className="w-full sm:w-48">
@@ -94,6 +96,7 @@ export function DashboardFilters({
           value={statusFilter}
           onChange={(e) => onStatusFilterChange(e.target.value)}
           label=""
+          aria-label="Filter Status"
         />
       </div>
       <div className="w-full sm:w-40">
@@ -102,6 +105,7 @@ export function DashboardFilters({
           value={sortOrder}
           onChange={(e) => onSortOrderChange(e.target.value as TransactionSort)}
           label=""
+          aria-label="Urutkan Transaksi"
         />
       </div>
     </div>
