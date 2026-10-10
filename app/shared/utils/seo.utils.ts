@@ -8,7 +8,7 @@ export interface SeoMetaProps {
 
 const DEFAULT_TITLE = "Tiketbisa";
 const DEFAULT_DESCRIPTION = "Platform ticketing dan event management terbaik.";
-const DEFAULT_IMAGE = "/favicon.png";
+const DEFAULT_IMAGE = "https://tiketbisa.com/favicon.png";
 
 /**
  * Generates an array of meta objects for React Router v7 `meta` function.
