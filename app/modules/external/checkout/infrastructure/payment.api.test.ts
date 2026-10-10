@@ -28,20 +28,20 @@ describe("paymentApi", () => {
     await expect(paymentApi.getConfiguration()).resolves.toEqual({ virtualAccountBanks: [], paymentSessionEnabled: false, paymentSessionMode: "PAYMENT_LINK", paymentMethods: [] });
   });
 
-  it("maps hosted methods without requiring a local VA bank choice", async () => {
+  it("preserves the backend bank-selection requirement", async () => {
     mockApiFetch.mockResolvedValueOnce({
       success: true,
       data: {
         paymentSessionEnabled: true,
         paymentSessionMode: "COMPONENTS",
         virtualAccountBanks: [],
-        paymentMethods: [{ id: "va", name: "Virtual Account", category: "BANK_TRANSFER", paymentMethod: "VA", feeType: "FLAT", feeValue: 5000 }],
+        paymentMethods: [{ id: "va", name: "Virtual Account", category: "BANK_TRANSFER", paymentMethod: "VA", feeType: "FLAT", feeValue: 5000, requiresBankSelection: true }],
       },
     } as any);
     const result = await paymentApi.getConfiguration();
     expect(result.paymentSessionEnabled).toBe(true);
     expect(result.paymentSessionMode).toBe("COMPONENTS");
-    expect(result.paymentMethods[0]).toMatchObject({ id: "va", requiresBankSelection: false, feeValue: 5000 });
+    expect(result.paymentMethods[0]).toMatchObject({ id: "va", requiresBankSelection: true, feeValue: 5000 });
   });
 
   it("fails closed when the configuration request throws", async () => {

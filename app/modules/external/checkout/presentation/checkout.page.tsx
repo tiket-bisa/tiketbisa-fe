@@ -45,7 +45,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     event.brandId ? brandApi.getBrandBySlug(event.brandId) : Promise.resolve(null),
   ]);
 
-  const configuredMethods = paymentConfiguration.paymentSessionEnabled && paymentConfiguration.paymentMethods.length > 0
+  const configuredMethods = paymentConfiguration.paymentMethods.length > 0
     ? paymentConfiguration.paymentMethods
     : paymentMethods;
   const availablePaymentMethods = paymentConfiguration.paymentSessionEnabled || paymentConfiguration.virtualAccountBanks.length > 0
@@ -310,7 +310,6 @@ export default function CheckoutPage({ loaderData }: Route.ComponentProps) {
                 <PaymentMethodSelection
                   methods={paymentMethods}
                   virtualAccountBanks={virtualAccountBanks}
-                  paymentSessionEnabled={paymentSessionEnabled}
                   selectedMethodId={paymentSelection.methodId}
                   onSelect={handlePaymentMethodSelect}
                   selectedBankCode={paymentSelection.bankCode}
