@@ -18,6 +18,7 @@ export interface InternalEventApiData {
   isPublished?: boolean | null;
   isFeatured?: boolean | null;
   homeOnly?: boolean | null;
+  revenue?: number | null;
   created?: string | null;
 }
 
@@ -270,6 +271,7 @@ function normalizeEvent(api: InternalEventApiData & Record<string, unknown>): In
     isPublished: (api.isPublished ?? api.is_published ?? null) as boolean | null,
     isFeatured: (api.isFeatured ?? api.is_featured ?? null) as boolean | null,
     homeOnly: Boolean(api.homeOnly ?? api.home_only ?? false),
+    revenue: api.revenue != null ? Number(api.revenue) : 0,
     created: (api.created ?? null) as string | null,
   };
 }
@@ -415,7 +417,7 @@ export const internalEventApi = {
             event: normalizeEvent(response.data.event as InternalEventApiData & Record<string, unknown>),
             categories: (response.data.categories ?? []).map(normalizeEventTicketCategory),
             issuedTickets: (response.data.issuedTickets ?? response.data.issued_tickets ?? []).map(normalizeIssuedTicket),
-            revenue: Number(response.data.revenue ?? 0),
+            revenue: Number(response.data.revenue ?? response.data.event?.revenue ?? 0),
             soldTickets: Number(response.data.soldTickets ?? response.data.sold_tickets ?? 0),
             inventory: {
               totalTicket: Number(response.data.inventory?.totalTicket ?? 0),
@@ -458,6 +460,7 @@ export function mapInternalEventToSummary(
     time: formatTime(normalized.startDate),
     status: feStatus,
     isFeatured: Boolean(normalized.isFeatured),
+    revenue: normalized.revenue ?? 0,
   };
 }
 
