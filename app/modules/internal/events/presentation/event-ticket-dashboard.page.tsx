@@ -562,7 +562,7 @@ function SummaryCard({ label, value }: { label: string; value: string | number }
   return (
     <Card padding="md">
       <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">{label}</p>
-      <p className="mt-2 text-2xl font-bold text-text-primary truncate" title={String(value)}>{value.toLocaleString()}</p>
+      <p className="mt-2 text-2xl font-bold text-text-primary truncate" title={value.toLocaleString()}>{value.toLocaleString()}</p>
     </Card>
   );
 }
