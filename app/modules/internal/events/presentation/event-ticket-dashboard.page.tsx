@@ -22,7 +22,7 @@ import {
   preGeneratedCodeApi,
   buildTicketCodeExportCsv,
 } from "~/core/api/services/pre-generated-code.api";
-import { getEventTransactionStatusLabel } from "./event-ticket-status";
+import { getEventTransactionStatusLabel, getEventTransactionStatusVariant } from "./event-ticket-status";
 import { EventDashboardBackButton, TicketCodeExportButton } from "./event-ticket-dashboard-actions";
 
 const statusOptions = [
@@ -282,24 +282,10 @@ export default function EventTicketDashboardPage() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div className="w-full sm:w-56">
-          <Select label="Transaction Type" options={transactionTypeOptions} value={transactionType}
-            onChange={(event) => { setTransactionType(event.target.value as TransactionTypeFilter); setCategoryFilter("all"); }} />
-        </div>
-        <div className="w-full sm:max-w-md">
-          <Input label="Cari tiket atau transaksi" value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Cari buyer, kode tiket, atau order ID" />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-7">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <SummaryCard label="Kuota" value={totalTicket} />
-        <SummaryCard label="Direservasi" value={reservedTicket} />
         <SummaryCard label="Revenue" value={formatIDR(data.revenue)} />
         <SummaryCard label="Terjual & Lunas" value={soldTicket} />
-        <SummaryCard label="Bulk Terbit" value={bulkTicket} />
         <SummaryCard label="Sisa" value={remainingTicket} />
         <SummaryCard label="Checked In" value={checkedInTicket} />
       </div>
@@ -360,7 +346,20 @@ export default function EventTicketDashboardPage() {
       </Card>
 
       <Card padding="md">
-        <h2 className="mb-4 text-lg font-semibold text-text-primary">Transaksi Event</h2>
+        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-lg font-semibold text-text-primary">Transaksi Event</h2>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="w-full sm:w-56">
+              <Select label="Transaction Type" options={transactionTypeOptions} value={transactionType}
+                onChange={(event) => { setTransactionType(event.target.value as TransactionTypeFilter); setCategoryFilter("all"); }} />
+            </div>
+            <div className="w-full sm:max-w-md">
+              <Input label="Cari tiket atau transaksi" value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Cari buyer, kode tiket, atau order ID" />
+            </div>
+          </div>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-sm">
             <thead><tr className="border-b border-border-subtle text-left text-text-tertiary">
@@ -375,7 +374,11 @@ export default function EventTicketDashboardPage() {
                   <td className="px-3 py-3">{transaction.customerName}</td>
                   <td className="px-3 py-3">{formatTransactionTimestamp(transaction.created)}</td>
                   <td className="px-3 py-3 text-right">{formatIDR(transaction.totalPrice)}</td>
-                  <td className="px-3 py-3">{getEventTransactionStatusLabel(transaction.status)}</td>
+                  <td className="px-3 py-3">
+                    <Badge variant={getEventTransactionStatusVariant(transaction.status)}>
+                      {getEventTransactionStatusLabel(transaction.status)}
+                    </Badge>
+                  </td>
                   <td className="px-3 py-3"><Button type="button" variant="ghost" size="sm"
                     onClick={() => navigate(`${basePath}/transactions/${transaction.id}`)}>Detail</Button></td>
                 </tr>
@@ -559,7 +562,7 @@ function SummaryCard({ label, value }: { label: string; value: string | number }
   return (
     <Card padding="md">
       <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">{label}</p>
-      <p className="mt-2 text-2xl font-bold text-text-primary">{value.toLocaleString()}</p>
+      <p className="mt-2 text-2xl font-bold text-text-primary truncate" title={value.toLocaleString()}>{value.toLocaleString()}</p>
     </Card>
   );
 }
