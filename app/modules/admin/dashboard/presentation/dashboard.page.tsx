@@ -11,6 +11,7 @@ import { TransactionPaginationControls } from "~/modules/internal/common/present
 import { useDebouncedValue } from "~/modules/internal/common/presentation/use-debounced-value";
 import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 import { parseTransactionType, toTransactionType, transactionTypeOptions, type TransactionTypeFilter } from "~/core/constants/transaction-type";
+import { DashboardFilters } from "./components/dashboard-filters";
 
 const DEFAULT_PAGE_SIZE = 5;
 const PAGE_SIZE_OPTIONS = new Set([5, 10, 25, 50]);
@@ -38,6 +39,8 @@ function buildDashboardParams({
   statusFilter,
   sortOrder,
   transactionType,
+  brandIdFilter,
+  eventIdFilter,
 }: {
   currentPage: number;
   pageSize: number;
@@ -45,6 +48,8 @@ function buildDashboardParams({
   statusFilter: string;
   sortOrder: TransactionSort;
   transactionType: TransactionTypeFilter;
+  brandIdFilter: string;
+  eventIdFilter: string;
 }) {
   const params = new URLSearchParams();
   if (currentPage > 1) params.set("page", String(currentPage));
@@ -53,6 +58,8 @@ function buildDashboardParams({
   if (statusFilter !== "all") params.set("status", statusFilter);
   if (sortOrder !== "newest") params.set("sort", sortOrder);
   if (transactionType !== "all") params.set("transactionType", transactionType);
+  if (brandIdFilter !== "all") params.set("brandId", brandIdFilter);
+  if (eventIdFilter !== "all") params.set("eventId", eventIdFilter);
   return params;
 }
 
@@ -65,14 +72,20 @@ export default function AdminDashboardPage() {
   const [transactionType, setTransactionType] = useState<TransactionTypeFilter>(() => parseTransactionType(searchParams.get("transactionType")));
   const [currentPage, setCurrentPage] = useState(() => parsePositiveInt(searchParams.get("page"), 1));
   const [pageSize, setPageSize] = useState(() => parsePageSize(searchParams.get("pageSize")));
+  const [brandIdFilter, setBrandIdFilter] = useState(() => searchParams.get("brandId") ?? "all");
+  const [eventIdFilter, setEventIdFilter] = useState(() => searchParams.get("eventId") ?? "all");
   const debouncedSearch = useDebouncedValue(search);
 
   // Fetch real dashboard stats
   const { data: stats, refetch: refetchStats } = useApiQuery(
     async () => {
-      return await analyticsApi.getDashboardStats(undefined, toTransactionType(transactionType));
+      return await analyticsApi.getDashboardStats(
+        brandIdFilter === "all" ? undefined : brandIdFilter,
+        toTransactionType(transactionType),
+        eventIdFilter === "all" ? undefined : eventIdFilter
+      );
     },
-    [transactionType],
+    [brandIdFilter, transactionType, eventIdFilter],
   );
 
   // Fetch real transaction list
@@ -84,6 +97,8 @@ export default function AdminDashboardPage() {
         search: debouncedSearch || undefined,
         status: mapTransactionStatusFilterToApi(statusFilter as "all" | TransactionStatus),
         transactionType: toTransactionType(transactionType),
+        brandId: brandIdFilter === "all" ? undefined : brandIdFilter,
+        eventId: eventIdFilter === "all" ? undefined : eventIdFilter,
         orderBy: sortOrder === "oldest" ? "created:ASC" : "created:DESC",
       });
       if (res.success && res.data) {
@@ -95,13 +110,13 @@ export default function AdminDashboardPage() {
       }
       return { transactions: [], totalCount: 0, totalPages: 1 };
     },
-    [currentPage, pageSize, debouncedSearch, statusFilter, sortOrder, transactionType],
+    [currentPage, pageSize, debouncedSearch, statusFilter, sortOrder, transactionType, brandIdFilter, eventIdFilter],
   );
 
   const transactions = transactionRes?.transactions ?? [];
   const totalCount = transactionRes?.totalCount ?? 0;
   const totalPages = transactionRes?.totalPages ?? 1;
-  const dashboardParams = buildDashboardParams({ currentPage, pageSize, search: debouncedSearch, statusFilter, sortOrder, transactionType });
+  const dashboardParams = buildDashboardParams({ currentPage, pageSize, search: debouncedSearch, statusFilter, sortOrder, transactionType, brandIdFilter, eventIdFilter });
   const returnTo = `/internal-tb/admin${dashboardParams.toString() ? `?${dashboardParams.toString()}` : ""}`;
 
   const handleRealtimeMessage = useCallback((message: RealtimeMessage) => {
@@ -117,8 +132,8 @@ export default function AdminDashboardPage() {
   useRealtimeSubscription(["admin"], handleRealtimeMessage);
 
   useEffect(() => {
-    setSearchParams(buildDashboardParams({ currentPage, pageSize, search: debouncedSearch, statusFilter, sortOrder, transactionType }), { replace: true });
-  }, [currentPage, pageSize, debouncedSearch, statusFilter, sortOrder, transactionType, setSearchParams]);
+    setSearchParams(buildDashboardParams({ currentPage, pageSize, search: debouncedSearch, statusFilter, sortOrder, transactionType, brandIdFilter, eventIdFilter }), { replace: true });
+  }, [currentPage, pageSize, debouncedSearch, statusFilter, sortOrder, transactionType, brandIdFilter, eventIdFilter, setSearchParams]);
 
   useEffect(() => {
     if (!loadingTransactions && currentPage > totalPages) {
@@ -162,32 +177,18 @@ export default function AdminDashboardPage() {
           Semua Transaksi
         </h2>
 
-        <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <div className="flex-1">
-            <SearchInput
-              placeholder="Cari ID atau pembeli..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-              onClear={() => { setSearch(""); setCurrentPage(1); }}
-            />
-          </div>
-          <div className="w-full sm:w-48">
-            <Select
-              options={statusFilterOptions}
-              value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-              label=""
-            />
-          </div>
-          <div className="w-full sm:w-40">
-            <Select
-              options={transactionSortOptions}
-              value={sortOrder}
-              onChange={(e) => { setSortOrder(e.target.value as TransactionSort); setCurrentPage(1); }}
-              label=""
-            />
-          </div>
-        </div>
+        <DashboardFilters
+          search={search}
+          onSearchChange={(val) => { setSearch(val); setCurrentPage(1); }}
+          brandIdFilter={brandIdFilter}
+          onBrandIdFilterChange={(val) => { setBrandIdFilter(val); setCurrentPage(1); }}
+          eventIdFilter={eventIdFilter}
+          onEventIdFilterChange={(val) => { setEventIdFilter(val); setCurrentPage(1); }}
+          statusFilter={statusFilter}
+          onStatusFilterChange={(val) => { setStatusFilter(val); setCurrentPage(1); }}
+          sortOrder={sortOrder}
+          onSortOrderChange={(val) => { setSortOrder(val); setCurrentPage(1); }}
+        />
 
         {loadingTransactions ? (
           <Card padding="md">
