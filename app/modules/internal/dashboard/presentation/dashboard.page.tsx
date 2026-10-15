@@ -87,7 +87,12 @@ export default function DashboardPage() {
   );
 
   // Fetch real transaction list
-  const { data: transactionRes, loading: loadingTransactions, refetch: refetchTransactions } = useApiQuery(
+  const {
+    data: transactionRes,
+    loading: loadingTransactions,
+    initialLoading: isInitialTransactionLoad,
+    refetch: refetchTransactions,
+  } = useApiQuery(
     async () => {
       // Don't fetch if brand is not loaded yet
       if (!user?.brand_slug) return { transactions: [], totalCount: 0, totalPages: 1 };
@@ -215,7 +220,7 @@ export default function DashboardPage() {
         />
 
         {/* Table */}
-        {loadingTransactions && !transactionRes ? (
+        {isInitialTransactionLoad ? (
           <Card padding="md">
             <div role="status" className="text-center py-12 text-text-tertiary">Memuat transaksi...</div>
           </Card>

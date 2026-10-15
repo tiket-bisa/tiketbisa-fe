@@ -14,6 +14,7 @@ export function useApiQuery<T>(
 ) {
     const [data, setData] = useState<T | null>(null);
     const [loading, setLoading] = useState(true);
+    const [hasSettled, setHasSettled] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const latestRequest = useRef(0);
 
@@ -31,7 +32,10 @@ export function useApiQuery<T>(
                 }
             })
             .finally(() => {
-                if (requestId === latestRequest.current) setLoading(false);
+                if (requestId === latestRequest.current) {
+                    setLoading(false);
+                    setHasSettled(true);
+                }
             });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, deps);
@@ -43,5 +47,5 @@ export function useApiQuery<T>(
         };
     }, [refetch]);
 
-    return { data, loading, error, refetch };
+    return { data, loading, initialLoading: loading && !hasSettled, error, refetch };
 }

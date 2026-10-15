@@ -89,7 +89,12 @@ export default function AdminDashboardPage() {
   );
 
   // Fetch real transaction list
-  const { data: transactionRes, loading: loadingTransactions, refetch: refetchTransactions } = useApiQuery(
+  const {
+    data: transactionRes,
+    loading: loadingTransactions,
+    initialLoading: isInitialTransactionLoad,
+    refetch: refetchTransactions,
+  } = useApiQuery(
     async () => {
       const res = await transactionApi.getList({
         limit: pageSize,
@@ -190,7 +195,7 @@ export default function AdminDashboardPage() {
           onSortOrderChange={(val) => { setSortOrder(val); setCurrentPage(1); }}
         />
 
-        {loadingTransactions && !transactionRes ? (
+        {isInitialTransactionLoad ? (
           <Card padding="md">
             <div role="status" className="text-center py-12 text-text-tertiary">Memuat transaksi...</div>
           </Card>
