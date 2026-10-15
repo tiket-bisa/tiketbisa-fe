@@ -43,6 +43,17 @@ describe("resolveCheckoutDeadline", () => {
     ).toBe(NOW + 1_200_000);
   });
 
+  it("replaces a stale five-minute buyer deadline with an authoritative fifteen-minute payment deadline", () => {
+    expect(
+      resolveCheckoutDeadline({
+        ttl: ttl(900, NOW + 900_000),
+        storedDeadline: NOW + 300_000,
+        now: NOW,
+        authoritative: true,
+      }),
+    ).toBe(NOW + 900_000);
+  });
+
   it("ignores a stored deadline that has already passed", () => {
     expect(
       resolveCheckoutDeadline({
