@@ -4,7 +4,7 @@ import { type RevenueSummary } from "~/modules/internal/analytics/analytics.api"
 
 export function RevenueSummaryCards({ summary }: { summary: RevenueSummary }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <Card padding="md">
         <p className="text-text-tertiary text-xs uppercase tracking-wide">Total Revenue</p>
         <p className="text-text-primary text-2xl font-bold mt-1">{formatIDR(summary.totalRevenue)}</p>

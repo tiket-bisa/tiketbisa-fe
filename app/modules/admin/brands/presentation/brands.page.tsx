@@ -566,7 +566,7 @@ export default function AdminBrandsPage() {
                         value={formData.description}
                         onChange={handleChange}
                         placeholder="Deskripsi singkat tentang brand"
-                        className="w-full rounded-lg border border-border-default bg-surface-alt px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                        className="w-full rounded-lg border border-border-default bg-surface-alt px-3 py-2 text-base text-text-primary placeholder:text-text-tertiary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent sm:text-sm"
                         rows={4}
                       />
                     </div>
@@ -586,6 +586,7 @@ export default function AdminBrandsPage() {
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="flex-1">
                   <SearchInput
+                    aria-label="Cari brand"
                     placeholder="Cari nama brand..."
                     value={search}
                     onChange={(event) => { setSearch(event.target.value); setCurrentPage(1); }}
@@ -593,7 +594,7 @@ export default function AdminBrandsPage() {
                   />
                 </div>
                 <div className="w-full sm:w-48">
-                  <Select options={sortOptions} value={sortBy} onChange={(event) => setSortBy(event.target.value)} label="" placeholder="Urutkan" />
+                  <Select aria-label="Urutkan brand" options={sortOptions} value={sortBy} onChange={(event) => setSortBy(event.target.value)} label="" placeholder="Urutkan" />
                 </div>
               </div>
 
@@ -601,17 +602,17 @@ export default function AdminBrandsPage() {
                 {paged.map((brand) => {
                   const fullBrand = brandById.get(brand.id);
                   return (
-                    <Card key={brand.id} hoverable padding="md">
-                      <div className="flex flex-col items-center gap-3 py-2">
+                    <Card key={brand.id} hoverable padding="md" className="flex h-full flex-col">
+                      <div className="flex h-full flex-col items-center gap-3 py-2">
                         <Avatar src={brand.logo_url} fallback={brand.name} size="xl" />
-                        <span className="text-text-primary text-sm font-semibold text-center">{brand.name}</span>
-                        {brand.description && (
-                          <span className="text-text-tertiary text-xs text-center">{brand.description}</span>
-                        )}
-                        <div className="w-full border-t border-border-subtle pt-3 mt-1 space-y-1">
+                        <span className="line-clamp-2 min-h-10 break-words text-center text-sm font-semibold text-text-primary" title={brand.name}>{brand.name}</span>
+                        <span className="line-clamp-2 min-h-8 break-words text-center text-xs text-text-tertiary" title={brand.description || undefined}>
+                          {brand.description || "Belum ada deskripsi"}
+                        </span>
+                        <div className="mt-auto w-full space-y-1 border-t border-border-subtle pt-3">
                           <div className="flex justify-between text-xs gap-3">
                             <span className="text-text-tertiary">ID</span>
-                            <span className="text-text-primary font-mono text-[10px] text-right">{brand.id}</span>
+                            <span className="min-w-0 break-all text-right font-mono text-[10px] text-text-primary">{brand.id}</span>
                           </div>
                           <div className="flex justify-between text-xs gap-3">
                             <span className="text-text-tertiary">Biaya layanan</span>
