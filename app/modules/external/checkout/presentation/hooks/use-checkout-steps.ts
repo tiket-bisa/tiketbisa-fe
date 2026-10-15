@@ -471,7 +471,10 @@ export function useCheckoutSteps(
           });
 
           if (result) {
-            if (!setDeadlineFromTtl(result.ttl)) {
+            // Submitting buyer details starts the server-owned payment window. Treat this
+            // response as authoritative so a stale buyer-info deadline in session storage
+            // cannot shorten the newly issued payment deadline.
+            if (!setDeadlineFromTtl(result.ttl, true)) {
               await expireCheckoutSession(true);
               break;
             }
