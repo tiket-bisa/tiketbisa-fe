@@ -297,13 +297,19 @@ export default function EventTicketDashboardPage() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-7">
         <SummaryCard label="Kuota" value={totalTicket} />
         <SummaryCard label="Direservasi" value={reservedTicket} />
-        <SummaryCard label="Revenue" value={formatIDR(data.revenue)} />
+        <SummaryCard
+          label="Revenue Event"
+          value={formatIDR(data.revenue)}
+          tooltip="Total omzet dari tiket terjual dan lunas untuk event ini"
+        />
         <SummaryCard label="Terjual & Lunas" value={soldTicket} />
         <SummaryCard label="Bulk Terbit" value={bulkTicket} />
         <SummaryCard label="Sisa" value={remainingTicket} />
         <SummaryCard label="Checked In" value={checkedInTicket} />
       </div>
-      <p className="text-xs text-text-tertiary">Kuota, Sisa, dan Checked In mencakup seluruh event.</p>
+      <p className="text-xs text-text-tertiary">
+        Revenue mencakup akumulasi penjualan tiket lunas khusus event ini. Kuota, Sisa, dan Checked In mencakup seluruh event.
+      </p>
 
       <Card padding="md">
         <h2 className="mb-4 text-lg font-semibold text-text-primary">Kategori Tiket</h2>
@@ -555,10 +561,25 @@ function AdjustCategoryModal({
   );
 }
 
-function SummaryCard({ label, value }: { label: string; value: string | number }) {
+function SummaryCard({
+  label,
+  value,
+  tooltip,
+}: {
+  label: string;
+  value: string | number;
+  tooltip?: string;
+}) {
   return (
     <Card padding="md">
-      <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">{label}</p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">{label}</p>
+        {tooltip && (
+          <span className="material-symbols-outlined text-xs text-text-tertiary cursor-help" title={tooltip}>
+            info
+          </span>
+        )}
+      </div>
       <p className="mt-2 text-2xl font-bold text-text-primary">{value.toLocaleString()}</p>
     </Card>
   );
