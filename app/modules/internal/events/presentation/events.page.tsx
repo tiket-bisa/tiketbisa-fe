@@ -22,9 +22,9 @@ import type { EventSummary } from "~/core/types";
 import { fileToBase64 } from "~/modules/internal/common/presentation/image-source-input";
 import { EventGalleryManager } from "~/modules/internal/common/presentation/event-gallery-manager";
 import { SearchableCitySelect } from "./components/searchable-city-select";
+import { EventRevenue } from "./components/event-revenue";
 import { internalBrandApi, normalizeInternalBrand } from "~/core/api/services/internal-brand.api";
 import { HOME_DOMICILE_OPTIONS, normalizeHomeDomicile } from "~/shared/constants/domicile.constants";
-import { formatIDR } from "~/core/utils";
 
 const STATUS_MAP = {
   draft: { label: "Draft", variant: "default" as const },
@@ -573,11 +573,8 @@ export default function EventsPage() {
                         {evt.location}
                       </span>
                     )}
-                    <span className="flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">
-                      <span className="material-symbols-outlined text-sm">payments</span>
-                      Revenue: {formatIDR(evt.revenue ?? 0)}
-                    </span>
                   </div>
+                  <EventRevenue revenue={evt.revenue} />
                 </div>
                 <Badge variant={status.variant}>{status.label}</Badge>
               </div>
