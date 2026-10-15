@@ -8,8 +8,30 @@ import { eventApi } from "../infrastructure/event.api";
 import { EventDetailHeader } from "./components/event-detail-header";
 import { EventDetailSidebar } from "./components/event-detail-sidebar";
 import { EventDetailContent } from "./components/event-detail-content";
+import { generateSeoMeta } from "~/shared/utils/seo.utils";
 
 import type { Route } from "./+types/event-detail.page";
+
+export const meta: Route.MetaFunction = ({ data }) => {
+  if (!data?.event) {
+    return generateSeoMeta({
+      title: "Event Tidak Ditemukan",
+      description: "Event yang kamu cari tidak ditemukan.",
+    });
+  }
+
+  const { name: title, description, imageUrl } = data.event;
+  // A simple plain-text extraction from description (since it might be rich text)
+  const plainDesc = description 
+    ? description.replace(/<[^>]+>/g, '').substring(0, 150) + "..."
+    : "Beli tiket event ini di Tiketbisa.";
+
+  return generateSeoMeta({
+    title,
+    description: plainDesc,
+    image: imageUrl || undefined,
+  });
+};
 
 export async function loader({ params, request }: Route.LoaderArgs) {
   const identifier = (params as Record<string, string | undefined>).slug || (params as Record<string, string | undefined>).eventId;

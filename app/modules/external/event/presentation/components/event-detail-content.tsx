@@ -12,15 +12,30 @@ interface EventDetailContentProps {
 export function EventDetailContent({ event }: EventDetailContentProps) {
   return (
     <div className="lg:col-span-2 space-y-8">
-      <article className="space-y-4">
-        <EventImageCarousel
-          eventName={event.name}
-          images={event.galleryImages?.length ? event.galleryImages : [event.imageUrl]}
-        />
-        <div className="prose prose-invert max-w-none">
-          <h2 className="text-lg font-bold text-text-primary mb-2">Tentang Event</h2>
-          <p className="text-text-secondary leading-relaxed">{event.description}</p>
+      <article className="space-y-8">
+        <div className="space-y-4">
+          <EventImageCarousel
+            eventName={event.name}
+            images={event.galleryImages?.length ? event.galleryImages : [event.imageUrl]}
+          />
+          <div className="prose prose-invert max-w-none">
+            <h2 className="text-lg font-bold text-text-primary mb-2">Tentang Event</h2>
+            <p className="text-text-secondary leading-relaxed">{event.description}</p>
+          </div>
         </div>
+
+        {event.layoutImagePath && (
+          <div>
+            <h2 className="text-lg font-bold text-text-primary mb-4">Denah Acara / Layout</h2>
+            <div className="overflow-hidden rounded-lg border border-border-default">
+              <img 
+                src={event.layoutImagePath} 
+                alt="Denah Acara / Layout" 
+                className="w-full h-auto object-cover" 
+              />
+            </div>
+          </div>
+        )}
       </article>
 
       {event.terms && event.terms.length > 0 && (

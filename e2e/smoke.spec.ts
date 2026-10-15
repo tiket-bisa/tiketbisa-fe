@@ -47,8 +47,18 @@ async function openNativePayment(
 
   await page.locator('[data-checkout-consent]:visible input[type="checkbox"]').nth(0).check();
   await page.locator('[data-checkout-consent]:visible input[type="checkbox"]').nth(1).check();
+  const paymentWindowResponse = page.waitForResponse(
+    (response) => response.url().endsWith("/transaction/temp") && response.request().method() === "POST",
+  );
   await page.getByRole("button", { name: /Lanjut ke Pembayaran/i }).and(page.locator(":visible")).click();
   await page.getByRole("button", { name: "Ya, Lanjutkan" }).click();
+  const paymentWindowEnvelope = await (await paymentWindowResponse).json();
+  const paymentWindow = paymentWindowEnvelope.data;
+  expect(paymentWindow?.status).toBe("ACTIVE");
+  expect(paymentWindow?.remainingSeconds).toBeGreaterThanOrEqual(895);
+  expect(paymentWindow?.remainingSeconds).toBeLessThanOrEqual(900);
+  expect(paymentWindow?.expiresAt - paymentWindow?.serverTime).toBeGreaterThanOrEqual(895_000);
+  expect(paymentWindow?.expiresAt - paymentWindow?.serverTime).toBeLessThanOrEqual(900_000);
   await expect(page.getByText(
     method.id === "qris" ? /Pembayaran QRIS/ : /Pembayaran Virtual Account/,
   ).first()).toBeVisible();
@@ -127,8 +137,14 @@ test.describe.serial("local smoke flows", () => {
     await page.locator('button', { hasText: 'Manual Transfer' }).click();
     await page.locator('[data-checkout-consent]:visible input[type="checkbox"]').nth(0).check();
     await page.locator('[data-checkout-consent]:visible input[type="checkbox"]').nth(1).check();
+    const paymentWindowResponse = page.waitForResponse(
+      (response) => response.url().endsWith("/transaction/temp") && response.request().method() === "POST",
+    );
     await page.getByRole("button", { name: /Lanjut ke Pembayaran/i }).and(page.locator(':visible')).click();
     await page.getByRole("button", { name: "Ya, Lanjutkan" }).click();
+    const paymentWindowEnvelope = await (await paymentWindowResponse).json();
+    expect(paymentWindowEnvelope.data?.remainingSeconds).toBeGreaterThanOrEqual(895);
+    expect(paymentWindowEnvelope.data?.remainingSeconds).toBeLessThanOrEqual(900);
 
     await expect(page.getByText("Mandiri")).toBeVisible();
     await expect(page.getByText("1010014855397")).toBeVisible();

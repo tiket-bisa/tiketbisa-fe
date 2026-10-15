@@ -22,6 +22,7 @@ export interface Event {
   description: string;
   imageUrl: string;
   galleryImages?: string[];
+  layoutImagePath?: string;
   date: string;
   location: string;
   minPrice?: number;

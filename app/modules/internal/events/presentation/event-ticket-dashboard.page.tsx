@@ -282,6 +282,7 @@ export default function EventTicketDashboardPage() {
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <SummaryCard label="Kuota" value={totalTicket} />
+        <SummaryCard label="Direservasi" value={reservedTicket} />
         <SummaryCard
           label="Revenue Event"
           value={formatIDR(data.revenue)}
@@ -581,7 +582,9 @@ function SummaryCard({
           </span>
         )}
       </div>
-      <p className="mt-2 text-2xl font-bold text-text-primary truncate" title={value.toLocaleString()}>{value.toLocaleString()}</p>
+      <p className="mt-2 text-2xl font-bold text-text-primary truncate" title={value.toLocaleString()}>
+        {value.toLocaleString()}
+      </p>
     </Card>
   );
 }

@@ -80,6 +80,7 @@ export function mapEventDtoToEntity(
     brandLogoUrl: brand?.logoUrl || undefined,
     description: dto.description || "",
     imageUrl: bannerUrl || placeholderImages[index % placeholderImages.length],
+    layoutImagePath: normalizeImageUrl(dto.layoutImagePath || dto.layout_image_path) || undefined,
     date: formatEventDate(startDate),
     location: dto.city || dto.location || "Online",
     minPrice: dto.minPrice ?? dto.min_price ?? undefined,
