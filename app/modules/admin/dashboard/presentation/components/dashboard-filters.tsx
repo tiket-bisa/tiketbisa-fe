@@ -63,6 +63,7 @@ export function DashboardFilters({
     <div className="flex flex-col sm:flex-row gap-3 mb-4">
       <div className="flex-1">
         <SearchInput
+          aria-label="Cari transaksi berdasarkan ID atau pembeli"
           placeholder="Cari ID atau pembeli..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}

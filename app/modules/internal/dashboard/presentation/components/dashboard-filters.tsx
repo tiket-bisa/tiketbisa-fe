@@ -48,6 +48,7 @@ export function DashboardFilters({
     <div className="flex flex-col sm:flex-row gap-3 mb-4">
       <div className="flex-1">
         <SearchInput
+          aria-label="Cari transaksi berdasarkan ID atau pembeli"
           placeholder="Cari ID atau pembeli..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
@@ -56,7 +57,7 @@ export function DashboardFilters({
       </div>
       <div className="w-full sm:w-48">
         <Select
-          aria-label="Semua Event"
+          aria-label="Filter event"
           options={eventOptions}
           value={eventIdFilter}
           onChange={(e) => onEventIdFilterChange(e.target.value)}
@@ -65,7 +66,7 @@ export function DashboardFilters({
       </div>
       <div className="w-full sm:w-48">
         <Select
-          aria-label="Semua Status"
+          aria-label="Filter status transaksi"
           options={statusFilterOptions}
           value={statusFilter}
           onChange={(e) => onStatusFilterChange(e.target.value)}
@@ -74,6 +75,7 @@ export function DashboardFilters({
       </div>
       <div className="w-full sm:w-40">
         <Select
+          aria-label="Urutkan transaksi"
           options={transactionSortOptions}
           value={sortOrder}
           onChange={(e) => onSortOrderChange(e.target.value as TransactionSort)}
