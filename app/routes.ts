@@ -49,8 +49,13 @@ export default [
     id: "internal-login-scanner-redirect",
   }),
 
+  layout("layouts/community.layout.tsx", [
+    route("internal-tb/community", "modules/internal/community/community.page.tsx"),
+  ]),
+
   // ─── Admin Layout (internal team — sees all brands) ───
   layout("layouts/admin.layout.tsx", [
+    route("internal-tb/admin/communities", "modules/internal/community/manage-community.page.tsx", { id: "admin-communities" }),
     route(
       "internal-tb/admin",
       "modules/admin/dashboard/presentation/dashboard.page.tsx",
@@ -113,6 +118,7 @@ export default [
 
   // ─── Partner Layout (each partner — sees only own brand) ───
   layout("layouts/internal.layout.tsx", [
+    route("internal-tb/partner/communities", "modules/internal/community/manage-community.page.tsx", { id: "partner-communities" }),
     route(
       "internal-tb/partner",
       "modules/internal/dashboard/presentation/dashboard.page.tsx",

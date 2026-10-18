@@ -13,6 +13,7 @@ const navLinks: readonly { to: string; label: string; exact?: boolean }[] = [
   { to: "/internal-tb/admin", label: "Beranda", exact: true },
   { to: "/internal-tb/admin/brands", label: "Brand" },
   { to: "/internal-tb/admin/events", label: "Event" },
+  { to: "/internal-tb/admin/communities", label: "Komunitas" },
   { to: "/internal-tb/admin/promos", label: "Promo" },
   { to: "/internal-tb/admin/analytics", label: "Analitik" },
   { to: "/internal-tb/admin/integration-clients", label: "Integrasi" },
@@ -54,7 +55,7 @@ export function NavbarAdmin({
         </span>
 
         {/* Nav links */}
-        <ul className="hidden md:flex items-center gap-1">
+        <ul className="hidden xl:flex items-center gap-1">
           {navLinks.map((link) => {
             const isActive = link.exact
               ? location.pathname === link.to
@@ -86,7 +87,7 @@ export function NavbarAdmin({
           )}
 
           {userEmail && (
-            <span className="hidden sm:block text-xs text-text-tertiary truncate max-w-[180px]">
+            <span className="hidden 2xl:block text-xs text-text-tertiary truncate max-w-[180px]">
               {userEmail}
             </span>
           )}
@@ -102,7 +103,7 @@ export function NavbarAdmin({
         <button
           type="button"
           onClick={toggleMobileMenu}
-          className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-lg text-text-secondary hover:bg-surface-hover transition-colors cursor-pointer"
+          className="xl:hidden inline-flex items-center justify-center h-9 w-9 rounded-lg text-text-secondary hover:bg-surface-hover transition-colors cursor-pointer"
           aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
           aria-expanded={mobileMenuOpen}
         >
@@ -135,7 +136,7 @@ export function NavbarAdmin({
       </nav>
 
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-border-default bg-surface-primary animate-in slide-in-from-top-2 duration-200">
+        <div className="xl:hidden border-t border-border-default bg-surface-primary animate-in slide-in-from-top-2 duration-200">
           <div className="px-4 py-4 space-y-2">
             {navLinks.map((link) => {
               const isActive = link.exact

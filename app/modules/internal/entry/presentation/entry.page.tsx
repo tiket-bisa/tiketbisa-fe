@@ -24,7 +24,7 @@ function InternalEntryContent() {
   if (user) {
     return (
       <Navigate
-        to={user.role === "admin" ? "/internal-tb/admin" : user.role === "partner" ? "/internal-tb/partner" : "/internal-tb/scanner"}
+        to={user.role === "admin" ? "/internal-tb/admin" : user.role === "partner" ? "/internal-tb/partner" : user.role === "community" ? "/internal-tb/community" : "/internal-tb/scanner"}
         replace
       />
     );
@@ -54,7 +54,7 @@ function InternalEntryContent() {
       const tokenData = await requestScannerToken(scannerUsername, scannerPassword);
       loginWithScanner(tokenData);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal login scanner");
+      setError(e instanceof Error ? e.message : "Gagal login akun");
     } finally {
       setIsScannerSubmitting(false);
     }
@@ -74,7 +74,7 @@ function InternalEntryContent() {
               <p className="text-xs font-semibold uppercase tracking-[0.32em] text-brand-primary">Internal</p>
               <h1 className="text-2xl font-bold text-text-primary sm:text-3xl">Masuk ke dashboard internal</h1>
               <p className="text-sm leading-6 text-text-secondary">
-                Gunakan akun Google yang terdaftar. Sistem akan mengarahkan kamu ke dashboard yang sesuai secara otomatis.
+                Admin dan Partner menggunakan akun Google. Scanner dan Komunitas menggunakan username dan password.
               </p>
             </div>
           </div>
@@ -115,12 +115,12 @@ function InternalEntryContent() {
               </div>
               <div className="relative flex justify-center">
                 <span className="bg-white px-3 text-xs font-semibold uppercase tracking-[0.24em] text-text-tertiary">
-                  Scanner
+                  Scanner / Komunitas
                 </span>
               </div>
             </div>
 
-            <div className="space-y-3 text-left">
+            <form className="space-y-3 text-left" onSubmit={(event) => { event.preventDefault(); void handleScannerLogin(); }}>
               <div className="space-y-1.5">
                 <label htmlFor="scanner-username" className="text-xs font-semibold uppercase tracking-[0.16em] text-text-tertiary">
                   Username
@@ -130,8 +130,9 @@ function InternalEntryContent() {
                   type="text"
                   value={scannerUsername}
                   onChange={(event) => setScannerUsername(event.target.value)}
-                  className="h-11 w-full rounded-xl border border-border-default bg-surface-hover px-4 text-sm text-text-primary outline-none transition-colors focus:border-brand-primary"
-                  placeholder="scanner username"
+                  className="h-11 w-full rounded-xl border border-border-default bg-surface-hover px-4 text-base sm:text-sm text-text-primary outline-none transition-colors focus:border-brand-primary"
+                  placeholder="Username akun"
+                  autoComplete="username"
                 />
               </div>
               <div className="space-y-1.5">
@@ -140,10 +141,11 @@ function InternalEntryContent() {
                 </label>
                 <input
                   id="scanner-password"
+                  autoComplete="current-password"
                   type="password"
                   value={scannerPassword}
                   onChange={(event) => setScannerPassword(event.target.value)}
-                  className="h-11 w-full rounded-xl border border-border-default bg-surface-hover px-4 text-sm text-text-primary outline-none transition-colors focus:border-brand-primary"
+                  className="h-11 w-full rounded-xl border border-border-default bg-surface-hover px-4 text-base sm:text-sm text-text-primary outline-none transition-colors focus:border-brand-primary"
                   placeholder="••••••••"
                 />
               </div>
@@ -151,14 +153,14 @@ function InternalEntryContent() {
                 variant="primary"
                 size="lg"
                 fullWidth
-                onClick={handleScannerLogin}
+                type="submit"
                 disabled={isScannerSubmitting || !scannerUsername.trim() || !scannerPassword}
               >
-                {isScannerSubmitting ? "Memproses..." : "Login Scanner"}
+                {isScannerSubmitting ? "Memproses..." : "Login dengan Username"}
               </Button>
-            </div>
+            </form>
 
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           </div>
         </div>
       </div>
