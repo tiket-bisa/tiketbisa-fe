@@ -186,6 +186,44 @@ describe("useCheckoutSteps checkout expiry", () => {
     );
   });
 
+  it("scopes checkout lock in sessionStorage per eventId and does not overwrite or clear other events", async () => {
+    sessionStorage.setItem(
+      "tiketbisa_checkout_lock_event-2",
+      JSON.stringify({ eventId: "event-2", lockId: "lock-for-event-2" }),
+    );
+
+    mocks.searchParams = new URLSearchParams("step=1&t[category-1]=2");
+    mocks.acquireLock.mockResolvedValue({ userId: "lock-for-event-1", expiresAt: Date.now() + 300_000 });
+    mocks.getTicketLockTtl.mockResolvedValue(295);
+
+    const { result } = renderHook(() => useCheckoutSteps(
+      { id: "event-1", slug: "event-1-slug" } as any,
+      { fullName: "Buyer 1", email: "b1@example.com", phoneNumber: "081234567890", identityType: "KTP", identityNumber: "1234567890123456" },
+      { subtotal: 20_000, serviceFeePerTicket: 0, serviceFee: 0, transactionFee: 0, discount: 0, totalPrice: 20_000, ticketCount: 2, items: [{ ticketId: "category-1", ticketName: "Regular", price: 10_000, quantity: 2 }] },
+      () => ({ isValid: true, errorCount: 0, firstInvalidFieldId: null }),
+      [],
+      null,
+      { selection: { methodId: null, agreedToTerms: false, agreedToPrivacy: false, appliedPromo: null, bankCode: null } } as any,
+    ));
+
+    await waitFor(() => {
+      const storedEvent1 = sessionStorage.getItem("tiketbisa_checkout_lock_event-1");
+      expect(storedEvent1).toBeTruthy();
+      expect(JSON.parse(storedEvent1!).lockId).toBe("lock-for-event-1");
+    });
+
+    const storedEvent2 = sessionStorage.getItem("tiketbisa_checkout_lock_event-2");
+    expect(storedEvent2).toBeTruthy();
+    expect(JSON.parse(storedEvent2!).lockId).toBe("lock-for-event-2");
+
+    await act(async () => {
+      result.current.handleExpire();
+    });
+
+    expect(sessionStorage.getItem("tiketbisa_checkout_lock_event-1")).toBeNull();
+    expect(sessionStorage.getItem("tiketbisa_checkout_lock_event-2")).toBeTruthy();
+  });
+
   it("awaits in-flight initial lock before re-locking with holders on handleNext", async () => {
     mocks.searchParams = new URLSearchParams("step=1&t[category-1]=4");
     let resolveInitialLock!: (value: { userId: string; expiresAt: number }) => void;

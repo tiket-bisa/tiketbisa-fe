@@ -15,12 +15,11 @@ import type { BuyerInfo, OrderSummary, PaymentMethod, OrderResponse, TicketHolde
 import type { EventSummary } from "~/core/types";
 
 const CHECKOUT_DEADLINE_STORAGE_KEY = "tiketbisa_checkout_deadline";
-const CHECKOUT_LOCK_STORAGE_KEY = "tiketbisa_checkout_lock";
+const CHECKOUT_LEGACY_LOCK_STORAGE_KEY = "tiketbisa_checkout_lock";
 /** Persists the issued-ticket success payload so a reload on step 5 can restore OrderSuccess. */
 const CHECKOUT_COMPLETED_ORDER_STORAGE_KEY = "tiketbisa_completed_order";
 const CHECKOUT_STORAGE_KEYS = [
   CHECKOUT_DEADLINE_STORAGE_KEY,
-  CHECKOUT_LOCK_STORAGE_KEY,
   CHECKOUT_COMPLETED_ORDER_STORAGE_KEY,
   "tiketbisa_buyer_info",
   "tiketbisa_payment_selection",
@@ -29,15 +28,29 @@ const CHECKOUT_STORAGE_KEYS = [
   "tiketbisa_holders_same_as_main",
 ];
 
+function getCheckoutLockStorageKey(eventId: string): string {
+  return `tiketbisa_checkout_lock_${eventId}`;
+}
+
 function getStoredEventLockId(eventId: string): string | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = sessionStorage.getItem(CHECKOUT_LOCK_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as { eventId?: string; lockId?: string };
-    return parsed?.eventId === eventId && typeof parsed?.lockId === "string" && parsed.lockId
-      ? parsed.lockId
-      : null;
+    const raw = sessionStorage.getItem(getCheckoutLockStorageKey(eventId));
+    if (raw) {
+      const parsed = JSON.parse(raw) as { eventId?: string; lockId?: string } | string;
+      if (typeof parsed === "string") return parsed;
+      if (parsed?.eventId === eventId && typeof parsed?.lockId === "string" && parsed.lockId) {
+        return parsed.lockId;
+      }
+    }
+    const legacyRaw = sessionStorage.getItem(CHECKOUT_LEGACY_LOCK_STORAGE_KEY);
+    if (legacyRaw) {
+      const parsed = JSON.parse(legacyRaw) as { eventId?: string; lockId?: string };
+      if (parsed?.eventId === eventId && typeof parsed?.lockId === "string" && parsed.lockId) {
+        return parsed.lockId;
+      }
+    }
+    return null;
   } catch {
     return null;
   }
@@ -46,11 +59,23 @@ function getStoredEventLockId(eventId: string): string | null {
 function storeEventLockId(eventId: string, lockId: string | null) {
   if (typeof window === "undefined") return;
   try {
+    const key = getCheckoutLockStorageKey(eventId);
     if (!lockId) {
-      sessionStorage.removeItem(CHECKOUT_LOCK_STORAGE_KEY);
+      sessionStorage.removeItem(key);
+      const legacyRaw = sessionStorage.getItem(CHECKOUT_LEGACY_LOCK_STORAGE_KEY);
+      if (legacyRaw) {
+        try {
+          const parsed = JSON.parse(legacyRaw) as { eventId?: string };
+          if (parsed?.eventId === eventId) {
+            sessionStorage.removeItem(CHECKOUT_LEGACY_LOCK_STORAGE_KEY);
+          }
+        } catch {
+          // Ignore parse errors
+        }
+      }
       return;
     }
-    sessionStorage.setItem(CHECKOUT_LOCK_STORAGE_KEY, JSON.stringify({ eventId, lockId }));
+    sessionStorage.setItem(key, JSON.stringify({ eventId, lockId }));
   } catch {
     // Ignore storage write errors
   }
@@ -126,10 +151,11 @@ export function useCheckoutSteps(
   }, [setMethodId]);
 
   const clearCheckoutStorage = useCallback(() => {
+    storeEventLockId(event.id, null);
     CHECKOUT_STORAGE_KEYS.forEach((key) => sessionStorage.removeItem(key));
     lockIdRef.current = null;
     setCheckoutDeadline(null);
-  }, []);
+  }, [event.id]);
 
   const releaseActiveCheckout = useCallback(async (activeLockId?: string | null) => {
     const checkoutId = activeLockId ?? lockIdRef.current ?? lockId ?? searchParams.get("lockId") ?? getStoredEventLockId(event.id);
