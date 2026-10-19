@@ -15,10 +15,12 @@ import type { BuyerInfo, OrderSummary, PaymentMethod, OrderResponse, TicketHolde
 import type { EventSummary } from "~/core/types";
 
 const CHECKOUT_DEADLINE_STORAGE_KEY = "tiketbisa_checkout_deadline";
+const CHECKOUT_LOCK_STORAGE_KEY = "tiketbisa_checkout_lock";
 /** Persists the issued-ticket success payload so a reload on step 5 can restore OrderSuccess. */
 const CHECKOUT_COMPLETED_ORDER_STORAGE_KEY = "tiketbisa_completed_order";
 const CHECKOUT_STORAGE_KEYS = [
   CHECKOUT_DEADLINE_STORAGE_KEY,
+  CHECKOUT_LOCK_STORAGE_KEY,
   CHECKOUT_COMPLETED_ORDER_STORAGE_KEY,
   "tiketbisa_buyer_info",
   "tiketbisa_payment_selection",
@@ -26,6 +28,33 @@ const CHECKOUT_STORAGE_KEYS = [
   "tiketbisa_ticket_holders",
   "tiketbisa_holders_same_as_main",
 ];
+
+function getStoredEventLockId(eventId: string): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(CHECKOUT_LOCK_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { eventId?: string; lockId?: string };
+    return parsed?.eventId === eventId && typeof parsed?.lockId === "string" && parsed.lockId
+      ? parsed.lockId
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function storeEventLockId(eventId: string, lockId: string | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (!lockId) {
+      sessionStorage.removeItem(CHECKOUT_LOCK_STORAGE_KEY);
+      return;
+    }
+    sessionStorage.setItem(CHECKOUT_LOCK_STORAGE_KEY, JSON.stringify({ eventId, lockId }));
+  } catch {
+    // Ignore storage write errors
+  }
+}
 
 export function useCheckoutSteps(
   event: EventSummary,
@@ -44,7 +73,17 @@ export function useCheckoutSteps(
   const currentStep = parseInt(searchParams.get("step") || "1", 10);
 
   // State for Backend Session Management
-  const [lockId, setLockId] = useState<string | null>(searchParams.get("lockId"));
+  const initialLockId = searchParams.get("lockId") || getStoredEventLockId(event.id);
+  const [lockId, setLockIdState] = useState<string | null>(initialLockId);
+  const lockIdRef = useRef<string | null>(initialLockId);
+  const initialLockPromiseRef = useRef<Promise<string | null> | null>(null);
+
+  const setLockId = useCallback((nextLockId: string | null) => {
+    lockIdRef.current = nextLockId;
+    setLockIdState(nextLockId);
+    storeEventLockId(event.id, nextLockId);
+  }, [event.id]);
+
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<CompleteOrderResponse | null>(null);
   const [checkoutDeadline, setCheckoutDeadline] = useState<number | null>(null);
@@ -88,11 +127,12 @@ export function useCheckoutSteps(
 
   const clearCheckoutStorage = useCallback(() => {
     CHECKOUT_STORAGE_KEYS.forEach((key) => sessionStorage.removeItem(key));
+    lockIdRef.current = null;
     setCheckoutDeadline(null);
   }, []);
 
   const releaseActiveCheckout = useCallback(async (activeLockId?: string | null) => {
-    const checkoutId = activeLockId ?? lockId ?? searchParams.get("lockId");
+    const checkoutId = activeLockId ?? lockIdRef.current ?? lockId ?? searchParams.get("lockId") ?? getStoredEventLockId(event.id);
     if (!checkoutId || searchParams.get("orderId")) return;
     try {
       await orderApi.releaseCheckout(checkoutId, event.id);
@@ -122,7 +162,7 @@ export function useCheckoutSteps(
     }
     navigate(`/event/${event.slug || params.eventId || event.id}`, { replace: true });
     await releasePromise;
-  }, [clearCheckoutStorage, event.id, event.slug, navigate, params.eventId, releaseActiveCheckout, warningToast]);
+  }, [clearCheckoutStorage, event.id, event.slug, navigate, params.eventId, releaseActiveCheckout, setLockId, warningToast]);
 
   const setDeadlineFromTtl = useCallback((ttl: CheckoutTtl, authoritative = false) => {
     const stored = sessionStorage.getItem(CHECKOUT_DEADLINE_STORAGE_KEY);
@@ -143,8 +183,8 @@ export function useCheckoutSteps(
   }, []);
 
   const getActiveLockId = useCallback(() => (
-    lockId || searchParams.get("lockId") || searchParams.get("orderId")
-  ), [lockId, searchParams]);
+    lockIdRef.current || lockId || searchParams.get("lockId") || searchParams.get("orderId") || getStoredEventLockId(event.id)
+  ), [event.id, lockId, searchParams]);
 
   const getCheckoutLockRemainingSeconds = useCallback(async (activeLockId: string) => {
     const categoryIds = baseSummary.items
@@ -232,32 +272,65 @@ export function useCheckoutSteps(
    * timer only starts once the buyer submits the combined data+payment page (see handleNext
    * case 1), by which point they've committed to a payment method.
    */
+  const initialLockAcquiredRef = useRef(Boolean(searchParams.get("lockId")));
+
   const acquireInitialLock = useCallback(async () => {
-    if (checkoutExitStartedRef.current || lockId || currentStep > 1) return;
+    if (
+      checkoutExitStartedRef.current ||
+      currentStep > 1 ||
+      baseSummary.items.length === 0 ||
+      initialLockAcquiredRef.current ||
+      Boolean(searchParams.get("lockId"))
+    ) {
+      return;
+    }
+
+    const existingSessionLockId =
+      lockIdRef.current || lockId || searchParams.get("lockId") || getStoredEventLockId(event.id);
+
+    if (initialLockPromiseRef.current) {
+      await initialLockPromiseRef.current;
+      return;
+    }
+
     if (exceedsTicketLimit) {
       await redirectForTicketLimit();
       return;
     }
 
-    setIsActionLoading(true);
-    try {
-      const lock = await orderApi.acquireLock(event.id, baseSummary);
-      setBlockingError(null);
-      setLockId(lock.userId);
-      setSearchParams(prev => {
-        const newParams = new URLSearchParams(prev);
-        newParams.set("lockId", lock.userId);
-        return newParams;
-      }, { replace: true });
-    } catch (error) {
-      console.error("Failed to acquire initial ticket lock", error);
-      const message = "Tiket belum dapat direservasi. Periksa ketersediaan tiket lalu coba lagi.";
-      setBlockingError(message);
-      errorToast(message);
-    } finally {
-      setIsActionLoading(false);
-    }
-  }, [lockId, currentStep, event.id, baseSummary, setSearchParams, exceedsTicketLimit, redirectForTicketLimit, errorToast]);
+    const lockPromise = (async (): Promise<string | null> => {
+      setIsActionLoading(true);
+      try {
+        const lock = await orderApi.acquireLock(
+          event.id,
+          baseSummary,
+          undefined,
+          existingSessionLockId ?? undefined,
+        );
+        initialLockAcquiredRef.current = true;
+        setBlockingError(null);
+        setLockId(lock.userId);
+        setSearchParams(prev => {
+          const newParams = new URLSearchParams(prev);
+          newParams.set("lockId", lock.userId);
+          return newParams;
+        }, { replace: true });
+        return lock.userId;
+      } catch (error) {
+        console.error("Failed to acquire initial ticket lock", error);
+        const message = "Tiket belum dapat direservasi. Periksa ketersediaan tiket lalu coba lagi.";
+        setBlockingError(message);
+        errorToast(message);
+        return null;
+      } finally {
+        setIsActionLoading(false);
+        initialLockPromiseRef.current = null;
+      }
+    })();
+
+    initialLockPromiseRef.current = lockPromise;
+    await lockPromise;
+  }, [lockId, currentStep, event.id, baseSummary, searchParams, setSearchParams, setLockId, exceedsTicketLimit, redirectForTicketLimit, errorToast]);
 
   // Trigger lock on mount if on step 1
   useEffect(() => {
@@ -451,13 +524,18 @@ export function useCheckoutSteps(
 
         setIsActionLoading(true);
         try {
+          if (initialLockPromiseRef.current) {
+            await initialLockPromiseRef.current;
+          }
+          const existingLockId =
+            lockIdRef.current || lockId || searchParams.get("lockId") || getStoredEventLockId(event.id) || undefined;
           // Always (re-)acquire the lock here with the buyer's current holder data. The
           // preliminary "intent" lock made on mount (see acquireInitialLock) has no holders
           // yet - reusing that lockId as-is would carry an empty holders array all the way to
           // the final commit and fail validation there. Re-locking (even if a lockId already
           // exists) guarantees the lock Redis is holding always matches what the buyer just
           // filled in on this step.
-          const lock = await orderApi.acquireLock(event.id, baseSummary, holders, lockId ?? undefined);
+          const lock = await orderApi.acquireLock(event.id, baseSummary, holders, existingLockId);
           setLockId(lock.userId);
 
           const result = await confirmOrder({
@@ -483,7 +561,7 @@ export function useCheckoutSteps(
               step: "4",
               orderId: result.order.orderId,
               lockId: lock.userId,
-            });
+            }, { replace: true });
           }
         } catch (e: any) {
           setBlockingError(e?.message || "Maaf, tiket tidak tersedia atau gagal dikunci. Silakan coba lagi.");
@@ -576,12 +654,14 @@ export function useCheckoutSteps(
         navigate("/event");
         break;
     }
-  }, [currentStep, event.id, event.slug, buyerInfo, baseSummary, paymentSummary, validateForm, searchParams, setSearchParams, confirmOrder, navigate, selectedPaymentMethod, canProceedToPayment, holders, lockId, isManualTransferPayment, manualTransferProofFile, ensureCheckoutSessionActive, clearCheckoutStorage, params.eventId, exceedsTicketLimit, redirectForTicketLimit, setDeadlineFromTtl, expireCheckoutSession, selection.appliedPromo?.code, selection.bankCode, warningToast, errorToast]);
+  }, [currentStep, event.id, event.slug, buyerInfo, baseSummary, paymentSummary, validateForm, searchParams, setSearchParams, setLockId, confirmOrder, navigate, selectedPaymentMethod, canProceedToPayment, holders, lockId, isManualTransferPayment, manualTransferProofFile, ensureCheckoutSessionActive, clearCheckoutStorage, params.eventId, exceedsTicketLimit, redirectForTicketLimit, setDeadlineFromTtl, expireCheckoutSession, selection.appliedPromo?.code, selection.bankCode, warningToast, errorToast]);
 
   const handleBack = useCallback(async () => {
     if (currentStep === 1) {
       await releaseActiveCheckout();
       clearCheckoutStorage();
+      navigate(`/event/${event.slug || params.eventId || event.id}`);
+    } else if (currentStep === 4) {
       navigate(`/event/${event.slug || params.eventId || event.id}`);
     } else if (currentStep === 5) {
       clearCheckoutStorage();
