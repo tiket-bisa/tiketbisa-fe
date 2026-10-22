@@ -87,7 +87,7 @@ export function NavbarAdmin({
           )}
 
           {userEmail && (
-            <span className="hidden 2xl:block text-xs text-text-tertiary truncate max-w-[180px]">
+            <span className="hidden xl:block text-xs text-text-tertiary truncate max-w-[140px]">
               {userEmail}
             </span>
           )}

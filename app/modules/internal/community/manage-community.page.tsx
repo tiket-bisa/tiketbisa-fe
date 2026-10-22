@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useAuth } from "~/core/auth";
-import { internalHttpClient, toUserFacingError } from "~/core/api";
+import { toUserFacingError } from "~/core/api";
+import { internalBrandApi } from "~/core/api/services/internal-brand.api";
 import { internalEventApi } from "~/core/api/services/internal-event.api";
 import { Button, Input, Select } from "~/core/design-system/components";
 import { communityApi, useCommunityQuery, unwrap } from "./community.api";
@@ -13,11 +14,7 @@ export default function ManageCommunityPage() {
     async () =>
       user?.role === "admin"
         ? (
-            await unwrap(
-              internalHttpClient.get<{
-                brands: { id: string; name: string }[];
-              }>("/brand?limit=200&offset=0"),
-            )
+            await unwrap(internalBrandApi.getList({ limit: 200, offset: 0 }))
           ).brands
         : [],
     [user?.identifier],
