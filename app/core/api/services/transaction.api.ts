@@ -1,5 +1,6 @@
 import { httpClient, internalHttpClient } from "../http-client";
 import { toAbsoluteApiUrl } from "../api-url";
+import type { ApiResponse } from "../api-response.type";
 import type { TransactionType } from "~/core/constants/transaction-type";
 
 /* ── API functions ── */
@@ -121,9 +122,10 @@ export interface ManualTransferReviewRequest {
 
 export interface ManualGenerateTicketsRequest {
     eventId: string;
-    customerName: string;
+    customerName?: string;
     customerEmail: string;
-    customerPhone: string;
+    customerPhone?: string;
+    requestId?: string;
     paymentMethod: "COMPLIMENTARY";
     codeType: "QR_CODE" | "BARCODE";
     isGenerateCodeOnly?: boolean;
@@ -131,6 +133,19 @@ export interface ManualGenerateTicketsRequest {
         categoryId: string;
         quantity: number;
     }>;
+}
+
+export interface ManualGenerateTicketsResponse {
+    id: string;
+    tickets: Record<string, IssuedTicketDetail[]>;
+}
+
+export function normalizeManualGenerateTicketsResponse(raw: Record<string, unknown>): ManualGenerateTicketsResponse {
+    const batches = Object.fromEntries(Object.entries(raw).filter(([, value]) => Array.isArray(value))) as Record<string, IssuedTicketDetail[]>;
+    const first = Object.values(batches).flat()[0];
+    const firstRaw = first as unknown as Record<string, unknown> | undefined;
+    const id = String(raw.id ?? raw.transactionId ?? first?.ticketTransactionId ?? firstRaw?.ticket_transaction_id ?? "");
+    return { id, tickets: batches };
 }
 
 type BlobDownloadResult = {
@@ -230,8 +245,10 @@ export const transactionApi = {
         internalHttpClient.post<TransactionApiData>(`/transaction/detail/${id}/review`, request),
 
     /** Generate bulk tickets from admin/partner dashboard (legacy COMPLIMENTARY contract) */
-    manualGenerateTickets: (request: ManualGenerateTicketsRequest) =>
-        internalHttpClient.post<TransactionApiData>("/transaction/manual-generate", request),
+    manualGenerateTickets: async (request: ManualGenerateTicketsRequest): Promise<ApiResponse<ManualGenerateTicketsResponse>> => {
+        const response = await internalHttpClient.post<Record<string, unknown>>("/transaction/manual-generate", request);
+        return { ...response, data: normalizeManualGenerateTicketsResponse(response.data ?? {}) };
+    },
 
     /** Get single transaction status */
     getStatus: (id: string) =>

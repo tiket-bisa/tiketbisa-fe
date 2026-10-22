@@ -17,6 +17,7 @@ export interface NavbarInternalProps {
 const navLinks: readonly { to: string; label: string; exact?: boolean }[] = [
   { to: "/internal-tb/partner", label: "Beranda", exact: true },
   { to: "/internal-tb/partner/events", label: "Event" },
+  { to: "/internal-tb/partner/communities", label: "Komunitas" },
   { to: "/internal-tb/partner/analytics", label: "Analitik" },
 ];
 

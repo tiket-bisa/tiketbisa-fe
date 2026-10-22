@@ -8,6 +8,7 @@ export interface PartnerBrandAccess {
 export interface ScannerAccountSummary {
   id: string;
   username: string;
+  role?: "scanner" | "community";
   isActive: boolean;
   created?: string | null;
   lastUpdated?: string | null;
@@ -18,6 +19,7 @@ export interface BrandAccessSummary {
   brandName: string;
   partnerEmails: PartnerBrandAccess[];
   scannerAccounts: ScannerAccountSummary[];
+  communityAccounts: ScannerAccountSummary[];
 }
 
 function normalizePartnerAccess(data: Record<string, unknown>): PartnerBrandAccess {
@@ -31,6 +33,7 @@ function normalizeScannerAccess(data: Record<string, unknown>): ScannerAccountSu
   return {
     id: String(data.id ?? ""),
     username: String(data.username ?? ""),
+    role: data.role === "community" ? "community" : "scanner",
     isActive: Boolean(data.isActive ?? data.is_active ?? false),
     created: (data.created ?? null) as string | null,
     lastUpdated: (data.lastUpdated ?? data.last_updated ?? null) as string | null,
@@ -49,8 +52,10 @@ export function normalizeBrandAccessSummary(data: Record<string, unknown>): Bran
     partnerEmails: Array.isArray(data.partnerEmails)
       ? data.partnerEmails.map((item) => normalizePartnerAccess(item as Record<string, unknown>))
       : [],
-    scannerAccounts: scannerItems.map((item: unknown) =>
-      normalizeScannerAccess(item as Record<string, unknown>)),
+    scannerAccounts: scannerItems.map((item: unknown) => normalizeScannerAccess(item as Record<string, unknown>))
+      .filter(account => account.role !== "community"),
+    communityAccounts: scannerItems.map((item: unknown) => normalizeScannerAccess(item as Record<string, unknown>))
+      .filter(account => account.role === "community"),
   };
 }
 
@@ -64,7 +69,21 @@ async function normalizeSummaryResponse(
   };
 }
 
+async function upsertInternalUser(brandId: string, username: string, password: string, role: "scanner" | "community") {
+  return normalizeSummaryResponse(
+    await internalHttpClient.post<BrandAccessSummary>(`/brand/${brandId}/access/internal-user`, { username, password, role }),
+  );
+}
+
+async function deactivateInternalUser(brandId: string, accountId: string) {
+  return normalizeSummaryResponse(
+    await internalHttpClient.delete<BrandAccessSummary>(`/brand/${brandId}/access/internal-user/${accountId}`),
+  );
+}
+
 export const internalBrandAccessApi = {
+  upsertInternalUser,
+  deactivateInternalUser,
   getSummary: async (brandId: string) => {
     const response = await internalHttpClient.get<BrandAccessSummary>(`/brand/${brandId}/access`);
     if (!response.success || !response.data) {
@@ -89,13 +108,8 @@ export const internalBrandAccessApi = {
       ),
     ),
 
-  upsertScanner: async (brandId: string, username: string, password: string) =>
-    normalizeSummaryResponse(
-      await internalHttpClient.post<BrandAccessSummary>(`/brand/${brandId}/access/internal-user`, { username, password }),
-    ),
+  upsertScanner: (brandId: string, username: string, password: string) =>
+    upsertInternalUser(brandId, username, password, "scanner"),
 
-  deactivateScanner: async (brandId: string, scannerId: string) =>
-    normalizeSummaryResponse(
-      await internalHttpClient.delete<BrandAccessSummary>(`/brand/${brandId}/access/internal-user/${scannerId}`),
-    ),
+  deactivateScanner: deactivateInternalUser,
 };
