@@ -60,6 +60,7 @@ export default function AdminEventsPage() {
   const [formData, setFormData] = useState({
     brandId: "",
     name: "",
+    ticketTitle: "",
     startDate: "",
     endDate: "",
     venue: "",
@@ -152,6 +153,7 @@ export default function AdminEventsPage() {
     setFormData({
       brandId: "",
       name: "",
+      ticketTitle: "",
       startDate: "",
       endDate: "",
       venue: "",
@@ -188,6 +190,7 @@ export default function AdminEventsPage() {
     setFormData({
       brandId: event.brandId ?? "",
       name: event.name ?? "",
+      ticketTitle: event.ticketTitle ?? "",
       startDate: toDateTimeLocal(event.startDate),
       endDate: toDateTimeLocal(event.endDate),
       venue: event.venue ?? "",
@@ -228,6 +231,10 @@ export default function AdminEventsPage() {
       setFormError("Nama event wajib diisi.");
       return;
     }
+    if (!formData.ticketTitle.trim()) {
+      setFormError("Judul e-ticket wajib diisi.");
+      return;
+    }
     if (!formData.startDate || !formData.endDate) {
       setFormError("Tanggal mulai dan selesai wajib diisi.");
       return;
@@ -256,6 +263,7 @@ export default function AdminEventsPage() {
       const payload = {
         brandId: formData.brandId,
         name: formData.name.trim(),
+        ticketTitle: formData.ticketTitle.trim(),
         bannerPath: formMode === "create" ? null : undefined,
         layoutImagePath: formData.layoutImagePath || null,
         startDate,
@@ -411,6 +419,16 @@ export default function AdminEventsPage() {
               value={formData.name}
               onChange={handleChange}
               placeholder="Contoh: Jazz Night 2026"
+              required
+            />
+
+            <Input
+              label="Judul E-Ticket"
+              name="ticketTitle"
+              value={formData.ticketTitle}
+              onChange={handleChange}
+              placeholder="Contoh: BRI Super League 2026/27"
+              maxLength={255}
               required
             />
 

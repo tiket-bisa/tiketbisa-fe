@@ -105,3 +105,14 @@ describe("event revenue normalization", () => {
   });
 });
 
+describe("event ticket title normalization", () => {
+  it("reads camelCase and snake_case API responses", async () => {
+    const { normalizeInternalEvent } = await import("./internal-event.api");
+
+    expect(normalizeInternalEvent({ id: "event-1", name: "Match", ticketTitle: "Super League" } as never).ticketTitle)
+      .toBe("Super League");
+    expect(normalizeInternalEvent({ id: "event-2", name: "Match", ticket_title: "Liga Nusantara" } as never).ticketTitle)
+      .toBe("Liga Nusantara");
+  });
+});
+
