@@ -9,6 +9,7 @@ import { useAuth } from "~/core/auth";
 import { formatIDR } from "~/core/utils";
 import { normalizeIndonesianPhone } from "~/modules/external/checkout/domain/phone";
 import { isValidDotComEmail } from "~/core/utils/form-validation";
+import { blurOnWheel } from "~/core/utils/number-input";
 
 interface GeneratedTicketRow extends IssuedTicketDetail {
   categoryName: string;
@@ -529,6 +530,7 @@ export default function GenerateBulkTicketPage() {
                             }`}
                             value={qtyValue}
                             onChange={(e) => handleQuantityChange(cat.id, e.target.value)}
+                            onWheel={blurOnWheel}
                           />
                           <span className="absolute right-3 top-2.5 text-xs text-text-tertiary pointer-events-none">
                             tiket
