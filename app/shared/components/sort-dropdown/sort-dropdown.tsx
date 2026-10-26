@@ -20,6 +20,7 @@ export function SortDropdown({
         Sort by
       </span>
       <Select
+        aria-label="Urutkan hasil"
         options={options}
         value={value}
         onChange={(e) => onChange(e.currentTarget.value)}

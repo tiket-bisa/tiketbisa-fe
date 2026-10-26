@@ -76,6 +76,7 @@ export function FilterBar({
         {showSearch && (
           <div className="flex-1 min-w-0 max-w-sm">
             <SearchInput
+              aria-label={searchPlaceholder}
               value={searchValue}
               onChange={(e) => onSearchChange(e.currentTarget.value)}
               onClear={onSearchClear}
@@ -207,6 +208,7 @@ function FilterControls({
               )}
             </div>
             <Select
+              aria-label={`Filter ${filter.label}`}
               options={filter.options}
               value={filterValues[filter.key] ?? ""}
               onChange={(e) =>

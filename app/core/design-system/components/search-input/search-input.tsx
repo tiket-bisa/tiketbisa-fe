@@ -9,6 +9,9 @@ export interface SearchInputProps extends Omit<
 
 export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
   ({ onClear, value, className = "", ...props }, ref) => {
+    if (import.meta.env.DEV && !props["aria-label"] && !props["aria-labelledby"]) {
+      throw new Error("SearchInput requires aria-label or aria-labelledby.");
+    }
     return (
       <div className="relative">
         {/* Search icon */}
@@ -32,7 +35,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
           ref={ref}
           type="search"
           value={value}
-          className={`w-full rounded-lg border border-border-default bg-surface-alt pl-9 pr-9 py-2 text-sm text-text-primary placeholder:text-text-tertiary transition-colors hover:border-border-subtle focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent ${className}`}
+          className={`w-full rounded-lg border border-border-default bg-surface-alt pl-9 pr-9 py-2 text-base sm:text-sm text-text-primary placeholder:text-text-tertiary transition-colors hover:border-border-subtle focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent ${className}`}
           {...props}
         />
 
@@ -42,7 +45,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
             type="button"
             onClick={onClear}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-secondary transition-colors"
-            aria-label="Clear search"
+            aria-label="Hapus pencarian"
           >
             <svg
               className="h-4 w-4"

@@ -6,6 +6,7 @@ export interface EventApiData {
     id: string;
     brand_id: string;
     name: string;
+    ticket_title?: string | null;
     banner_path: string | null;
     start_date: string | null;
     end_date: string | null;
