@@ -159,5 +159,9 @@ for (const role of ["admin", "partner"] as const) {
         ),
       ).toBeTruthy();
     }
+    await page.screenshot({
+      path: `/tmp/category-dashboard-${role}.png`,
+      fullPage: true,
+    });
   });
 }

@@ -181,7 +181,6 @@ export default function EventTicketDashboardPage() {
   const remainingTicket = data.inventory.remainingTicket;
   const checkedInTicket = data.inventory.checkedInTicket;
   const reservedTicket = categories.reduce((sum, category) => sum + category.reservedTicket, 0);
-  const bulkTicket = categories.reduce((sum, category) => sum + (category.bulkType ? category.issuedTicket : 0), 0);
   const displayedStart = data.totalCount === 0 ? 0 : data.offset + 1;
   const displayedEnd = Math.min(data.offset + data.issuedTickets.length, data.totalCount);
   const canGoPrevious = data.offset > 0;

@@ -566,7 +566,7 @@ export default function AdminBrandsPage() {
                         value={formData.description}
                         onChange={handleChange}
                         placeholder="Deskripsi singkat tentang brand"
-                        className="w-full rounded-lg border border-border-default bg-surface-alt px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                        className="w-full rounded-lg border border-border-default bg-surface-alt px-3 py-2 text-base text-text-primary placeholder:text-text-tertiary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent sm:text-sm"
                         rows={4}
                       />
                     </div>
@@ -586,6 +586,7 @@ export default function AdminBrandsPage() {
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="flex-1">
                   <SearchInput
+                    aria-label="Cari brand"
                     placeholder="Cari nama brand..."
                     value={search}
                     onChange={(event) => { setSearch(event.target.value); setCurrentPage(1); }}
@@ -593,7 +594,7 @@ export default function AdminBrandsPage() {
                   />
                 </div>
                 <div className="w-full sm:w-48">
-                  <Select options={sortOptions} value={sortBy} onChange={(event) => setSortBy(event.target.value)} label="" placeholder="Urutkan" />
+                  <Select aria-label="Urutkan brand" options={sortOptions} value={sortBy} onChange={(event) => setSortBy(event.target.value)} label="" placeholder="Urutkan" />
                 </div>
               </div>
 

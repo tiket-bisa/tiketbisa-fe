@@ -27,7 +27,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           id={inputId}
           required={required}
-          className={`w-full rounded-lg border bg-surface-alt px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent ${
+          className={`w-full rounded-lg border bg-surface-alt px-3 py-2 text-base sm:text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent ${
             error
               ? "border-destructive"
               : "border-border-default hover:border-border-subtle"
