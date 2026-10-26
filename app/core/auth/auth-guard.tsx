@@ -9,6 +9,7 @@ interface AuthGuardProps {
 function getRoleHomePath(role: AuthRole): string {
   if (role === "admin") return "/internal-tb/admin";
   if (role === "partner") return "/internal-tb/partner";
+  if (role === "community") return "/internal-tb/community";
   return "/internal-tb/scanner";
 }
 

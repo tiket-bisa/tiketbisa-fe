@@ -44,7 +44,8 @@ export interface ScannerUser extends BaseAuthUser {
   brand_name: string;
 }
 
-export type AuthUser = AdminUser | PartnerUser | ScannerUser;
+export interface CommunityUser extends Omit<ScannerUser, "role"> { role: "community"; }
+export type AuthUser = AdminUser | PartnerUser | ScannerUser | CommunityUser;
 export type AuthRole = AuthUser["role"];
 
 interface AuthContextValue {
@@ -107,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("Account is missing brand details");
       }
 
-      if (payload.role === "scanner") {
+      if (payload.role === "scanner" || payload.role === "community") {
         if (!payload.username) {
           throw new Error("Scanner account is missing username");
         }
@@ -117,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           username: payload.username,
           email: payload.username,
           name: payload.brandName,
-          role: "scanner",
+          role: payload.role,
           brand_id: payload.brandId,
           brand_slug: payload.brandSlug,
           brand_name: payload.brandName,
@@ -181,7 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 brandName: refreshed.brandName ?? parsed.brand_name ?? parsed.name ?? null,
                 username: refreshed.username ?? parsed.username ?? null,
               },
-              parsed.role === "scanner"
+              (parsed.role === "scanner" || parsed.role === "community")
                 ? undefined
                 : {
                     email: parsed.email,
@@ -193,7 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           };
 
           // Invalidate legacy sessions that are missing the internal_token
-          if (!parsed.internal_token || ((parsed.role === "partner" || parsed.role === "scanner") && !parsed.brand_id)) {
+          if (!parsed.internal_token || ((parsed.role === "partner" || parsed.role === "scanner" || parsed.role === "community") && !parsed.brand_id)) {
             try {
               await refreshSession();
             } catch {
