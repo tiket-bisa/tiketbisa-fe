@@ -130,7 +130,7 @@ function InternalEntryContent() {
                   type="text"
                   value={scannerUsername}
                   onChange={(event) => setScannerUsername(event.target.value)}
-                  className="h-11 w-full rounded-xl border border-border-default bg-surface-hover px-4 text-sm text-text-primary outline-none transition-colors focus:border-brand-primary"
+                  className="h-11 w-full rounded-xl border border-border-default bg-surface-hover px-4 text-base text-text-primary outline-none transition-colors focus:border-brand-primary sm:text-sm"
                   placeholder="scanner username"
                 />
               </div>
@@ -143,7 +143,7 @@ function InternalEntryContent() {
                   type="password"
                   value={scannerPassword}
                   onChange={(event) => setScannerPassword(event.target.value)}
-                  className="h-11 w-full rounded-xl border border-border-default bg-surface-hover px-4 text-sm text-text-primary outline-none transition-colors focus:border-brand-primary"
+                  className="h-11 w-full rounded-xl border border-border-default bg-surface-hover px-4 text-base text-text-primary outline-none transition-colors focus:border-brand-primary sm:text-sm"
                   placeholder="••••••••"
                 />
               </div>

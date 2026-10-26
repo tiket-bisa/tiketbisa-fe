@@ -41,7 +41,7 @@ export function NavbarExternal({ className = "" }: NavbarExternalProps) {
         </Link>
 
         <div className="hidden flex-1 px-8 sm:block sm:max-w-md">
-          <SearchInput placeholder="Cari event…" />
+          <SearchInput aria-label="Cari event" placeholder="Cari event…" />
         </div>
 
         <ul className="hidden md:flex items-center gap-1">
@@ -105,7 +105,7 @@ export function NavbarExternal({ className = "" }: NavbarExternalProps) {
             <p className="text-[10px] font-bold text-text-tertiary uppercase tracking-[0.2em] px-3">
               Cari Event
             </p>
-            <SearchInput placeholder="Mau nonton apa hari ini?" className="w-full !bg-white/5" />
+            <SearchInput aria-label="Cari event" placeholder="Mau nonton apa hari ini?" className="w-full !bg-white/5" />
           </div>
 
           <nav className="space-y-1">

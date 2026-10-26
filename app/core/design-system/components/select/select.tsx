@@ -23,6 +23,9 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     ref,
   ) => {
     const selectId = id ?? label?.toLowerCase().replace(/\s+/g, "-");
+    if (import.meta.env.DEV && !label && !props["aria-label"] && !props["aria-labelledby"]) {
+      throw new Error("Select requires a visible label, aria-label, or aria-labelledby.");
+    }
 
     return (
       <div className="flex flex-col gap-1.5">
@@ -42,7 +45,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             id={selectId}
             required={required}
-            className={`w-full appearance-none rounded-lg border bg-surface-alt px-3 py-2 pr-8 text-sm text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent ${
+            className={`w-full appearance-none rounded-lg border bg-surface-alt px-3 py-2 pr-8 text-base sm:text-sm text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent ${
               error
                 ? "border-destructive"
                 : "border-border-default hover:border-border-subtle"

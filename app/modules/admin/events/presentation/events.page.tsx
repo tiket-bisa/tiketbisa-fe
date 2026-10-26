@@ -451,7 +451,7 @@ export default function AdminEventsPage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input
                 label="Venue"
                 name="venue"
@@ -555,7 +555,7 @@ export default function AdminEventsPage() {
                 value={formData.description}
                 onChange={handleChange}
                 placeholder="Deskripsi singkat event"
-                className="w-full rounded-lg border border-border-default bg-surface-alt px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                className="w-full rounded-lg border border-border-default bg-surface-alt px-3 py-2 text-base text-text-primary placeholder:text-text-tertiary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent sm:text-sm"
                 rows={4}
               />
             </div>
@@ -570,7 +570,7 @@ export default function AdminEventsPage() {
                 value={formData.termAndCondition}
                 onChange={handleChange}
                 placeholder="Pisahkan dengan baris baru"
-                className="w-full rounded-lg border border-border-default bg-surface-alt px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                className="w-full rounded-lg border border-border-default bg-surface-alt px-3 py-2 text-base text-text-primary placeholder:text-text-tertiary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent sm:text-sm"
                 rows={4}
               />
             </div>
@@ -601,6 +601,7 @@ export default function AdminEventsPage() {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1">
           <SearchInput
+            aria-label="Cari event atau brand"
             placeholder="Cari event atau brand..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
@@ -609,6 +610,7 @@ export default function AdminEventsPage() {
         </div>
         <div className="w-full sm:w-48">
           <Select
+            aria-label="Filter brand"
             options={brandOptions}
             value={brandFilter}
             onChange={(e) => { setBrandFilter(e.target.value); setCurrentPage(1); }}
@@ -621,12 +623,12 @@ export default function AdminEventsPage() {
         {paged.map((evt) => {
           const status = STATUS_MAP[evt.status ?? "draft"];
           return (
-            <Card key={evt.id} hoverable padding="md">
-              <div className="flex items-start justify-between gap-3">
+            <Card key={evt.id} hoverable padding="md" className="flex h-full flex-col">
+              <div className="flex flex-1 items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-text-primary font-semibold truncate">{evt.name}</h3>
-                  <p className="text-text-secondary text-sm mt-1">{evt.description}</p>
-                  <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-text-tertiary">
+                  <h3 className="line-clamp-2 min-h-10 break-words font-semibold text-text-primary" title={evt.name}>{evt.name}</h3>
+                  <p className="mt-1 line-clamp-2 min-h-10 break-words text-sm text-text-secondary" title={evt.description}>{evt.description}</p>
+                  <div className="mt-3 flex min-h-12 flex-wrap items-center gap-3 text-xs text-text-tertiary">
                     <span className="flex items-center gap-1">
                       <span className="material-symbols-outlined text-sm">group</span>
                       {evt.brand}
@@ -655,7 +657,7 @@ export default function AdminEventsPage() {
                   {evt.isFeatured && <Badge variant="brand">Featured</Badge>}
                 </div>
               </div>
-              <div className="mt-4 space-y-3 border-t border-border-subtle pt-3">
+              <div className="mt-auto space-y-3 border-t border-border-subtle pt-3">
                 <Button
                   variant="primary"
                   size="sm"
