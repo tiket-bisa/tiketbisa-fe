@@ -22,7 +22,7 @@ export function Card({
     <div
       className={`rounded-xl border border-border-default bg-surface-alt shadow-md overflow-hidden ${paddingClasses[padding]} ${
         hoverable
-          ? "transition-all hover:border-border-subtle hover:bg-surface-hover hover:shadow-lg cursor-pointer"
+          ? "transition-all hover:border-border-subtle hover:bg-surface-hover hover:shadow-lg"
           : ""
       } ${className}`}
       {...props}

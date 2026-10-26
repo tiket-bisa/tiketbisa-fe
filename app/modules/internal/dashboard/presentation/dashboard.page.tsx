@@ -1,5 +1,5 @@
-import { useCallback, useState } from "react";
-import { useNavigate } from "react-router";
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router";
 import { Card, Badge, SearchInput, Select, Button } from "~/core/design-system/components";
 import { formatIDR, formatTransactionTimestamp } from "~/core/utils";
 import { useAuth } from "~/core/auth";
@@ -10,10 +10,11 @@ import { TransactionPaginationControls } from "~/modules/internal/common/present
 import { useDebouncedValue } from "~/modules/internal/common/presentation/use-debounced-value";
 import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 import { mapTransactionStatusFilterToApi, STATUS_MAP, statusFilterOptions, type TransactionStatus } from "~/core/constants/transaction";
-import { toTransactionType, transactionTypeOptions, type TransactionTypeFilter } from "~/core/constants/transaction-type";
+import { parseTransactionType, toTransactionType, transactionTypeOptions, type TransactionTypeFilter } from "~/core/constants/transaction-type";
 import { DashboardFilters } from "./components/dashboard-filters";
 
 const DEFAULT_PAGE_SIZE = 5;
+const PAGE_SIZE_OPTIONS = new Set([5, 10, 25, 50]);
 type TransactionSort = "newest" | "oldest";
 
 const transactionSortOptions = [
@@ -21,18 +22,57 @@ const transactionSortOptions = [
   { value: "oldest", label: "Terlama" },
 ];
 
+function parsePositiveInt(value: string | null, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function parsePageSize(value: string | null): number {
+  const parsed = parsePositiveInt(value, DEFAULT_PAGE_SIZE);
+  return PAGE_SIZE_OPTIONS.has(parsed) ? parsed : DEFAULT_PAGE_SIZE;
+}
+
+function buildPartnerDashboardParams({
+  currentPage,
+  pageSize,
+  search,
+  statusFilter,
+  sortOrder,
+  transactionType,
+  eventIdFilter,
+}: {
+  currentPage: number;
+  pageSize: number;
+  search: string;
+  statusFilter: string;
+  sortOrder: TransactionSort;
+  transactionType: TransactionTypeFilter;
+  eventIdFilter: string;
+}) {
+  const params = new URLSearchParams();
+  if (currentPage > 1) params.set("page", String(currentPage));
+  if (pageSize !== DEFAULT_PAGE_SIZE) params.set("pageSize", String(pageSize));
+  if (search.trim()) params.set("search", search.trim());
+  if (statusFilter !== "all") params.set("status", statusFilter);
+  if (sortOrder !== "newest") params.set("sort", sortOrder);
+  if (transactionType !== "all") params.set("transactionType", transactionType);
+  if (eventIdFilter !== "all") params.set("eventId", eventIdFilter);
+  return params;
+}
+
 /** Partner — Dashboard / Beranda (filtered by partner's brand) */
 export default function DashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [transactionType, setTransactionType] = useState<TransactionTypeFilter>("all");
-  const [sortOrder, setSortOrder] = useState<TransactionSort>("newest");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
+  const [statusFilter, setStatusFilter] = useState(() => searchParams.get("status") ?? "all");
+  const [transactionType, setTransactionType] = useState<TransactionTypeFilter>(() => parseTransactionType(searchParams.get("transactionType")));
+  const [sortOrder, setSortOrder] = useState<TransactionSort>(() => searchParams.get("sort") === "oldest" ? "oldest" : "newest");
+  const [currentPage, setCurrentPage] = useState(() => parsePositiveInt(searchParams.get("page"), 1));
+  const [pageSize, setPageSize] = useState(() => parsePageSize(searchParams.get("pageSize")));
   const [pendingDetailId, setPendingDetailId] = useState<string | null>(null);
-  const [eventIdFilter, setEventIdFilter] = useState("all");
+  const [eventIdFilter, setEventIdFilter] = useState(() => searchParams.get("eventId") ?? "all");
   const debouncedSearch = useDebouncedValue(search);
 
   const { data: stats, loading: isStatsLoading, refetch: refetchStats } = useApiQuery(
@@ -47,7 +87,12 @@ export default function DashboardPage() {
   );
 
   // Fetch real transaction list
-  const { data: transactionRes, loading: loadingTransactions, refetch: refetchTransactions } = useApiQuery(
+  const {
+    data: transactionRes,
+    loading: loadingTransactions,
+    initialLoading: isInitialTransactionLoad,
+    refetch: refetchTransactions,
+  } = useApiQuery(
     async () => {
       // Don't fetch if brand is not loaded yet
       if (!user?.brand_slug) return { transactions: [], totalCount: 0, totalPages: 1 };
@@ -93,6 +138,24 @@ export default function DashboardPage() {
   }, [refetchTransactions, refetchStats]);
 
   useRealtimeSubscription(user?.brand_id ? [`brand:${user.brand_id}`] : [], handleRealtimeMessage);
+
+  useEffect(() => {
+    setSearchParams(buildPartnerDashboardParams({
+      currentPage,
+      pageSize,
+      search: debouncedSearch,
+      statusFilter,
+      sortOrder,
+      transactionType,
+      eventIdFilter,
+    }), { replace: true });
+  }, [currentPage, pageSize, debouncedSearch, statusFilter, sortOrder, transactionType, eventIdFilter, setSearchParams]);
+
+  useEffect(() => {
+    if (!loadingTransactions && currentPage > totalPages) {
+      setCurrentPage(Math.max(totalPages, 1));
+    }
+  }, [currentPage, loadingTransactions, totalPages]);
 
   return (
     <div className="space-y-8">
@@ -157,12 +220,17 @@ export default function DashboardPage() {
         />
 
         {/* Table */}
-        {loadingTransactions ? (
+        {isInitialTransactionLoad ? (
           <Card padding="md">
-            <div className="text-center py-12 text-text-tertiary">Memuat transaksi...</div>
+            <div role="status" className="text-center py-12 text-text-tertiary">Memuat transaksi...</div>
           </Card>
         ) : (
-          <Card padding="none">
+          <Card padding="none" aria-busy={loadingTransactions}>
+          {loadingTransactions && (
+            <p role="status" className="border-b border-border-subtle px-4 py-2 text-sm text-text-tertiary">
+              Memperbarui transaksi...
+            </p>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>

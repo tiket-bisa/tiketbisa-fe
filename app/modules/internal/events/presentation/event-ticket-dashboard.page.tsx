@@ -140,7 +140,7 @@ export default function EventTicketDashboardPage() {
 
   const data = fetchedData;
 
-  const categories = useMemo(() => {
+  const availableCategories = useMemo(() => {
     return [...(data?.categories ?? [])].sort((a, b) =>
       a.name.localeCompare(b.name, "id", { numeric: true, sensitivity: "base" }),
     );
@@ -149,9 +149,11 @@ export default function EventTicketDashboardPage() {
   const categoryOptions = useMemo(() => {
     return [
       { value: "all", label: "Semua Kategori" },
-      ...categories.map((category) => ({ value: category.id, label: category.name })),
+      ...availableCategories.map((category) => ({ value: category.id, label: category.name })),
     ];
-  }, [categories]);
+  }, [availableCategories]);
+
+  const categories = availableCategories.filter((category) => categoryFilter === "all" || category.id === categoryFilter);
 
   const filteredIssuedTickets = data?.issuedTickets ?? [];
 
@@ -178,8 +180,7 @@ export default function EventTicketDashboardPage() {
   const soldTicket = data.soldTickets;
   const remainingTicket = data.inventory.remainingTicket;
   const checkedInTicket = data.inventory.checkedInTicket;
-  const reservedTicket = data.categories.reduce((sum, category) => sum + category.reservedTicket, 0);
-  const bulkTicket = data.categories.reduce((sum, category) => sum + (category.bulkType ? category.issuedTicket : 0), 0);
+  const reservedTicket = categories.reduce((sum, category) => sum + category.reservedTicket, 0);
   const displayedStart = data.totalCount === 0 ? 0 : data.offset + 1;
   const displayedEnd = Math.min(data.offset + data.issuedTickets.length, data.totalCount);
   const canGoPrevious = data.offset > 0;
@@ -282,20 +283,35 @@ export default function EventTicketDashboardPage() {
         </div>
       </div>
 
+      <Card padding="md">
+        <div className="w-full sm:max-w-sm">
+          <Select
+            label="Kategori"
+            value={categoryFilter}
+            onChange={(event) => { setCategoryFilter(event.target.value); setIssuedTicketOffset(0); }}
+            options={categoryOptions}
+            className="text-base sm:text-sm"
+          />
+        </div>
+        <p className="mt-2 text-sm text-text-tertiary">
+          Ringkasan, kategori tiket, dan daftar tiket mengikuti kategori yang dipilih.
+        </p>
+      </Card>
+
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <SummaryCard label="Kuota" value={totalTicket} />
         <SummaryCard label="Direservasi" value={reservedTicket} />
         <SummaryCard
           label="Revenue Event"
           value={formatIDR(data.revenue)}
-          tooltip="Total omzet dari tiket terjual dan lunas untuk event ini"
+          tooltip="Total omzet tiket terjual dan lunas sesuai kategori dan tipe transaksi yang dipilih"
         />
         <SummaryCard label="Terjual & Lunas" value={soldTicket} />
         <SummaryCard label="Sisa" value={remainingTicket} />
         <SummaryCard label="Checked In" value={checkedInTicket} />
       </div>
       <p className="text-xs text-text-tertiary">
-        Revenue mencakup akumulasi penjualan tiket lunas khusus event ini. Kuota, Sisa, dan Checked In mencakup seluruh event.
+        Kuota, Sisa, dan Checked In mengikuti kategori yang dipilih. Direservasi, Terjual &amp; Lunas, dan Revenue juga mengikuti tipe transaksi.
       </p>
 
       <Card padding="md">
@@ -354,7 +370,10 @@ export default function EventTicketDashboardPage() {
 
       <Card padding="md">
         <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-lg font-semibold text-text-primary">Transaksi Event</h2>
+          <div>
+            <h2 className="text-lg font-semibold text-text-primary">Transaksi Event</h2>
+            <p className="text-sm text-text-tertiary">Semua kategori; total mencakup seluruh tiket dalam order.</p>
+          </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="w-full sm:w-56">
               <Select label="Transaction Type" options={transactionTypeOptions} value={transactionType}
@@ -415,14 +434,6 @@ export default function EventTicketDashboardPage() {
 
       <Card padding="md">
         <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end">
-          <div className="w-full lg:w-56">
-            <Select
-              label="Kategori"
-              value={categoryFilter}
-              onChange={(event) => setCategoryFilter(event.target.value)}
-              options={categoryOptions}
-            />
-          </div>
           <div className="w-full lg:w-48">
             <Select
               label="Status"

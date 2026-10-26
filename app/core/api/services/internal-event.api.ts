@@ -6,6 +6,7 @@ export interface InternalEventApiData {
   id: string;
   brandId: string;
   name: string;
+  ticketTitle?: string | null;
   bannerPath?: string | null;
   layoutImagePath?: string | null;
   layout_image_path?: string | null;
@@ -261,6 +262,7 @@ function normalizeEvent(api: InternalEventApiData & Record<string, unknown>): In
     id: String(api.id ?? ""),
     brandId: String(api.brandId ?? api.brand_id ?? ""),
     name: String(api.name ?? ""),
+    ticketTitle: (api.ticketTitle ?? api.ticket_title ?? null) as string | null,
     bannerPath: (api.bannerPath ?? api.banner_path ?? null) as string | null,
     layoutImagePath: (api.layoutImagePath ?? api.layout_image_path ?? null) as string | null,
     startDate: (api.startDate ?? api.start_date ?? null) as string | null,
