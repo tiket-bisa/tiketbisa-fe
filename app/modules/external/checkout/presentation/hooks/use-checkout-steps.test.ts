@@ -128,4 +128,243 @@ describe("useCheckoutSteps checkout expiry", () => {
     expect(mocks.acquireLock).not.toHaveBeenCalled();
     expect(mocks.warningToast).not.toHaveBeenCalled();
   });
+
+  it("reuses stored event lockId from sessionStorage when re-entering step 1 without lockId in URL", async () => {
+    mocks.searchParams = new URLSearchParams("step=1&t[category-1]=4");
+    sessionStorage.setItem(
+      "tiketbisa_checkout_lock",
+      JSON.stringify({ eventId: "event-1", lockId: "stored-lock-1" }),
+    );
+    mocks.acquireLock.mockResolvedValue({ userId: "stored-lock-1", expiresAt: Date.now() + 300_000 });
+    mocks.getTicketLockTtl.mockResolvedValue(295);
+
+    renderHook(() => useCheckoutSteps(
+      { id: "event-1", slug: "event-slug" } as any,
+      {
+        fullName: "Buyer",
+        email: "buyer@example.com",
+        phoneNumber: "081234567890",
+        identityType: "KTP",
+        identityNumber: "1234567890123456",
+      },
+      {
+        subtotal: 40_000,
+        serviceFeePerTicket: 0,
+        serviceFee: 0,
+        transactionFee: 0,
+        discount: 0,
+        totalPrice: 40_000,
+        ticketCount: 4,
+        items: [{ ticketId: "category-1", ticketName: "Regular", price: 10_000, quantity: 4 }],
+      },
+      () => ({ isValid: true, errorCount: 0, firstInvalidFieldId: null }),
+      [],
+      null,
+      {
+        selection: {
+          methodId: null,
+          agreedToTerms: false,
+          agreedToPrivacy: false,
+          appliedPromo: null,
+          bankCode: null,
+        },
+        setMethodId: vi.fn(),
+        setBankCode: vi.fn(),
+        setAgreedToTerms: vi.fn(),
+        setAgreedToPrivacy: vi.fn(),
+        applyPromo: vi.fn(),
+        removePromo: vi.fn(),
+      } as any,
+    ));
+
+    await waitFor(() => expect(mocks.acquireLock).toHaveBeenCalledTimes(1));
+    expect(mocks.acquireLock).toHaveBeenCalledWith(
+      "event-1",
+      expect.objectContaining({ ticketCount: 4 }),
+      undefined,
+      "stored-lock-1",
+    );
+  });
+
+  it("scopes checkout lock in sessionStorage per eventId and does not overwrite or clear other events", async () => {
+    sessionStorage.setItem(
+      "tiketbisa_checkout_lock_event-2",
+      JSON.stringify({ eventId: "event-2", lockId: "lock-for-event-2" }),
+    );
+
+    mocks.searchParams = new URLSearchParams("step=1&t[category-1]=2");
+    mocks.acquireLock.mockResolvedValue({ userId: "lock-for-event-1", expiresAt: Date.now() + 300_000 });
+    mocks.getTicketLockTtl.mockResolvedValue(295);
+
+    const { result } = renderHook(() => useCheckoutSteps(
+      { id: "event-1", slug: "event-1-slug" } as any,
+      { fullName: "Buyer 1", email: "b1@example.com", phoneNumber: "081234567890", identityType: "KTP", identityNumber: "1234567890123456" },
+      { subtotal: 20_000, serviceFeePerTicket: 0, serviceFee: 0, transactionFee: 0, discount: 0, totalPrice: 20_000, ticketCount: 2, items: [{ ticketId: "category-1", ticketName: "Regular", price: 10_000, quantity: 2 }] },
+      () => ({ isValid: true, errorCount: 0, firstInvalidFieldId: null }),
+      [],
+      null,
+      { selection: { methodId: null, agreedToTerms: false, agreedToPrivacy: false, appliedPromo: null, bankCode: null } } as any,
+    ));
+
+    await waitFor(() => {
+      const storedEvent1 = sessionStorage.getItem("tiketbisa_checkout_lock_event-1");
+      expect(storedEvent1).toBeTruthy();
+      expect(JSON.parse(storedEvent1!).lockId).toBe("lock-for-event-1");
+    });
+
+    const storedEvent2 = sessionStorage.getItem("tiketbisa_checkout_lock_event-2");
+    expect(storedEvent2).toBeTruthy();
+    expect(JSON.parse(storedEvent2!).lockId).toBe("lock-for-event-2");
+
+    await act(async () => {
+      result.current.handleExpire();
+    });
+
+    expect(sessionStorage.getItem("tiketbisa_checkout_lock_event-1")).toBeNull();
+    expect(sessionStorage.getItem("tiketbisa_checkout_lock_event-2")).toBeTruthy();
+  });
+
+  it("awaits in-flight initial lock before re-locking with holders on handleNext", async () => {
+    mocks.searchParams = new URLSearchParams("step=1&t[category-1]=4");
+    let resolveInitialLock!: (value: { userId: string; expiresAt: number }) => void;
+    mocks.acquireLock
+      .mockImplementationOnce(
+        () => new Promise((resolve) => { resolveInitialLock = resolve; }),
+      )
+      .mockResolvedValueOnce({ userId: "lock-from-mount", expiresAt: Date.now() + 300_000 });
+    mocks.getTicketLockTtl.mockResolvedValue(295);
+    mocks.confirmOrder.mockResolvedValue({
+      order: { orderId: "lock-from-mount" },
+      ttl: {
+        status: "ACTIVE",
+        remainingSeconds: 900,
+        expiresAt: Date.now() + 900_000,
+        serverTime: Date.now(),
+      },
+    });
+
+    const { result } = renderHook(() => useCheckoutSteps(
+      { id: "event-1", slug: "event-slug" } as any,
+      {
+        fullName: "Buyer",
+        email: "buyer@example.com",
+        phoneNumber: "081234567890",
+        identityType: "KTP",
+        identityNumber: "1234567890123456",
+      },
+      {
+        subtotal: 40_000,
+        serviceFeePerTicket: 0,
+        serviceFee: 0,
+        transactionFee: 0,
+        discount: 0,
+        totalPrice: 40_000,
+        ticketCount: 4,
+        items: [{ ticketId: "category-1", ticketName: "Regular", price: 10_000, quantity: 4 }],
+      },
+      () => ({ isValid: true, errorCount: 0, firstInvalidFieldId: null }),
+      [{ id: "qris", name: "QRIS", type: "EWALLET", fee: 0, isAvailable: true } as any],
+      null,
+      {
+        selection: {
+          methodId: "qris",
+          agreedToTerms: true,
+          agreedToPrivacy: true,
+          appliedPromo: null,
+          bankCode: null,
+        },
+        setMethodId: vi.fn(),
+        setBankCode: vi.fn(),
+        setAgreedToTerms: vi.fn(),
+        setAgreedToPrivacy: vi.fn(),
+        applyPromo: vi.fn(),
+        removePromo: vi.fn(),
+      } as any,
+      [{ name: "Buyer", identityNumber: "1234567890123456" }],
+    ));
+
+    await waitFor(() => expect(mocks.acquireLock).toHaveBeenCalledTimes(1));
+
+    let nextPromise!: Promise<void>;
+    act(() => {
+      nextPromise = result.current.handleNext();
+    });
+
+    // Second acquireLock should wait until initial lock resolves
+    expect(mocks.acquireLock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveInitialLock({ userId: "lock-from-mount", expiresAt: Date.now() + 300_000 });
+      await nextPromise;
+    });
+
+    expect(mocks.acquireLock).toHaveBeenCalledTimes(2);
+    expect(mocks.acquireLock).toHaveBeenNthCalledWith(
+      2,
+      "event-1",
+      expect.objectContaining({ ticketCount: 4 }),
+      [{ name: "Buyer", identityNumber: "1234567890123456" }],
+      "lock-from-mount",
+    );
+  });
+
+  it("navigates directly to event page when handleBack is called on step 4", async () => {
+    mocks.searchParams = new URLSearchParams("step=4&lockId=lock-1&orderId=lock-1&t[category-1]=4");
+    mocks.getTempTransactionTtl.mockResolvedValue({
+      status: "ACTIVE",
+      remainingSeconds: 900,
+      expiresAt: Date.now() + 900_000,
+      serverTime: Date.now(),
+    });
+    mocks.recoverGatewayOrder.mockResolvedValue({
+      id: "lock-1",
+      status: "WAITING_PAYMENT",
+      paymentMethod: "qris",
+    });
+
+    const { result } = renderHook(() => useCheckoutSteps(
+      { id: "event-1", slug: "event-slug" } as any,
+      {
+        fullName: "Buyer",
+        email: "buyer@example.com",
+        phoneNumber: "081234567890",
+        identityType: "KTP",
+        identityNumber: "1234567890123456",
+      },
+      {
+        subtotal: 40_000,
+        serviceFeePerTicket: 0,
+        serviceFee: 0,
+        transactionFee: 0,
+        discount: 0,
+        totalPrice: 40_000,
+        ticketCount: 4,
+        items: [{ ticketId: "category-1", ticketName: "Regular", price: 10_000, quantity: 4 }],
+      },
+      () => ({ isValid: true, errorCount: 0, firstInvalidFieldId: null }),
+      [],
+      null,
+      {
+        selection: {
+          methodId: "qris",
+          agreedToTerms: true,
+          agreedToPrivacy: true,
+          appliedPromo: null,
+          bankCode: null,
+        },
+        setMethodId: vi.fn(),
+        setBankCode: vi.fn(),
+        setAgreedToTerms: vi.fn(),
+        setAgreedToPrivacy: vi.fn(),
+        applyPromo: vi.fn(),
+        removePromo: vi.fn(),
+      } as any,
+    ));
+
+    await act(async () => {
+      await result.current.handleBack();
+    });
+
+    expect(mocks.navigate).toHaveBeenCalledWith("/event/event-slug");
+  });
 });
