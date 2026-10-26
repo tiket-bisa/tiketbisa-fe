@@ -40,3 +40,6 @@ export type { SocialLink } from "./social-links";
 export { ToastProvider, useToast } from "./toast";
 export type { ToastType, ToastItem } from "./toast";
 
+export { ConfirmationDialog } from "./confirmation-dialog";
+export type { ConfirmationDialogProps } from "./confirmation-dialog";
+

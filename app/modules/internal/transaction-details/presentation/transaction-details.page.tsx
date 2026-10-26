@@ -7,6 +7,7 @@ import { useRealtimeSubscription, type RealtimeMessage } from "~/core/realtime";
 import { TicketDeliveryActions } from "~/modules/internal/ticket-delivery/presentation/ticket-delivery-actions";
 import { PaymentProofActions } from "~/modules/internal/common/presentation/payment-proof-actions";
 import { TransactionTicketSummary } from "~/modules/internal/common/presentation/transaction-ticket-summary";
+import { PaymentReconciliationAction } from "~/modules/internal/common/presentation/payment-reconciliation-action";
 
 const STATUS_MAP: Record<string, { label: string; variant: "success" | "warning" | "destructive" | "default" }> = {
   WAITING_PAYMENT: { label: "Menunggu Pembayaran", variant: "warning" },
@@ -128,6 +129,8 @@ export default function TransactionDetailsPage() {
           </div>
         </Card>
       )}
+
+      <PaymentReconciliationAction transaction={tx} available={detail.paymentReconciliationAvailable} onUpdated={refetch} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card padding="md">

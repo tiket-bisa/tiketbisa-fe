@@ -28,6 +28,8 @@ export interface TransactionApiData {
     totalPrice: number;
     status: string;
     paymentMethod: string;
+    gatewayProvider?: string | null;
+    gatewayRef?: string | null;
     paymentDate: string;
     created: string;
     paymentProofPath?: string | null;
@@ -65,6 +67,12 @@ export interface TransactionTicketDetail {
 export interface TransactionDetailResponse {
     transaction: TransactionApiData;
     ticketDetails: TransactionTicketDetail[];
+    paymentReconciliationAvailable: boolean;
+}
+
+export interface PaymentReconciliationResult {
+    transactionId: string;
+    status: string;
 }
 
 export interface PaymentProofResponse {
@@ -212,6 +220,11 @@ export const transactionApi = {
     /** Get detailed transaction */
     getDetail: (id: string) =>
         internalHttpClient.get<TransactionDetailResponse>(`/transaction/detail/${id}`),
+
+    reconcilePayment: (id: string) =>
+        internalHttpClient.post<PaymentReconciliationResult>(
+            `/transaction/detail/${id}/payment/reconcile`, {},
+        ),
 
     /** Get payment proof from manual transfer transaction */
     getPaymentProof: (id: string) =>
