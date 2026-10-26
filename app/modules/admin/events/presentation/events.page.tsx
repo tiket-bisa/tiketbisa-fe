@@ -26,6 +26,7 @@ import type { EventSummary } from "~/core/types";
 import { fileToBase64 } from "~/modules/internal/common/presentation/image-source-input";
 import { EventGalleryManager } from "~/modules/internal/common/presentation/event-gallery-manager";
 import { SearchableCitySelect } from "~/modules/internal/events/presentation/components/searchable-city-select";
+import { EventRevenue } from "~/modules/internal/events/presentation/components/event-revenue";
 
 const STATUS_MAP = {
   draft: { label: "Draft", variant: "default" as const },
@@ -59,6 +60,7 @@ export default function AdminEventsPage() {
   const [formData, setFormData] = useState({
     brandId: "",
     name: "",
+    ticketTitle: "",
     startDate: "",
     endDate: "",
     venue: "",
@@ -151,6 +153,7 @@ export default function AdminEventsPage() {
     setFormData({
       brandId: "",
       name: "",
+      ticketTitle: "",
       startDate: "",
       endDate: "",
       venue: "",
@@ -187,6 +190,7 @@ export default function AdminEventsPage() {
     setFormData({
       brandId: event.brandId ?? "",
       name: event.name ?? "",
+      ticketTitle: event.ticketTitle ?? "",
       startDate: toDateTimeLocal(event.startDate),
       endDate: toDateTimeLocal(event.endDate),
       venue: event.venue ?? "",
@@ -227,6 +231,10 @@ export default function AdminEventsPage() {
       setFormError("Nama event wajib diisi.");
       return;
     }
+    if (!formData.ticketTitle.trim()) {
+      setFormError("Judul e-ticket wajib diisi.");
+      return;
+    }
     if (!formData.startDate || !formData.endDate) {
       setFormError("Tanggal mulai dan selesai wajib diisi.");
       return;
@@ -255,6 +263,7 @@ export default function AdminEventsPage() {
       const payload = {
         brandId: formData.brandId,
         name: formData.name.trim(),
+        ticketTitle: formData.ticketTitle.trim(),
         bannerPath: formMode === "create" ? null : undefined,
         layoutImagePath: formData.layoutImagePath || null,
         startDate,
@@ -410,6 +419,16 @@ export default function AdminEventsPage() {
               value={formData.name}
               onChange={handleChange}
               placeholder="Contoh: Jazz Night 2026"
+              required
+            />
+
+            <Input
+              label="Judul E-Ticket"
+              name="ticketTitle"
+              value={formData.ticketTitle}
+              onChange={handleChange}
+              placeholder="Contoh: BRI Super League 2026/27"
+              maxLength={255}
               required
             />
 
@@ -631,6 +650,7 @@ export default function AdminEventsPage() {
                       </span>
                     )}
                   </div>
+                  <EventRevenue revenue={evt.revenue} />
                 </div>
                 <div className="flex flex-col items-end gap-1.5">
                   <Badge variant={status.variant}>{status.label}</Badge>

@@ -602,28 +602,35 @@ export default function AdminBrandsPage() {
                 {paged.map((brand) => {
                   const fullBrand = brandById.get(brand.id);
                   return (
-                    <Card key={brand.id} hoverable padding="md" className="flex h-full flex-col">
+                    <Card key={brand.id} padding="md" className="h-full">
                       <div className="flex h-full flex-col items-center gap-3 py-2">
                         <Avatar src={brand.logo_url} fallback={brand.name} size="xl" />
-                        <span className="line-clamp-2 min-h-10 break-words text-center text-sm font-semibold text-text-primary" title={brand.name}>{brand.name}</span>
-                        <span className="line-clamp-2 min-h-8 break-words text-center text-xs text-text-tertiary" title={brand.description || undefined}>
-                          {brand.description || "Belum ada deskripsi"}
+                        <span className="line-clamp-2 flex min-h-10 items-center text-center text-sm font-semibold text-text-primary">
+                          {brand.name}
                         </span>
-                        <div className="mt-auto w-full space-y-1 border-t border-border-subtle pt-3">
+                        <span className="line-clamp-2 h-8 text-center text-xs leading-4 text-text-tertiary">
+                          {brand.description || "\u00a0"}
+                        </span>
+                        <div className="mt-auto w-full border-t border-border-subtle pt-3 space-y-1">
                           <div className="flex justify-between text-xs gap-3">
                             <span className="text-text-tertiary">ID</span>
-                            <span className="min-w-0 break-all text-right font-mono text-[10px] text-text-primary">{brand.id}</span>
+                            <span
+                              className="min-w-0 truncate text-right font-mono text-[10px] text-text-primary"
+                              title={brand.id}
+                            >
+                              {brand.id}
+                            </span>
                           </div>
                           <div className="flex justify-between text-xs gap-3">
                             <span className="text-text-tertiary">Biaya layanan</span>
                             <span className="text-text-primary font-medium">{formatRupiah(fullBrand?.adminFee ?? 0)}</span>
                           </div>
                         </div>
-                        <div className="flex w-full gap-2 pt-2">
+                        <div className="grid w-full grid-cols-3 gap-2 pt-2">
                           <Button
                             variant="secondary"
                             size="sm"
-                            className="flex-1"
+                            className="w-full"
                             onClick={() => startEdit(brand.id)}
                           >
                             Edit
@@ -631,7 +638,7 @@ export default function AdminBrandsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="flex-1"
+                            className="w-full"
                             onClick={() => {
                               setSelectedAccessBrandId(brand.id);
                               setActiveTab("access");
@@ -642,7 +649,7 @@ export default function AdminBrandsPage() {
                           <Button
                             variant="destructive"
                             size="sm"
-                            className="flex-1"
+                            className="w-full"
                             onClick={() => handleDelete(brand.id)}
                             disabled={isSubmitting}
                           >

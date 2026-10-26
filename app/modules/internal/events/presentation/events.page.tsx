@@ -22,9 +22,9 @@ import type { EventSummary } from "~/core/types";
 import { fileToBase64 } from "~/modules/internal/common/presentation/image-source-input";
 import { EventGalleryManager } from "~/modules/internal/common/presentation/event-gallery-manager";
 import { SearchableCitySelect } from "./components/searchable-city-select";
+import { EventRevenue } from "./components/event-revenue";
 import { internalBrandApi, normalizeInternalBrand } from "~/core/api/services/internal-brand.api";
 import { HOME_DOMICILE_OPTIONS, normalizeHomeDomicile } from "~/shared/constants/domicile.constants";
-import { formatIDR } from "~/core/utils";
 
 const STATUS_MAP = {
   draft: { label: "Draft", variant: "default" as const },
@@ -44,6 +44,7 @@ const ITEMS_PER_PAGE = 6;
 
 const EMPTY_FORM_DATA = {
   name: "",
+  ticketTitle: "",
   startDate: "",
   endDate: "",
   venue: "",
@@ -160,6 +161,7 @@ export default function EventsPage() {
     setFormMode("edit");
     setFormData({
       name: event.name ?? "",
+      ticketTitle: event.ticketTitle ?? "",
       startDate: toDateTimeLocal(event.startDate),
       endDate: toDateTimeLocal(event.endDate),
       venue: event.venue ?? "",
@@ -199,6 +201,10 @@ export default function EventsPage() {
       setFormError("Nama event wajib diisi.");
       return;
     }
+    if (!formData.ticketTitle.trim()) {
+      setFormError("Judul e-ticket wajib diisi.");
+      return;
+    }
     if (!formData.startDate || !formData.endDate) {
       setFormError("Tanggal mulai dan selesai wajib diisi.");
       return;
@@ -224,6 +230,7 @@ export default function EventsPage() {
       const payload = {
         brandId: user.brand_id,
         name: formData.name.trim(),
+        ticketTitle: formData.ticketTitle.trim(),
         bannerPath: formMode === "create" ? null : undefined,
         layoutImagePath: formData.layoutImagePath || null,
         startDate,
@@ -369,6 +376,16 @@ export default function EventsPage() {
               name="name"
               value={formData.name}
               onChange={handleChange}
+              required
+            />
+
+            <Input
+              label="Judul E-Ticket"
+              name="ticketTitle"
+              value={formData.ticketTitle}
+              onChange={handleChange}
+              placeholder="Contoh: Pegadaian Championship 2026/27"
+              maxLength={255}
               required
             />
 
@@ -574,11 +591,8 @@ export default function EventsPage() {
                         {evt.location}
                       </span>
                     )}
-                    <span className="flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">
-                      <span className="material-symbols-outlined text-sm">payments</span>
-                      Revenue: {formatIDR(evt.revenue ?? 0)}
-                    </span>
                   </div>
+                  <EventRevenue revenue={evt.revenue} />
                 </div>
                 <Badge variant={status.variant}>{status.label}</Badge>
               </div>
